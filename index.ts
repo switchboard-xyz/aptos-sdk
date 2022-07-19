@@ -12,6 +12,8 @@ const NODE_URL =
 const FAUCET_URL =
   process.env.APTOS_FAUCET_URL || "https://faucet.devnet.aptoslabs.com";
 
+const SWITCHBOARD_DEVNET_ADDRESS = "BLAHBLAHBLAH";
+
 const {
   AccountAddress,
   TypeTagStruct,
@@ -22,15 +24,96 @@ const {
   ChainId,
 } = TxnBuilderTypes;
 
+/**
+ * Aggregator
+ * init
+ * addJob
+ * openRound
+ *
+ * Job
+ * init
+ *
+ * Oracle
+ * saveResult
+ *
+ * Crank
+ *
+ *
+ */
+
+interface AggregatorAddJobParams {
+  aggregatorAddress: string;
+  job: string;
+  weight?: number;
+}
+
+interface AggregatorInitParams {
+  addr: string; // arbitrary key associated with aggregator @NOTE: Cannot be altered
+  authority: string; // owner of aggregator
+  name?: string;
+  metadata?: string;
+  queue_address?: string;
+  batch_size: number;
+  min_oracle_results: number;
+  min_job_results: number;
+  min_update_delay_seconds: number;
+  start_after: number;
+  variance_threshold: number;
+  force_report_period?: number;
+  expiration?: number;
+}
+
+interface AggregatorOpenRoundParams {
+  aggregator_address: string;
+}
+
+interface AggregatorRemoveJobParams {
+  aggregatorAddress: string;
+  job: string;
+}
+
+interface AggregatorSetConfigParams {
+  addr: string;
+  name?: string;
+  metadata?: string;
+  queue_address?: string;
+  batch_size: number;
+  min_oracle_results: number;
+  min_job_results: number;
+  min_update_delay_seconds: number;
+  start_after: number;
+  variance_threshold: number;
+  force_report_period?: number;
+  expiration?: number;
+}
+
+interface CrankInitParams {
+  addr: string;
+  queue_address: string;
+}
+
+interface CrankPopParams {
+  crank_address: string;
+}
+
+interface CrankPushParams {
+  crank_address: string;
+  aggregator_address: string;
+}
+
+interface OracleHeartbeatParams {
+  
+}
+
 export class AggregatorAccount {
-  static async init(payer: AptosAccount) {
+  static async init(client: AptosClient, payer: AptosAccount) {
     const account1 = new AptosAccount();
     // TS SDK support 3 types of transaction payloads: `ScriptFunction`, `Script` and `Module`.
     // See https://aptos-labs.github.io/ts-sdk-doc/ for the details.
     const scriptFunctionPayload = new TransactionPayloadScriptFunction(
       ScriptFunction.natural(
         // Fully qualified module name, `AccountAddress::ModuleName`
-        "0x1::Switchboard::AggregatorInitAction",
+        `${SWITCHBOARD_DEVNET_ADDRESS}::Switchboard::AggregatorInitAction`,
         // Module function
         "run",
         [],
@@ -66,5 +149,8 @@ export class AggregatorAccount {
     const transactionRes = await client.submitSignedBCSTransaction(bcsTxn);
 
     await client.waitForTransaction(transactionRes.hash);
+
+    const signedTxn = await client.signTransaction(payer, txnRequest);
+    const res = await client.submitTransaction(signedTxn);
   }
 }
