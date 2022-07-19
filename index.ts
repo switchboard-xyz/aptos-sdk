@@ -124,7 +124,7 @@ export class AggregatorAccount {
   ) {
     const payload: Types.TransactionPayload = {
       type: "script_function_payload",
-      function: `${SWITCHBOARD_DEVNET_ADDRESS}::Switchboard::AggregatorInitAction::run`,
+      function: `${SWITCHBOARD_DEVNET_ADDRESS}::AggregatorInitAction::run`,
       type_arguments: [],
       arguments: [
         HexString.ensure(SWITCHBOARD_STATE_ADDRESS).hex(),
