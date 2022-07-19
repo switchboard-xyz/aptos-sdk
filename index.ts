@@ -4,6 +4,8 @@ import {
   FaucetClient,
   BCS,
   TxnBuilderTypes,
+  Types,
+  HexString,
 } from "aptos";
 import assert from "assert";
 
@@ -12,7 +14,11 @@ const NODE_URL =
 const FAUCET_URL =
   process.env.APTOS_FAUCET_URL || "https://faucet.devnet.aptoslabs.com";
 
+// Address that deployed the module
 const SWITCHBOARD_DEVNET_ADDRESS = "BLAHBLAHBLAH";
+
+// Address of the account that owns the Switchboard resource
+const SWITCHBOARD_STATE_ADDRESS = "Probable the above";
 
 const {
   AccountAddress,
@@ -48,18 +54,19 @@ interface AggregatorAddJobParams {
 }
 
 interface AggregatorInitParams {
-  addr: string; // arbitrary key associated with aggregator @NOTE: Cannot be altered
+  address: string; // arbitrary key associated with aggregator @NOTE: Cannot be altered
   authority: string; // owner of aggregator
   name?: string;
   metadata?: string;
-  queue_address?: string;
-  batch_size: number;
-  min_oracle_results: number;
-  min_job_results: number;
-  min_update_delay_seconds: number;
-  start_after: number;
-  variance_threshold: number;
-  force_report_period?: number;
+  queueAddress?: string;
+  batchSize: number;
+  minOracleResults: number;
+  minJobResults: number;
+  minUpdateDelaySeconds: number;
+  startAfter?: number;
+  varianceThreshold?: number;
+  varianceThresholdScale?: number;
+  forceReportPeriod?: number;
   expiration?: number;
 }
 
@@ -73,17 +80,18 @@ interface AggregatorRemoveJobParams {
 }
 
 interface AggregatorSetConfigParams {
-  addr: string;
+  address: string;
+  authority: string;
   name?: string;
   metadata?: string;
-  queue_address?: string;
-  batch_size: number;
-  min_oracle_results: number;
-  min_job_results: number;
-  min_update_delay_seconds: number;
-  start_after: number;
-  variance_threshold: number;
-  force_report_period?: number;
+  queueAddress?: string;
+  batchSize: number;
+  minOracleResults: number;
+  minJobResults: number;
+  minUpdateDelaySeconds: number;
+  startAfter?: number;
+  varianceThreshold?: number;
+  forceReportPeriod?: number;
   expiration?: number;
 }
 
@@ -101,11 +109,53 @@ interface CrankPushParams {
   aggregator_address: string;
 }
 
-interface OracleHeartbeatParams {
-  
+/** Convert string to hex-encoded utf-8 bytes. */
+function stringToHex(text: string) {
+  const encoder = new TextEncoder();
+  const encoded = encoder.encode(text);
+  return Array.from(encoded, (i) => i.toString(16).padStart(2, "0")).join("");
 }
 
 export class AggregatorAccount {
+  static async init(
+    client: AptosClient,
+    payer: AptosAccount,
+    params: AggregatorInitParams
+  ) {
+    const payload: Types.TransactionPayload = {
+      type: "script_function_payload",
+      function: `${SWITCHBOARD_DEVNET_ADDRESS}::Switchboard::AggregatorInitAction`,
+      type_arguments: [],
+      arguments: [
+        HexString.ensure(SWITCHBOARD_STATE_ADDRESS).hex(),
+        HexString.ensure(params.address).hex(),
+        stringToHex(params.name ?? ""),
+        stringToHex(params.metadata ?? ""),
+        params.queueAddress
+          ? HexString.ensure(params.queueAddress).hex()
+          : HexString.ensure("0x0").hex(),
+        params.batchSize,
+        params.minOracleResults,
+        params.minUpdateDelaySeconds,
+        params.startAfter ?? 0,
+        params.varianceThreshold ?? 0,
+        params.varianceThresholdScale ?? 0,
+        params.forceReportPeriod ?? 0,
+        params.expiration ?? 0,
+        payer.address().hex(),
+      ],
+    };
+    const txnRequest = await client.generateTransaction(
+      payer.address(),
+      payload
+    );
+    const signedTxn = await client.signTransaction(payer, txnRequest);
+    const transactionRes = await client.submitTransaction(signedTxn);
+    await client.waitForTransaction(transactionRes.hash);
+  }
+}
+
+export class JobAccount {
   static async init(client: AptosClient, payer: AptosAccount) {
     const account1 = new AptosAccount();
     // TS SDK support 3 types of transaction payloads: `ScriptFunction`, `Script` and `Module`.
