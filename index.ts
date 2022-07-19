@@ -124,7 +124,7 @@ export class AggregatorAccount {
   ) {
     const payload: Types.TransactionPayload = {
       type: "script_function_payload",
-      function: `${SWITCHBOARD_DEVNET_ADDRESS}::Switchboard::AggregatorInitAction`,
+      function: `${SWITCHBOARD_DEVNET_ADDRESS}::Switchboard::AggregatorInitAction::run`,
       type_arguments: [],
       arguments: [
         HexString.ensure(SWITCHBOARD_STATE_ADDRESS).hex(),
@@ -143,8 +143,11 @@ export class AggregatorAccount {
         params.forceReportPeriod ?? 0,
         params.expiration ?? 0,
         payer.address().hex(),
-      ],
+
+        // values must be strings
+      ].map((value) => (typeof value === "string" ? value : value.toString())),
     };
+
     const txnRequest = await client.generateTransaction(
       payer.address(),
       payload
