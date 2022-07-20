@@ -176,22 +176,186 @@ async function sendAptosTx(
   return transactionRes.hash;
 }
 
+interface TableType {
+  stateKey: string;
+  keyType: string;
+  valueType: string;
+}
+
+export const AggregatorTable: TableType = {
+  stateKey: `aggregators`,
+  keyType: `address`,
+  valueType: `${SWITCHBOARD_DEVNET_ADDRESS}::Aggregator::Aggregator`,
+};
+
+export const JobTable: TableType = {
+  stateKey: `jobs`,
+  keyType: `address`,
+  valueType: `${SWITCHBOARD_DEVNET_ADDRESS}::Job::Job`,
+};
+
+export const CrankTable: TableType = {
+  stateKey: `cranks`,
+  keyType: `address`,
+  valueType: `${SWITCHBOARD_DEVNET_ADDRESS}::Crank::Crank`,
+};
+
+export const OracleTable: TableType = {
+  stateKey: `oracles`,
+  keyType: `address`,
+  valueType: `${SWITCHBOARD_DEVNET_ADDRESS}::Oracle::Oracle`,
+};
+
+export const OracleQueueTable: TableType = {
+  stateKey: `oracle_queues`,
+  keyType: `address`,
+  valueType: `${SWITCHBOARD_DEVNET_ADDRESS}::OracleQueue::OracleQueue`,
+};
+
+export const LeaseTable: TableType = {
+  stateKey: `leases`,
+  keyType: `vector<u8>`,
+  valueType: `${SWITCHBOARD_DEVNET_ADDRESS}::Lease::Lease`,
+};
+
+export const PermissionTable: TableType = {
+  stateKey: `permissions`,
+  keyType: `vector<u8>`,
+  valueType: `${SWITCHBOARD_DEVNET_ADDRESS}::Permission::Permission`,
+};
+
+/**
+ * Retrieve Table Item
+ * @param client
+ * @param tableType
+ * @param key string to fetch table item by
+ */
+async function getTableItem(
+  client: AptosClient,
+  tableType: TableType,
+  key: string
+): Promise<unknown | undefined> {
+  // get table resource
+  const switchboardTableResource = await client.getAccountResource(
+    HexString.ensure(SWITCHBOARD_STATE_ADDRESS).hex(),
+    `${SWITCHBOARD_DEVNET_ADDRESS}::Switchboard::State`
+  );
+
+  const handle = (switchboardTableResource.data as any)[tableType.stateKey]
+    ?.handle;
+
+  const getTokenTableItemRequest: Types.TableItemRequest = {
+    key_type: tableType.keyType,
+    value_type: tableType.valueType,
+    key: key,
+  };
+
+  try {
+    // fetch table item (it's an object with the schema structure)
+    const tableItem = await client.getTableItem(
+      handle,
+      getTokenTableItemRequest
+    );
+    return tableItem?.data;
+  } catch (e) {
+    console.log(e);
+    return;
+  }
+}
+
+/**
+ * Poll Events on Aptos
+ */
+export class EventPoller {
+  client: AptosClient;
+  intervalId: ReturnType<typeof setInterval>;
+  cb: (event: Types.Event) => void; // some effect will happen on event
+  address: MaybeHexString;
+  eventHandleStruct: Types.MoveStructTagId;
+  fieldName: string;
+  pollingIntervalMs: number;
+  lastSequenceNumber: string = "";
+
+  constructor(
+    client: AptosClient,
+    address: MaybeHexString,
+    eventHandleStruct: Types.MoveStructTagId,
+    fieldName: string,
+    pollingIntervalMs: number = 5000,
+    cb: (event: Types.Event) => void | (() => void) // sometimes you don't want args
+  ) {
+    this.client = client;
+    this.cb = cb;
+    this.address = address;
+    this.eventHandleStruct = eventHandleStruct;
+    this.fieldName = fieldName;
+    this.pollingIntervalMs = pollingIntervalMs;
+  }
+
+  async start() {
+    // Get the start sequence number in the EVENT STREAM, defaulting to the latest event.
+    const [{ sequence_number }] = await this.client.getEventsByEventHandle(
+      this.address,
+      this.eventHandleStruct,
+      this.fieldName,
+      { limit: 1 }
+    );
+
+    // type for this is string for some reason
+    this.lastSequenceNumber = sequence_number;
+
+    this.intervalId = setInterval(async () => {
+      const events = await this.client.getEventsByEventHandle(
+        this.address,
+        this.eventHandleStruct,
+        this.fieldName,
+        {
+          start: Number(this.lastSequenceNumber) + 1,
+        }
+      );
+      for (let e of events) {
+        // increment sequence number
+        this.lastSequenceNumber = e.sequence_number;
+
+        // fire off the callback for all new events
+        this.cb(e);
+      }
+    }, this.pollingIntervalMs);
+  }
+
+  stop() {
+    clearInterval(this.intervalId);
+  }
+}
+
 /**
  * Common Constructor
  */
 class SwitchboardResource {
   client: AptosClient;
   address: MaybeHexString;
+  tableType: TableType;
   payer?: AptosAccount;
 
   constructor(
+    tableType: TableType,
     client: AptosClient,
     address: MaybeHexString,
     payer?: AptosAccount
   ) {
+    this.tableType = tableType;
     this.client = client;
     this.payer = payer;
     this.address = address;
+  }
+
+  // try to load data from on-chain
+  async loadData(): Promise<unknown | undefined> {
+    return await getTableItem(
+      this.client,
+      this.tableType,
+      HexString.ensure(this.address).hex()
+    );
   }
 }
 
@@ -201,7 +365,7 @@ export class Aggregator extends SwitchboardResource {
     address: MaybeHexString,
     payer?: AptosAccount
   ) {
-    super(client, address, payer);
+    super(AggregatorTable, client, address, payer);
   }
 
   /**
@@ -305,7 +469,7 @@ export class Job extends SwitchboardResource {
     address: MaybeHexString,
     payer?: AptosAccount
   ) {
-    super(client, address, payer);
+    super(JobTable, client, address, payer);
   }
 
   /**
@@ -343,7 +507,7 @@ export class Crank extends SwitchboardResource {
     address: MaybeHexString,
     payer?: AptosAccount
   ) {
-    super(client, address, payer);
+    super(CrankTable, client, address, payer);
   }
 
   /**
@@ -419,7 +583,7 @@ export class Oracle extends SwitchboardResource {
     address: MaybeHexString,
     payer?: AptosAccount
   ) {
-    super(client, address, payer);
+    super(OracleTable, client, address, payer);
   }
 
   /**
@@ -457,7 +621,7 @@ export class OracleQueue extends SwitchboardResource {
     address: MaybeHexString,
     payer?: AptosAccount
   ) {
-    super(client, address, payer);
+    super(OracleQueueTable, client, address, payer);
   }
 
   /**
