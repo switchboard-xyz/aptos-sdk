@@ -432,7 +432,7 @@ export class Oracle extends SwitchboardResource {
     client: AptosClient,
     payer: AptosAccount,
     params: OracleInitParams
-  ): Promise<[string, Job]> {
+  ): Promise<[string, Oracle]> {
     const tx = await sendAptosTx(
       client,
       payer,
@@ -470,7 +470,7 @@ export class OracleQueue extends SwitchboardResource {
     client: AptosClient,
     payer: AptosAccount,
     params: OracleQueueInitParams
-  ): Promise<[string, Job]> {
+  ): Promise<[string, OracleQueue]> {
     const tx = await sendAptosTx(
       client,
       payer,
@@ -503,6 +503,6 @@ export class OracleQueue extends SwitchboardResource {
       ]
     );
 
-    return [tx, new Oracle(client, params.address, payer)];
+    return [tx, new OracleQueue(client, params.address, payer)];
   }
 }
