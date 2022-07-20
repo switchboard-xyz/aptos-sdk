@@ -6,6 +6,7 @@ import {
   TxnBuilderTypes,
   Types,
   HexString,
+  MaybeHexString,
 } from "aptos";
 import assert from "assert";
 
@@ -48,17 +49,16 @@ const {
  */
 
 interface AggregatorAddJobParams {
-  aggregatorAddress: string;
   job: string;
   weight?: number;
 }
 
 interface AggregatorInitParams {
-  address: string; // arbitrary key associated with aggregator @NOTE: Cannot be altered
-  authority: string; // owner of aggregator
+  address: MaybeHexString; // arbitrary key associated with aggregator @NOTE: Cannot be altered
+  authority: MaybeHexString; // owner of aggregator
   name?: string;
   metadata?: string;
-  queueAddress?: string;
+  queueAddress?: MaybeHexString;
   batchSize: number;
   minOracleResults: number;
   minJobResults: number;
@@ -70,8 +70,29 @@ interface AggregatorInitParams {
   expiration?: number;
 }
 
+interface AggregatorSaveResultParams {
+  //state_address: address,
+  oracle_address: MaybeHexString;
+  aggregator_address: MaybeHexString;
+  oracle_idx: number;
+  error: boolean;
+  // this should probably be automatically generated
+  value_num: number;
+  value_scale_factor: number; // scale factor
+  value_neg: boolean;
+  jobs_checksum: string;
+}
+
 interface AggregatorOpenRoundParams {
-  aggregator_address: string;
+  aggregator_address: MaybeHexString;
+}
+
+interface JobInitParams {
+  address: MaybeHexString;
+  name: string;
+  metadata: string;
+  authority: MaybeHexString;
+  data: string;
 }
 
 interface AggregatorRemoveJobParams {
@@ -111,22 +132,85 @@ interface CrankPushParams {
 
 /** Convert string to hex-encoded utf-8 bytes. */
 function stringToHex(text: string) {
-  const encoder = new TextEncoder();
-  const encoded = encoder.encode(text);
-  return Array.from(encoded, (i) => i.toString(16).padStart(2, "0")).join("");
+  return Buffer.from(text, "utf-8").toString("hex");
 }
 
-export class AggregatorAccount {
+/**
+ * Sends and waits for an aptos tx to be confirmed
+ * @param client
+ * @param signer
+ * @param method Aptos module method (ex: 0xSwitchboard::AggregatorAddJobAction)
+ * @param args Arguments for method (converts numbers to strings)
+ * @returns
+ */
+async function sendAptosTx(
+  client: AptosClient,
+  signer: AptosAccount,
+  method: string,
+  args: Array<any>
+): Promise<string> {
+  const payload: Types.TransactionPayload = {
+    type: "script_function_payload",
+    function: method,
+    type_arguments: [],
+    arguments: args.map((value) =>
+      typeof value === "string" ? value : value.toString()
+    ),
+  };
+  const txnRequest = await client.generateTransaction(
+    signer.address(),
+    payload
+  );
+  const signedTxn = await client.signTransaction(signer, txnRequest);
+  const transactionRes = await client.submitTransaction(signedTxn);
+  await client.waitForTransaction(transactionRes.hash);
+  return transactionRes.hash;
+}
+
+/**
+ * Common Constructor
+ */
+class SwitchboardResource {
+  client: AptosClient;
+  address: MaybeHexString;
+  payer?: AptosAccount;
+
+  constructor(
+    client: AptosClient,
+    address: MaybeHexString,
+    payer?: AptosAccount
+  ) {
+    this.client = client;
+    this.payer = payer;
+    this.address = address;
+  }
+}
+
+export class Aggregator extends SwitchboardResource {
+  constructor(
+    client: AptosClient,
+    address: MaybeHexString,
+    payer?: AptosAccount
+  ) {
+    super(client, address, payer);
+  }
+
+  /**
+   * Initialize an Aggregator
+   * @param client
+   * @param payer account that will be the authority of the aggregator
+   * @param params AggregatorInitParams initialization params
+   */
   static async init(
     client: AptosClient,
     payer: AptosAccount,
     params: AggregatorInitParams
-  ) {
-    const payload: Types.TransactionPayload = {
-      type: "script_function_payload",
-      function: `${SWITCHBOARD_DEVNET_ADDRESS}::AggregatorInitAction::run`,
-      type_arguments: [],
-      arguments: [
+  ): Promise<[string, Aggregator]> {
+    const tx = await sendAptosTx(
+      client,
+      payer,
+      `${SWITCHBOARD_DEVNET_ADDRESS}::AggregatorInitAction::run`,
+      [
         HexString.ensure(SWITCHBOARD_STATE_ADDRESS).hex(),
         HexString.ensure(params.address).hex(),
         stringToHex(params.name ?? ""),
@@ -142,68 +226,158 @@ export class AggregatorAccount {
         params.varianceThresholdScale ?? 0,
         params.forceReportPeriod ?? 0,
         params.expiration ?? 0,
-        payer.address().hex(),
-
-        // values must be strings
-      ].map((value) => (typeof value === "string" ? value : value.toString())),
-    };
-
-    const txnRequest = await client.generateTransaction(
-      payer.address(),
-      payload
+        HexString.ensure(params.authority).hex(),
+      ]
     );
-    const signedTxn = await client.signTransaction(payer, txnRequest);
-    const transactionRes = await client.submitTransaction(signedTxn);
-    await client.waitForTransaction(transactionRes.hash);
+
+    return [tx, new Aggregator(client, params.address, payer)];
+  }
+
+  async addJob(params: AggregatorAddJobParams): Promise<string> {
+    if (!this.payer) {
+      throw "Add Job Error: No Payer Found";
+    }
+
+    return await sendAptosTx(
+      this.client,
+      this.payer,
+      `${SWITCHBOARD_DEVNET_ADDRESS}::AggregatorAddJobAction::run`,
+      [
+        HexString.ensure(SWITCHBOARD_STATE_ADDRESS).hex(),
+        HexString.ensure(this.address).hex(),
+        HexString.ensure(params.job).hex(),
+        params.weight || 0,
+      ]
+    );
+  }
+
+  async saveResult(params: AggregatorSaveResultParams): Promise<string> {
+    if (!this.payer) {
+      throw "Save Result Error: No Payer Found";
+    }
+
+    return await sendAptosTx(
+      this.client,
+      this.payer,
+      `${SWITCHBOARD_DEVNET_ADDRESS}::AggregatorAddJobAction::run`,
+      [
+        HexString.ensure(SWITCHBOARD_STATE_ADDRESS).hex(),
+        HexString.ensure(params.oracle_address).hex(),
+        HexString.ensure(params.aggregator_address).hex(),
+        params.oracle_idx,
+        params.value_num,
+        params.value_scale_factor,
+        params.value_neg,
+        stringToHex(params.jobs_checksum),
+      ]
+    );
+  }
+
+  async openRound(params: AggregatorOpenRoundParams): Promise<string> {
+    if (!this.payer) {
+      throw "Save Result Error: No Payer Found";
+    }
+
+    return await sendAptosTx(
+      this.client,
+      this.payer,
+      `${SWITCHBOARD_DEVNET_ADDRESS}::AggregatorAddJobAction::run`,
+      [
+        HexString.ensure(SWITCHBOARD_STATE_ADDRESS).hex(),
+        HexString.ensure(params.aggregator_address).hex(),
+      ]
+    );
   }
 }
 
-export class JobAccount {
-  static async init(client: AptosClient, payer: AptosAccount) {
-    const account1 = new AptosAccount();
-    // TS SDK support 3 types of transaction payloads: `ScriptFunction`, `Script` and `Module`.
-    // See https://aptos-labs.github.io/ts-sdk-doc/ for the details.
-    const scriptFunctionPayload = new TransactionPayloadScriptFunction(
-      ScriptFunction.natural(
-        // Fully qualified module name, `AccountAddress::ModuleName`
-        `${SWITCHBOARD_DEVNET_ADDRESS}::Switchboard::AggregatorInitAction`,
-        // Module function
-        "run",
-        [],
-        // Arguments for function `transfer`: receiver account address and amount to transfer
-        [BCS.b, BCS.bcsSerializeUint64(717)]
-      )
+export class Job extends SwitchboardResource {
+  constructor(
+    client: AptosClient,
+    address: MaybeHexString,
+    payer?: AptosAccount
+  ) {
+    super(client, address, payer);
+  }
+
+  /**
+   * Initialize a Job stored in the switchboard resource account
+   * @param client
+   * @param payer account that will be the authority of the job
+   * @param params JobInitParams initialization params
+   */
+  static async init(
+    client: AptosClient,
+    payer: AptosAccount,
+    params: JobInitParams
+  ): Promise<[string, Job]> {
+    /**
+     *  state_address: address,
+        addr: address,
+        name: vector<u8>,
+        metadata: vector<u8>,
+        authority: address,
+        data: vector<u8>
+     */
+    const tx = await sendAptosTx(
+      client,
+      payer,
+      `${SWITCHBOARD_DEVNET_ADDRESS}::JobInitAction::run`,
+      [
+        HexString.ensure(SWITCHBOARD_STATE_ADDRESS).hex(),
+        HexString.ensure(params.address).hex(),
+        stringToHex(params.name),
+        stringToHex(params.metadata),
+        HexString.ensure(params.authority).hex(),
+        stringToHex(params.data),
+      ]
     );
 
-    const [{ sequence_number: sequnceNumber }, chainId] = await Promise.all([
-      client.getAccount(account1.address()),
-      client.getChainId(),
-    ]);
+    return [tx, new Job(client, params.address, payer)];
+  }
+}
 
-    // See class definiton here
-    // https://aptos-labs.github.io/ts-sdk-doc/classes/TxnBuilderTypes.RawTransaction.html#constructor.
-    const rawTxn = new RawTransaction(
-      // Transaction sender account address
-      AccountAddress.fromHex(account1.address()),
-      BigInt(sequnceNumber),
-      scriptFunctionPayload,
-      // Max gas unit to spend
-      1000n,
-      // Gas price per unit
-      1n,
-      // Expiration timestamp. Transaction is discarded if it is not executed within 10 seconds from now.
-      BigInt(Math.floor(Date.now() / 1000) + 10),
-      new ChainId(chainId)
+export class Crank extends SwitchboardResource {
+  constructor(
+    client: AptosClient,
+    address: MaybeHexString,
+    payer?: AptosAccount
+  ) {
+    super(client, address, payer);
+  }
+
+  /**
+   * Initialize a Crank stored in the switchboard resource account
+   * @param client
+   * @param payer account that will be the authority of the Crank
+   * @param params CrankInitParams initialization params
+   */
+  static async init(
+    client: AptosClient,
+    payer: AptosAccount,
+    params: JobInitParams
+  ): Promise<[string, Job]> {
+    /**
+     *  state_address: address,
+        addr: address,
+        name: vector<u8>,
+        metadata: vector<u8>,
+        authority: address,
+        data: vector<u8>
+     */
+    const tx = await sendAptosTx(
+      client,
+      payer,
+      `${SWITCHBOARD_DEVNET_ADDRESS}::JobInitAction::run`,
+      [
+        HexString.ensure(SWITCHBOARD_STATE_ADDRESS).hex(),
+        HexString.ensure(params.address).hex(),
+        stringToHex(params.name),
+        stringToHex(params.metadata),
+        HexString.ensure(params.authority).hex(),
+        stringToHex(params.data),
+      ]
     );
 
-    // Sign the raw transaction with account1's private key
-    const bcsTxn = AptosClient.generateBCSTransaction(account1, rawTxn);
-
-    const transactionRes = await client.submitSignedBCSTransaction(bcsTxn);
-
-    await client.waitForTransaction(transactionRes.hash);
-
-    const signedTxn = await client.signTransaction(payer, txnRequest);
-    const res = await client.submitTransaction(signedTxn);
+    return [tx, new Job(client, params.address, payer)];
   }
 }
