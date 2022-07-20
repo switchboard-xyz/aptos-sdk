@@ -6,11 +6,6 @@ import {
   MaybeHexString,
 } from "aptos";
 
-const NODE_URL =
-  process.env.APTOS_NODE_URL || "https://fullnode.devnet.aptoslabs.com";
-const FAUCET_URL =
-  process.env.APTOS_FAUCET_URL || "https://faucet.devnet.aptoslabs.com";
-
 // Address that deployed the module
 const SWITCHBOARD_DEVNET_ADDRESS = "BLAHBLAHBLAH";
 
@@ -265,6 +260,7 @@ async function getTableItem(
 
 /**
  * Poll Events on Aptos
+ * @Note uncleared setTimeout calls will keep processes from ending organically (SIGTERM is needed)
  */
 export class EventPoller {
   client: AptosClient;
@@ -326,6 +322,60 @@ export class EventPoller {
   stop() {
     clearInterval(this.intervalId);
   }
+}
+
+// Returns a started event poller for aggregator updates
+async function onAggregatorUpdate(
+  client: AptosClient,
+  cb: (e: Types.Event) => void
+): Promise<EventPoller> {
+  const poller = new EventPoller(
+    client,
+    SWITCHBOARD_STATE_ADDRESS,
+    `${SWITCHBOARD_DEVNET_ADDRESS}::Switchboard<${SWITCHBOARD_DEVNET_ADDRESS}::Switchboard::State>`,
+    "aggregator_update_events",
+    1500,
+    cb
+  );
+
+  await poller.start();
+  return poller;
+}
+
+// Returns a started event poller for aggregator updates
+async function onAggregatorOpenRound(
+  client: AptosClient,
+  cb: (e: Types.Event) => void
+): Promise<EventPoller> {
+  const poller = new EventPoller(
+    client,
+    SWITCHBOARD_STATE_ADDRESS,
+    `${SWITCHBOARD_DEVNET_ADDRESS}::Switchboard<${SWITCHBOARD_DEVNET_ADDRESS}::Switchboard::State>`,
+    "aggregator_open_round_events",
+    1500,
+    cb
+  );
+
+  await poller.start();
+  return poller;
+}
+
+// Returns a started event poller for aggregator updates
+async function onAggregatorSaveResult(
+  client: AptosClient,
+  cb: (e: Types.Event) => void
+): Promise<EventPoller> {
+  const poller = new EventPoller(
+    client,
+    SWITCHBOARD_STATE_ADDRESS,
+    `${SWITCHBOARD_DEVNET_ADDRESS}::Switchboard<${SWITCHBOARD_DEVNET_ADDRESS}::Switchboard::State>`,
+    "aggregator_save_result_events",
+    1500,
+    cb
+  );
+
+  await poller.start();
+  return poller;
 }
 
 /**
