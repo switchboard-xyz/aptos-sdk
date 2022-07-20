@@ -1,14 +1,10 @@
 import {
   AptosClient,
   AptosAccount,
-  FaucetClient,
-  BCS,
-  TxnBuilderTypes,
   Types,
   HexString,
   MaybeHexString,
 } from "aptos";
-import assert from "assert";
 
 const NODE_URL =
   process.env.APTOS_NODE_URL || "https://fullnode.devnet.aptoslabs.com";
@@ -20,33 +16,6 @@ const SWITCHBOARD_DEVNET_ADDRESS = "BLAHBLAHBLAH";
 
 // Address of the account that owns the Switchboard resource
 const SWITCHBOARD_STATE_ADDRESS = "Probable the above";
-
-const {
-  AccountAddress,
-  TypeTagStruct,
-  ScriptFunction,
-  StructTag,
-  TransactionPayloadScriptFunction,
-  RawTransaction,
-  ChainId,
-} = TxnBuilderTypes;
-
-/**
- * Aggregator
- * init
- * addJob
- * openRound
- *
- * Job
- * init
- *
- * Oracle
- * saveResult
- *
- * Crank
- *
- *
- */
 
 interface AggregatorAddJobParams {
   job: string;
@@ -128,6 +97,46 @@ interface CrankPopParams {
 interface CrankPushParams {
   crankAddress: string;
   aggregatorAddress: string;
+}
+
+interface OracleInitParams {
+  address: MaybeHexString;
+  name: string;
+  metadata: string;
+  oracleAuthority: MaybeHexString;
+  queue: MaybeHexString;
+}
+
+interface OracleQueueInitParams {
+  address: MaybeHexString;
+  name: string;
+  metadata: string;
+  authority: MaybeHexString;
+  oracleTimeout: number;
+  reward: number;
+  minStake: number;
+  slashingEnabled: boolean;
+
+  // we'll probably wanna build this automatically
+  varianceToleranceMultiplierValue: number;
+  varianceToleranceMultiplierScale: number;
+  //
+  feedProbationPeriod: number;
+  currIdx: number;
+  size: number;
+  gcIdx: number;
+  consecutiveFeedFailureLimit: number;
+  consecutiveOracleFailureLimit: number;
+  unpermissionedFeedsEnabled: boolean;
+  unpermissionedVrfEnabled: boolean;
+  curatorRewardCutValue: number;
+  curatorRewardCutScale: number;
+  lockLeaseFunding: boolean;
+
+  // this needs to be swapped with Coin or something later
+  mint: MaybeHexString;
+  enableBufferRelayers: boolean;
+  maxSize: number;
 }
 
 /** Convert string to hex-encoded utf-8 bytes. */
@@ -310,14 +319,6 @@ export class Job extends SwitchboardResource {
     payer: AptosAccount,
     params: JobInitParams
   ): Promise<[string, Job]> {
-    /**
-     *  state_address: address,
-        address: address,
-        name: vector<u8>,
-        metadata: vector<u8>,
-        authority: address,
-        data: vector<u8>
-     */
     const tx = await sendAptosTx(
       client,
       payer,
@@ -369,8 +370,6 @@ export class Crank extends SwitchboardResource {
 
     return [tx, new Crank(client, params.address, payer)];
   }
-  ///   push public fun run(account: &signer, state_address: address, crank_address: address, aggregator_address) {
-  /// pop     public fun run(account: &signer, state_address: address, crank_address: address) {
 
   /**
    * Push an aggregator to a Crank
@@ -411,5 +410,99 @@ export class Crank extends SwitchboardResource {
         HexString.ensure(params.crankAddress).hex(),
       ]
     );
+  }
+}
+
+export class Oracle extends SwitchboardResource {
+  constructor(
+    client: AptosClient,
+    address: MaybeHexString,
+    payer?: AptosAccount
+  ) {
+    super(client, address, payer);
+  }
+
+  /**
+   * Initialize a Oracle stored in the switchboard resource account
+   * @param client
+   * @param payer
+   * @param params Oracle initialization params
+   */
+  static async init(
+    client: AptosClient,
+    payer: AptosAccount,
+    params: OracleInitParams
+  ): Promise<[string, Job]> {
+    const tx = await sendAptosTx(
+      client,
+      payer,
+      `${SWITCHBOARD_DEVNET_ADDRESS}::OracleInitAction::run`,
+      [
+        HexString.ensure(SWITCHBOARD_STATE_ADDRESS).hex(),
+        HexString.ensure(params.address).hex(),
+        stringToHex(params.name),
+        stringToHex(params.metadata),
+        HexString.ensure(params.oracleAuthority).hex(),
+        HexString.ensure(params.queue).hex(),
+      ]
+    );
+
+    return [tx, new Oracle(client, params.address, payer)];
+  }
+}
+
+export class OracleQueue extends SwitchboardResource {
+  constructor(
+    client: AptosClient,
+    address: MaybeHexString,
+    payer?: AptosAccount
+  ) {
+    super(client, address, payer);
+  }
+
+  /**
+   * Initialize a OracleQueue stored in the switchboard resource account
+   * @param client
+   * @param payer
+   * @param params OracleQueue initialization params
+   */
+  static async init(
+    client: AptosClient,
+    payer: AptosAccount,
+    params: OracleQueueInitParams
+  ): Promise<[string, Job]> {
+    const tx = await sendAptosTx(
+      client,
+      payer,
+      `${SWITCHBOARD_DEVNET_ADDRESS}::OracleInitAction::run`,
+      [
+        HexString.ensure(SWITCHBOARD_STATE_ADDRESS).hex(),
+        HexString.ensure(params.address).hex(),
+        stringToHex(params.name),
+        stringToHex(params.metadata),
+        params.oracleTimeout,
+        params.reward,
+        params.minStake,
+        params.slashingEnabled,
+        params.varianceToleranceMultiplierValue,
+        params.varianceToleranceMultiplierScale,
+        params.feedProbationPeriod,
+        params.currIdx,
+        params.size,
+        params.gcIdx,
+        params.consecutiveFeedFailureLimit,
+        params.consecutiveOracleFailureLimit,
+        params.unpermissionedFeedsEnabled,
+        params.unpermissionedVrfEnabled,
+        params.curatorRewardCutValue,
+        params.curatorRewardCutScale,
+        params.lockLeaseFunding,
+        params.mint,
+        params.enableBufferRelayers,
+        params.maxSize,
+      ]
+    );
+
+    return [tx, new Oracle(client, params.address, payer)];
   }
 }
