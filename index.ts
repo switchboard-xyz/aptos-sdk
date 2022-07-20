@@ -73,7 +73,7 @@ interface AggregatorInitParams {
 interface AggregatorSaveResultParams {
   //state_address: address,
   oracle_address: MaybeHexString;
-  aggregator_address: MaybeHexString;
+  aggregatorAddress: MaybeHexString;
   oracle_idx: number;
   error: boolean;
   // this should probably be automatically generated
@@ -84,7 +84,7 @@ interface AggregatorSaveResultParams {
 }
 
 interface AggregatorOpenRoundParams {
-  aggregator_address: MaybeHexString;
+  aggregatorAddress: MaybeHexString;
 }
 
 interface JobInitParams {
@@ -122,12 +122,12 @@ interface CrankInitParams {
 }
 
 interface CrankPopParams {
-  crank_address: string;
+  crankAddress: string;
 }
 
 interface CrankPushParams {
-  crank_address: string;
-  aggregator_address: string;
+  crankAddress: string;
+  aggregatorAddress: string;
 }
 
 /** Convert string to hex-encoded utf-8 bytes. */
@@ -263,7 +263,7 @@ export class Aggregator extends SwitchboardResource {
       [
         HexString.ensure(SWITCHBOARD_STATE_ADDRESS).hex(),
         HexString.ensure(params.oracle_address).hex(),
-        HexString.ensure(params.aggregator_address).hex(),
+        HexString.ensure(params.aggregatorAddress).hex(),
         params.oracle_idx,
         params.value_num,
         params.value_scale_factor,
@@ -284,7 +284,7 @@ export class Aggregator extends SwitchboardResource {
       `${SWITCHBOARD_DEVNET_ADDRESS}::AggregatorAddJobAction::run`,
       [
         HexString.ensure(SWITCHBOARD_STATE_ADDRESS).hex(),
-        HexString.ensure(params.aggregator_address).hex(),
+        HexString.ensure(params.aggregatorAddress).hex(),
       ]
     );
   }
@@ -368,5 +368,48 @@ export class Crank extends SwitchboardResource {
     );
 
     return [tx, new Crank(client, params.address, payer)];
+  }
+  ///   push public fun run(account: &signer, state_address: address, crank_address: address, aggregator_address) {
+  /// pop     public fun run(account: &signer, state_address: address, crank_address: address) {
+
+  /**
+   * Push an aggregator to a Crank
+   * @param params CrankPushParams
+   */
+  async crankPush(params: CrankPushParams): Promise<string> {
+    if (!this.payer) {
+      throw "Save Result Error: No Payer Found";
+    }
+
+    return await sendAptosTx(
+      this.client,
+      this.payer,
+      `${SWITCHBOARD_DEVNET_ADDRESS}::CrankPushAction::run`,
+      [
+        HexString.ensure(SWITCHBOARD_STATE_ADDRESS).hex(),
+        HexString.ensure(params.crankAddress).hex(),
+        HexString.ensure(params.aggregatorAddress).hex(),
+      ]
+    );
+  }
+
+  /**
+   * Pop an aggregator off the Crank
+   * @param params CrankPopParams
+   */
+  async crankPop(params: CrankPopParams): Promise<string> {
+    if (!this.payer) {
+      throw "Save Result Error: No Payer Found";
+    }
+
+    return await sendAptosTx(
+      this.client,
+      this.payer,
+      `${SWITCHBOARD_DEVNET_ADDRESS}::CrankPopAction::run`,
+      [
+        HexString.ensure(SWITCHBOARD_STATE_ADDRESS).hex(),
+        HexString.ensure(params.crankAddress).hex(),
+      ]
+    );
   }
 }
