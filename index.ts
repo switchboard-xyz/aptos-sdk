@@ -117,8 +117,8 @@ interface AggregatorSetConfigParams {
 }
 
 interface CrankInitParams {
-  addr: string;
-  queue_address: string;
+  address: string;
+  queueAddress: string;
 }
 
 interface CrankPopParams {
@@ -198,7 +198,7 @@ export class Aggregator extends SwitchboardResource {
   /**
    * Initialize an Aggregator
    * @param client
-   * @param payer account that will be the authority of the aggregator
+   * @param payer
    * @param params AggregatorInitParams initialization params
    */
   static async init(
@@ -302,7 +302,7 @@ export class Job extends SwitchboardResource {
   /**
    * Initialize a Job stored in the switchboard resource account
    * @param client
-   * @param payer account that will be the authority of the job
+   * @param payer
    * @param params JobInitParams initialization params
    */
   static async init(
@@ -312,7 +312,7 @@ export class Job extends SwitchboardResource {
   ): Promise<[string, Job]> {
     /**
      *  state_address: address,
-        addr: address,
+        address: address,
         name: vector<u8>,
         metadata: vector<u8>,
         authority: address,
@@ -354,30 +354,19 @@ export class Crank extends SwitchboardResource {
   static async init(
     client: AptosClient,
     payer: AptosAccount,
-    params: JobInitParams
-  ): Promise<[string, Job]> {
-    /**
-     *  state_address: address,
-        addr: address,
-        name: vector<u8>,
-        metadata: vector<u8>,
-        authority: address,
-        data: vector<u8>
-     */
+    params: CrankInitParams
+  ): Promise<[string, Crank]> {
     const tx = await sendAptosTx(
       client,
       payer,
-      `${SWITCHBOARD_DEVNET_ADDRESS}::JobInitAction::run`,
+      `${SWITCHBOARD_DEVNET_ADDRESS}::CrankInitAction::run`,
       [
         HexString.ensure(SWITCHBOARD_STATE_ADDRESS).hex(),
         HexString.ensure(params.address).hex(),
-        stringToHex(params.name),
-        stringToHex(params.metadata),
-        HexString.ensure(params.authority).hex(),
-        stringToHex(params.data),
+        params.queueAddress,
       ]
     );
 
-    return [tx, new Job(client, params.address, payer)];
+    return [tx, new Crank(client, params.address, payer)];
   }
 }
