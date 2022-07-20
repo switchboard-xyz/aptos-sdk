@@ -12,12 +12,12 @@ const SWITCHBOARD_DEVNET_ADDRESS = "BLAHBLAHBLAH";
 // Address of the account that owns the Switchboard resource
 const SWITCHBOARD_STATE_ADDRESS = "Probable the above";
 
-interface AggregatorAddJobParams {
+export interface AggregatorAddJobParams {
   job: string;
   weight?: number;
 }
 
-interface AggregatorInitParams {
+export interface AggregatorInitParams {
   address: MaybeHexString; // arbitrary key associated with aggregator @NOTE: Cannot be altered
   authority: MaybeHexString; // owner of aggregator
   name?: string;
@@ -34,7 +34,7 @@ interface AggregatorInitParams {
   expiration?: number;
 }
 
-interface AggregatorSaveResultParams {
+export interface AggregatorSaveResultParams {
   //state_address: address,
   oracle_address: MaybeHexString;
   aggregatorAddress: MaybeHexString;
@@ -47,11 +47,11 @@ interface AggregatorSaveResultParams {
   jobs_checksum: string;
 }
 
-interface AggregatorOpenRoundParams {
+export interface AggregatorOpenRoundParams {
   aggregatorAddress: MaybeHexString;
 }
 
-interface JobInitParams {
+export interface JobInitParams {
   address: MaybeHexString;
   name: string;
   metadata: string;
@@ -59,12 +59,12 @@ interface JobInitParams {
   data: string;
 }
 
-interface AggregatorRemoveJobParams {
+export interface AggregatorRemoveJobParams {
   aggregatorAddress: string;
   job: string;
 }
 
-interface AggregatorSetConfigParams {
+export interface AggregatorSetConfigParams {
   address: string;
   authority: string;
   name?: string;
@@ -80,21 +80,21 @@ interface AggregatorSetConfigParams {
   expiration?: number;
 }
 
-interface CrankInitParams {
+export interface CrankInitParams {
   address: string;
   queueAddress: string;
 }
 
-interface CrankPopParams {
+export interface CrankPopParams {
   crankAddress: string;
 }
 
-interface CrankPushParams {
+export interface CrankPushParams {
   crankAddress: string;
   aggregatorAddress: string;
 }
 
-interface OracleInitParams {
+export interface OracleInitParams {
   address: MaybeHexString;
   name: string;
   metadata: string;
@@ -102,7 +102,7 @@ interface OracleInitParams {
   queue: MaybeHexString;
 }
 
-interface OracleQueueInitParams {
+export interface OracleQueueInitParams {
   address: MaybeHexString;
   name: string;
   metadata: string;
@@ -147,7 +147,7 @@ function stringToHex(text: string) {
  * @param args Arguments for method (converts numbers to strings)
  * @returns
  */
-async function sendAptosTx(
+export async function sendAptosTx(
   client: AptosClient,
   signer: AptosAccount,
   method: string,
@@ -177,43 +177,43 @@ interface TableType {
   valueType: string;
 }
 
-export const AggregatorTable: TableType = {
+const AggregatorTable: TableType = {
   stateKey: `aggregators`,
   keyType: `address`,
   valueType: `${SWITCHBOARD_DEVNET_ADDRESS}::Aggregator::Aggregator`,
 };
 
-export const JobTable: TableType = {
+const JobTable: TableType = {
   stateKey: `jobs`,
   keyType: `address`,
   valueType: `${SWITCHBOARD_DEVNET_ADDRESS}::Job::Job`,
 };
 
-export const CrankTable: TableType = {
+const CrankTable: TableType = {
   stateKey: `cranks`,
   keyType: `address`,
   valueType: `${SWITCHBOARD_DEVNET_ADDRESS}::Crank::Crank`,
 };
 
-export const OracleTable: TableType = {
+const OracleTable: TableType = {
   stateKey: `oracles`,
   keyType: `address`,
   valueType: `${SWITCHBOARD_DEVNET_ADDRESS}::Oracle::Oracle`,
 };
 
-export const OracleQueueTable: TableType = {
+const OracleQueueTable: TableType = {
   stateKey: `oracle_queues`,
   keyType: `address`,
   valueType: `${SWITCHBOARD_DEVNET_ADDRESS}::OracleQueue::OracleQueue`,
 };
 
-export const LeaseTable: TableType = {
+const LeaseTable: TableType = {
   stateKey: `leases`,
   keyType: `vector<u8>`,
   valueType: `${SWITCHBOARD_DEVNET_ADDRESS}::Lease::Lease`,
 };
 
-export const PermissionTable: TableType = {
+const PermissionTable: TableType = {
   stateKey: `permissions`,
   keyType: `vector<u8>`,
   valueType: `${SWITCHBOARD_DEVNET_ADDRESS}::Permission::Permission`,
@@ -325,7 +325,7 @@ export class EventPoller {
 }
 
 // Returns a started event poller for aggregator updates
-async function onAggregatorUpdate(
+export async function onAggregatorUpdate(
   client: AptosClient,
   cb: (e: Types.Event) => void
 ): Promise<EventPoller> {
@@ -343,7 +343,7 @@ async function onAggregatorUpdate(
 }
 
 // Returns a started event poller for aggregator updates
-async function onAggregatorOpenRound(
+export async function onAggregatorOpenRound(
   client: AptosClient,
   cb: (e: Types.Event) => void
 ): Promise<EventPoller> {
@@ -361,7 +361,7 @@ async function onAggregatorOpenRound(
 }
 
 // Returns a started event poller for aggregator updates
-async function onAggregatorSaveResult(
+export async function onAggregatorSaveResult(
   client: AptosClient,
   cb: (e: Types.Event) => void
 ): Promise<EventPoller> {
@@ -589,7 +589,7 @@ export class Crank extends SwitchboardResource {
    * Push an aggregator to a Crank
    * @param params CrankPushParams
    */
-  async crankPush(params: CrankPushParams): Promise<string> {
+  async push(params: CrankPushParams): Promise<string> {
     if (!this.payer) {
       throw "Save Result Error: No Payer Found";
     }
@@ -610,7 +610,7 @@ export class Crank extends SwitchboardResource {
    * Pop an aggregator off the Crank
    * @param params CrankPopParams
    */
-  async crankPop(params: CrankPopParams): Promise<string> {
+  async pop(params: CrankPopParams): Promise<string> {
     if (!this.payer) {
       throw "Save Result Error: No Payer Found";
     }
