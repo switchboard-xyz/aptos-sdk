@@ -1,6 +1,7 @@
 {
   "dependencies": {
-    "aptos": "^1.2.0"
+    "aptos": "^1.2.0",
+    "big.js": "^6.2.1"
   },
   "devDependencies": {
     "@types/node": "^18.0.6"

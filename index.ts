@@ -5,12 +5,40 @@ import {
   HexString,
   MaybeHexString,
 } from "aptos";
+import Big from "big.js";
 
 // Address that deployed the module
 const SWITCHBOARD_DEVNET_ADDRESS = "BLAHBLAHBLAH";
 
 // Address of the account that owns the Switchboard resource
 const SWITCHBOARD_STATE_ADDRESS = "Probable the above";
+
+class AptosDecimal {
+  constructor(
+    readonly mantissa: string,
+    readonly scale: number,
+    readonly neg: boolean
+  ) {}
+
+  toBig(): Big {
+    let result = new Big(this.mantissa);
+    if (this.neg === true) {
+      result = result.mul(-1);
+    }
+    const TEN = new Big(10);
+    return result.div(TEN.pow(this.scale));
+  }
+
+  static fromBig(val: Big): AptosDecimal {
+    const value = val.c.slice();
+    let e = val.e;
+    while (e > 18) {
+      value.pop();
+      e -= 1;
+    }
+    return new AptosDecimal(value.join(""), e, val.s === -1);
+  }
+}
 
 export interface AggregatorAddJobParams {
   job: string;
@@ -435,9 +463,8 @@ export class Aggregator extends SwitchboardResource {
       `${SWITCHBOARD_DEVNET_ADDRESS}::AggregatorInitAction::run`,
       [
         HexString.ensure(SWITCHBOARD_STATE_ADDRESS).hex(),
-        HexString.ensure(params.address).hex(),
-        stringToHex(params.name ?? ""),
-        stringToHex(params.metadata ?? ""),
+        Buffer.from(params.name ?? "").toString("hex"),
+        Buffer.from(params.metadata ?? "").toString("hex"),
         params.queueAddress
           ? HexString.ensure(params.queueAddress).hex()
           : HexString.ensure("0x0").hex(),
@@ -488,6 +515,7 @@ export class Aggregator extends SwitchboardResource {
         HexString.ensure(params.oracle_address).hex(),
         HexString.ensure(params.aggregatorAddress).hex(),
         params.oracle_idx,
+        params.error,
         params.value_num,
         params.value_scale_factor,
         params.value_neg,
@@ -539,11 +567,11 @@ export class Job extends SwitchboardResource {
       `${SWITCHBOARD_DEVNET_ADDRESS}::JobInitAction::run`,
       [
         HexString.ensure(SWITCHBOARD_STATE_ADDRESS).hex(),
-        HexString.ensure(params.address).hex(),
         stringToHex(params.name),
         stringToHex(params.metadata),
         HexString.ensure(params.authority).hex(),
         stringToHex(params.data),
+        // HexString.ensure(params.address).hex(),
       ]
     );
 
@@ -653,7 +681,7 @@ export class Oracle extends SwitchboardResource {
       `${SWITCHBOARD_DEVNET_ADDRESS}::OracleInitAction::run`,
       [
         HexString.ensure(SWITCHBOARD_STATE_ADDRESS).hex(),
-        HexString.ensure(params.address).hex(),
+        //HexString.ensure(params.address).hex(),
         stringToHex(params.name),
         stringToHex(params.metadata),
         HexString.ensure(params.oracleAuthority).hex(),
@@ -691,7 +719,7 @@ export class OracleQueue extends SwitchboardResource {
       `${SWITCHBOARD_DEVNET_ADDRESS}::OracleInitAction::run`,
       [
         HexString.ensure(SWITCHBOARD_STATE_ADDRESS).hex(),
-        HexString.ensure(params.address).hex(),
+        //HexString.ensure(params.address).hex(),
         stringToHex(params.name),
         stringToHex(params.metadata),
         params.oracleTimeout,
@@ -716,6 +744,30 @@ export class OracleQueue extends SwitchboardResource {
         params.maxSize,
       ]
     );
+
+    // [
+    //   state.address().hex(), // addr
+    //   Buffer.from("").toString("hex"), // name
+    //   Buffer.from("").toString("hex"), // metadata
+    //   authority.address().hex(), // authority
+    //   "120", // oracle_timeout
+    //   "10000", // reward
+    //   "0", // min_stake
+    //   false, // slashing enabled
+    //   "0", // variance_tolerance_multiplier_value
+    //   0, // variance_tolerance_multiplier_scale
+    //   "0", // feed_probation_period
+    //   "0", // consecutive_feed_failure_limit
+    //   "0", // consecutive_oracle_failure_limit
+    //   true, // unpermissioned_feeds_enabled
+    //   true, // unpermissioned_vrf_enabled
+    //   "0", // curator reward cut value
+    //   0, // curator reward cut scale
+    //   false, // lock_lease_funding
+    //   authority.address().hex(), // mint
+    //   false, // enable buffer relayers
+    //   "1000", // max_size
+    // ]
 
     return [tx, new OracleQueue(client, params.address, payer)];
   }
