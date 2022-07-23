@@ -323,11 +323,14 @@ export class EventPoller {
         }
       );
       for (let e of events) {
-        // increment sequence number
-        this.lastSequenceNumber = e.sequence_number;
+        // fire off cb if new sequence number
+        if (Number(this.lastSequenceNumber) + 1 === Number(e.sequence_number)) {
+          // increment sequence number
+          this.lastSequenceNumber = e.sequence_number;
 
-        // fire off the callback for all new events
-        await this.cb(e);
+          // fire off the callback for all new events
+          await this.cb(e);
+        }
       }
     }, this.pollingIntervalMs);
   }
@@ -471,7 +474,21 @@ export class Aggregator {
     ).data;
   }
 
-  async loadJobs() {}
+  async loadJobs(): Promise<unknown[]> {
+    const aggregatorData = await this.loadData();
+    const jobs: unknown[] = [];
+    for (let job of aggregatorData.job_keys) {
+      jobs.push(
+        (
+          await this.client.getAccountResource(
+            HexString.ensure(job).hex(),
+            `${HexString.ensure(SWITCHBOARD_DEVNET_ADDRESS).hex()}::Job::Job`
+          )
+        ).data
+      );
+    }
+    return jobs;
+  }
 
   /**
    * Initialize an Aggregator
@@ -569,13 +586,20 @@ export class Aggregator {
   }
 }
 
-export class Job extends SwitchboardResource {
+export class Job {
   constructor(
-    client: AptosClient,
-    address: MaybeHexString,
-    payer?: AptosAccount
-  ) {
-    super(JobTable, client, address, payer);
+    readonly client: AptosClient,
+    readonly address: MaybeHexString,
+    readonly payer?: AptosAccount
+  ) {}
+
+  async loadData(): Promise<any> {
+    return (
+      await this.client.getAccountResource(
+        HexString.ensure(this.address).hex(),
+        `${HexString.ensure(SWITCHBOARD_DEVNET_ADDRESS).hex()}::Job::Job`
+      )
+    ).data;
   }
 
   /**

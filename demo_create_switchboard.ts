@@ -39,10 +39,11 @@ import {
 
   // Event polling
   onAggregatorOpenRound,
+  onAggregatorUpdate,
   // onAggregatorSaveResult,
   // onAggregatorUpdate,
 } from ".";
-
+import fetch from "node-fetch";
 const NODE_URL =
   process.env.APTOS_NODE_URL ?? "https://fullnode.devnet.aptoslabs.com";
 const FAUCET_URL =
@@ -201,22 +202,78 @@ const FAUCET_URL =
   });
   console.log(`Save result tx: ${saveResultTxSig}`);
 
-  const onUpdatePoller = onAggregatorOpenRound(client, async (e) => {
-    console.log(`Aggregator Open Round Event:`, e);
-    // (await onUpdatePoller).stop();
+  const onOpenRoundPoller = onAggregatorOpenRound(client, async (e) => {
+    console.log(e.sequence_number);
+
+    // The event data includes Job Pubkeys, so grab the Job Data
+    const jobsData = (
+      await Promise.all(
+        e.data?.job_keys?.map((jobAddress: any) =>
+          new Job(client, jobAddress).loadData()
+        )
+      )
+    ).map((job) => {
+      // slice off the first two because move prepends 0x to everything :|
+      let jobData = Buffer.from(job.data.slice(2), "hex");
+      return sbv2.OracleJob.decodeDelimited(jobData);
+    }); // just grab the OracleJob[]
+
+    // fake it till you make it, call the task runner
+    const response = await fetch(`https://api.switchboard.xyz/api/test`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ jobs: jobsData }),
+    });
+
+    if (!response.ok) console.error(`[Task runner] Error testing jobs json.`);
+    const json = await response.json();
+    console.log(json);
+    // // save the aggregator result
+    // await aggregator.saveResult({
+    //   oracle_address: oracle.address,
+    //   oracle_idx: 0,
+    //   error: false,
+    //   value_num: Number(json.result.split(".")[0]),
+    //   value_scale_factor: 0,
+    //   value_neg: false,
+    //   jobs_checksum: "",
+    // });
   });
 
-  console.log("Starting 5 open rounds");
+  /**
+   * Listen to Aggregator Update Calls
+   *
+   */
+
+  const updatePoller = onAggregatorUpdate(client, async (e) => {
+    console.log(`NEW RESULT:`, e.data);
+  });
+
+  /**
+   * Run Updates
+   *
+   */
+
+  console.log("Starting open rounds");
   let i = 5;
   while (i--) {
-    await new Promise((r) => setTimeout(r, 1000));
+    // every 5 seconds
+    await new Promise((r) => setTimeout(r, 10000));
     await aggregator.openRound();
   }
-  (await onUpdatePoller).stop();
 
+  // close out listeners so process can end
+  (await onOpenRoundPoller).stop();
+  (await updatePoller).stop();
+
+  /**
+   * Log Data Objects
+   *
+   */
   console.log("logging all data objects");
   console.log("Aggregator:", await aggregator.loadData());
   console.log("Job:", await job.loadData());
   console.log("Oracle", await oracle.loadData());
   console.log("OracleQueue", await queue.loadData());
+  console.log("Load aggregator jobs data", await aggregator.loadJobs());
 })();
