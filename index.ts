@@ -8,12 +8,14 @@ import {
 import Big from "big.js";
 
 // Address that deployed the module
-const SWITCHBOARD_DEVNET_ADDRESS = "BLAHBLAHBLAH";
+const SWITCHBOARD_DEVNET_ADDRESS =
+  "0x348ecb66a5d9edab8d175f647d5e99d6962803da7f5d3d2eb839387aeb118300";
 
 // Address of the account that owns the Switchboard resource
-const SWITCHBOARD_STATE_ADDRESS = "Probable the above";
+const SWITCHBOARD_STATE_ADDRESS =
+  "0x348ecb66a5d9edab8d175f647d5e99d6962803da7f5d3d2eb839387aeb118300";
 
-class AptosDecimal {
+export class AptosDecimal {
   constructor(
     readonly mantissa: string,
     readonly scale: number,
@@ -41,7 +43,7 @@ class AptosDecimal {
 }
 
 export interface AggregatorAddJobParams {
-  job: string;
+  job: MaybeHexString;
   weight?: number;
 }
 
@@ -65,7 +67,6 @@ export interface AggregatorInitParams {
 export interface AggregatorSaveResultParams {
   //state_address: address,
   oracle_address: MaybeHexString;
-  aggregatorAddress: MaybeHexString;
   oracle_idx: number;
   error: boolean;
   // this should probably be automatically generated
@@ -75,12 +76,7 @@ export interface AggregatorSaveResultParams {
   jobs_checksum: string;
 }
 
-export interface AggregatorOpenRoundParams {
-  aggregatorAddress: MaybeHexString;
-}
-
 export interface JobInitParams {
-  address: MaybeHexString;
   name: string;
   metadata: string;
   authority: MaybeHexString;
@@ -126,7 +122,7 @@ export interface OracleInitParams {
   address: MaybeHexString;
   name: string;
   metadata: string;
-  oracleAuthority: MaybeHexString;
+  authority: MaybeHexString;
   queue: MaybeHexString;
 }
 
@@ -139,15 +135,9 @@ export interface OracleQueueInitParams {
   reward: number;
   minStake: number;
   slashingEnabled: boolean;
-
-  // we'll probably wanna build this automatically
   varianceToleranceMultiplierValue: number;
   varianceToleranceMultiplierScale: number;
-  //
   feedProbationPeriod: number;
-  currIdx: number;
-  size: number;
-  gcIdx: number;
   consecutiveFeedFailureLimit: number;
   consecutiveOracleFailureLimit: number;
   unpermissionedFeedsEnabled: boolean;
@@ -185,9 +175,7 @@ export async function sendAptosTx(
     type: "script_function_payload",
     function: method,
     type_arguments: [],
-    arguments: args.map((value) =>
-      typeof value === "string" ? value : value.toString()
-    ),
+    arguments: args,
   };
   const txnRequest = await client.generateTransaction(
     signer.address(),
@@ -204,12 +192,6 @@ interface TableType {
   keyType: string;
   valueType: string;
 }
-
-const AggregatorTable: TableType = {
-  stateKey: `aggregators`,
-  keyType: `address`,
-  valueType: `${SWITCHBOARD_DEVNET_ADDRESS}::Aggregator::Aggregator`,
-};
 
 const JobTable: TableType = {
   stateKey: `jobs`,
@@ -260,7 +242,7 @@ async function getTableItem(
 ): Promise<unknown | undefined> {
   // get table resource
   const switchboardTableResource = await client.getAccountResource(
-    HexString.ensure(SWITCHBOARD_STATE_ADDRESS).hex(),
+    SWITCHBOARD_STATE_ADDRESS,
     `${SWITCHBOARD_DEVNET_ADDRESS}::Switchboard::State`
   );
 
@@ -292,13 +274,13 @@ async function getTableItem(
  */
 export class EventPoller {
   client: AptosClient;
-  intervalId: ReturnType<typeof setInterval>;
   cb: (event: Types.Event) => void; // some effect will happen on event
   address: MaybeHexString;
   eventHandleStruct: Types.MoveStructTagId;
   fieldName: string;
   pollingIntervalMs: number;
   lastSequenceNumber: string = "";
+  intervalId?: ReturnType<typeof setInterval>;
 
   constructor(
     client: AptosClient,
@@ -317,16 +299,19 @@ export class EventPoller {
   }
 
   async start() {
-    // Get the start sequence number in the EVENT STREAM, defaulting to the latest event.
-    const [{ sequence_number }] = await this.client.getEventsByEventHandle(
-      this.address,
-      this.eventHandleStruct,
-      this.fieldName,
-      { limit: 1 }
-    );
-
-    // type for this is string for some reason
-    this.lastSequenceNumber = sequence_number;
+    try {
+      // Get the start sequence number in the EVENT STREAM, defaulting to the latest event.
+      const [{ sequence_number }] = await this.client.getEventsByEventHandle(
+        this.address,
+        this.eventHandleStruct,
+        this.fieldName,
+        { limit: 1 }
+      );
+      this.lastSequenceNumber = sequence_number;
+    } catch (e) {
+      // type for this is string for some reason
+      this.lastSequenceNumber = "0";
+    }
 
     this.intervalId = setInterval(async () => {
       const events = await this.client.getEventsByEventHandle(
@@ -342,7 +327,7 @@ export class EventPoller {
         this.lastSequenceNumber = e.sequence_number;
 
         // fire off the callback for all new events
-        this.cb(e);
+        await this.cb(e);
       }
     }, this.pollingIntervalMs);
   }
@@ -360,7 +345,7 @@ export async function onAggregatorUpdate(
   const poller = new EventPoller(
     client,
     SWITCHBOARD_STATE_ADDRESS,
-    `${SWITCHBOARD_DEVNET_ADDRESS}::Switchboard<${SWITCHBOARD_DEVNET_ADDRESS}::Switchboard::State>`,
+    `${SWITCHBOARD_DEVNET_ADDRESS}::Switchboard::State`,
     "aggregator_update_events",
     1500,
     cb
@@ -378,7 +363,7 @@ export async function onAggregatorOpenRound(
   const poller = new EventPoller(
     client,
     SWITCHBOARD_STATE_ADDRESS,
-    `${SWITCHBOARD_DEVNET_ADDRESS}::Switchboard<${SWITCHBOARD_DEVNET_ADDRESS}::Switchboard::State>`,
+    `${SWITCHBOARD_DEVNET_ADDRESS}::Switchboard::State`,
     "aggregator_open_round_events",
     1500,
     cb
@@ -396,7 +381,7 @@ export async function onAggregatorSaveResult(
   const poller = new EventPoller(
     client,
     SWITCHBOARD_STATE_ADDRESS,
-    `${SWITCHBOARD_DEVNET_ADDRESS}::Switchboard<${SWITCHBOARD_DEVNET_ADDRESS}::Switchboard::State>`,
+    `${SWITCHBOARD_DEVNET_ADDRESS}::Switchboard::State`,
     "aggregator_save_result_events",
     1500,
     cb
@@ -437,14 +422,56 @@ class SwitchboardResource {
   }
 }
 
-export class Aggregator extends SwitchboardResource {
+export class State {
   constructor(
+    readonly client: AptosClient,
+    readonly address: MaybeHexString,
+    readonly payer: AptosAccount
+  ) {}
+
+  static async init(
     client: AptosClient,
-    address: MaybeHexString,
-    payer?: AptosAccount
-  ) {
-    super(AggregatorTable, client, address, payer);
+    payer: AptosAccount
+  ): Promise<[string, State]> {
+    const tx = await sendAptosTx(
+      client,
+      payer,
+      `${SWITCHBOARD_DEVNET_ADDRESS}::SwitchboardInitAction::run`,
+      []
+    );
+
+    return [tx, new State(client, payer.address(), payer)];
   }
+
+  async loadData(): Promise<any> {
+    return (
+      await this.client.getAccountResource(
+        this.address,
+        `${SWITCHBOARD_STATE_ADDRESS}::Switchboard::State`
+      )
+    ).data;
+  }
+}
+
+export class Aggregator {
+  constructor(
+    readonly client: AptosClient,
+    readonly address: MaybeHexString,
+    readonly payer?: AptosAccount
+  ) {}
+
+  async loadData(): Promise<any> {
+    return (
+      await this.client.getAccountResource(
+        HexString.ensure(this.address).hex(),
+        `${HexString.ensure(
+          SWITCHBOARD_DEVNET_ADDRESS
+        ).hex()}::Aggregator::Aggregator`
+      )
+    ).data;
+  }
+
+  async loadJobs() {}
 
   /**
    * Initialize an Aggregator
@@ -468,14 +495,15 @@ export class Aggregator extends SwitchboardResource {
         params.queueAddress
           ? HexString.ensure(params.queueAddress).hex()
           : HexString.ensure("0x0").hex(),
-        params.batchSize,
-        params.minOracleResults,
-        params.minUpdateDelaySeconds,
-        params.startAfter ?? 0,
-        params.varianceThreshold ?? 0,
+        params.batchSize.toString(),
+        params.minOracleResults.toString(),
+        params.minJobResults.toString(),
+        params.minUpdateDelaySeconds.toString(),
+        (params.startAfter ?? 0).toString(),
+        (params.varianceThreshold ?? 0).toString(),
         params.varianceThresholdScale ?? 0,
-        params.forceReportPeriod ?? 0,
-        params.expiration ?? 0,
+        (params.forceReportPeriod ?? 0).toString(),
+        (params.expiration ?? 0).toString(),
         HexString.ensure(params.authority).hex(),
       ]
     );
@@ -509,14 +537,14 @@ export class Aggregator extends SwitchboardResource {
     return await sendAptosTx(
       this.client,
       this.payer,
-      `${SWITCHBOARD_DEVNET_ADDRESS}::AggregatorAddJobAction::run`,
+      `${SWITCHBOARD_DEVNET_ADDRESS}::AggregatorSaveResultAction::run`,
       [
         HexString.ensure(SWITCHBOARD_STATE_ADDRESS).hex(),
         HexString.ensure(params.oracle_address).hex(),
-        HexString.ensure(params.aggregatorAddress).hex(),
-        params.oracle_idx,
+        HexString.ensure(this.address).hex(),
+        params.oracle_idx.toString(),
         params.error,
-        params.value_num,
+        params.value_num.toString(),
         params.value_scale_factor,
         params.value_neg,
         stringToHex(params.jobs_checksum),
@@ -524,7 +552,7 @@ export class Aggregator extends SwitchboardResource {
     );
   }
 
-  async openRound(params: AggregatorOpenRoundParams): Promise<string> {
+  async openRound(): Promise<string> {
     if (!this.payer) {
       throw "Save Result Error: No Payer Found";
     }
@@ -532,10 +560,10 @@ export class Aggregator extends SwitchboardResource {
     return await sendAptosTx(
       this.client,
       this.payer,
-      `${SWITCHBOARD_DEVNET_ADDRESS}::AggregatorAddJobAction::run`,
+      `${SWITCHBOARD_DEVNET_ADDRESS}::AggregatorOpenRoundAction::run`,
       [
         HexString.ensure(SWITCHBOARD_STATE_ADDRESS).hex(),
-        HexString.ensure(params.aggregatorAddress).hex(),
+        HexString.ensure(this.address).hex(),
       ]
     );
   }
@@ -570,12 +598,11 @@ export class Job extends SwitchboardResource {
         stringToHex(params.name),
         stringToHex(params.metadata),
         HexString.ensure(params.authority).hex(),
-        stringToHex(params.data),
-        // HexString.ensure(params.address).hex(),
+        params.data,
       ]
     );
 
-    return [tx, new Job(client, params.address, payer)];
+    return [tx, new Job(client, payer.address(), payer)];
   }
 }
 
@@ -606,7 +633,7 @@ export class Crank extends SwitchboardResource {
       [
         HexString.ensure(SWITCHBOARD_STATE_ADDRESS).hex(),
         HexString.ensure(params.address).hex(),
-        params.queueAddress,
+        HexString.ensure(params.queueAddress).hex(),
       ]
     );
 
@@ -681,15 +708,33 @@ export class Oracle extends SwitchboardResource {
       `${SWITCHBOARD_DEVNET_ADDRESS}::OracleInitAction::run`,
       [
         HexString.ensure(SWITCHBOARD_STATE_ADDRESS).hex(),
-        //HexString.ensure(params.address).hex(),
         stringToHex(params.name),
         stringToHex(params.metadata),
-        HexString.ensure(params.oracleAuthority).hex(),
+        HexString.ensure(params.authority).hex(),
         HexString.ensure(params.queue).hex(),
       ]
     );
 
     return [tx, new Oracle(client, params.address, payer)];
+  }
+
+  /**
+   * Oracle Heartbeat Action
+   */
+  async heartbeat(): Promise<string> {
+    if (!this.payer) {
+      throw "Save Result Error: No Payer Found";
+    }
+
+    return await sendAptosTx(
+      this.client,
+      this.payer,
+      `${SWITCHBOARD_DEVNET_ADDRESS}::OracleHeartbeatAction::run`,
+      [
+        HexString.ensure(SWITCHBOARD_STATE_ADDRESS).hex(),
+        HexString.ensure(this.address).hex(),
+      ]
+    );
   }
 }
 
@@ -716,58 +761,31 @@ export class OracleQueue extends SwitchboardResource {
     const tx = await sendAptosTx(
       client,
       payer,
-      `${SWITCHBOARD_DEVNET_ADDRESS}::OracleInitAction::run`,
+      `${SWITCHBOARD_DEVNET_ADDRESS}::OracleQueueInitAction::run`,
       [
         HexString.ensure(SWITCHBOARD_STATE_ADDRESS).hex(),
-        //HexString.ensure(params.address).hex(),
         stringToHex(params.name),
         stringToHex(params.metadata),
-        params.oracleTimeout,
-        params.reward,
-        params.minStake,
+        HexString.ensure(params.authority).hex(),
+        params.oracleTimeout.toString(),
+        params.reward.toString(),
+        params.minStake.toString(),
         params.slashingEnabled,
-        params.varianceToleranceMultiplierValue,
+        params.varianceToleranceMultiplierValue.toString(),
         params.varianceToleranceMultiplierScale,
-        params.feedProbationPeriod,
-        params.currIdx,
-        params.size,
-        params.gcIdx,
-        params.consecutiveFeedFailureLimit,
-        params.consecutiveOracleFailureLimit,
+        params.feedProbationPeriod.toString(),
+        params.consecutiveFeedFailureLimit.toString(),
+        params.consecutiveOracleFailureLimit.toString(),
         params.unpermissionedFeedsEnabled,
         params.unpermissionedVrfEnabled,
-        params.curatorRewardCutValue,
+        params.curatorRewardCutValue.toString(),
         params.curatorRewardCutScale,
         params.lockLeaseFunding,
-        params.mint,
+        HexString.ensure(params.mint).hex(),
         params.enableBufferRelayers,
-        params.maxSize,
+        params.maxSize.toString(),
       ]
     );
-
-    // [
-    //   state.address().hex(), // addr
-    //   Buffer.from("").toString("hex"), // name
-    //   Buffer.from("").toString("hex"), // metadata
-    //   authority.address().hex(), // authority
-    //   "120", // oracle_timeout
-    //   "10000", // reward
-    //   "0", // min_stake
-    //   false, // slashing enabled
-    //   "0", // variance_tolerance_multiplier_value
-    //   0, // variance_tolerance_multiplier_scale
-    //   "0", // feed_probation_period
-    //   "0", // consecutive_feed_failure_limit
-    //   "0", // consecutive_oracle_failure_limit
-    //   true, // unpermissioned_feeds_enabled
-    //   true, // unpermissioned_vrf_enabled
-    //   "0", // curator reward cut value
-    //   0, // curator reward cut scale
-    //   false, // lock_lease_funding
-    //   authority.address().hex(), // mint
-    //   false, // enable buffer relayers
-    //   "1000", // max_size
-    // ]
 
     return [tx, new OracleQueue(client, params.address, payer)];
   }

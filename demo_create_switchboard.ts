@@ -25,114 +25,198 @@
  *
  * loading this file should create the infra, log it (so we can reuse, then do all the other, perpetually running)
  */
-
+import { Buffer } from "buffer";
+import * as sbv2 from "@switchboard-xyz/switchboard-v2";
 import { AptosClient, AptosAccount, FaucetClient, Types } from "aptos";
 import {
   // Object types
+  State,
   Aggregator,
   Job,
   Oracle,
   OracleQueue,
-  Crank,
-
-  // Aggregator Action Params
-  AggregatorAddJobParams,
-  AggregatorInitParams,
-  AggregatorOpenRoundParams,
-  AggregatorRemoveJobParams,
-  AggregatorSaveResultParams,
-  AggregatorSetConfigParams,
-
-  // Job Action Params
-  JobInitParams,
-
-  // Crank Action Params
-  CrankInitParams,
-  CrankPopParams,
-  CrankPushParams,
-
-  // Oracle Action Params
-  OracleInitParams,
-
-  // OracleQueue Action Params
-  OracleQueueInitParams,
+  // Crank,
 
   // Event polling
   onAggregatorOpenRound,
-  onAggregatorSaveResult,
-  onAggregatorUpdate,
-  sendAptosTx,
+  // onAggregatorSaveResult,
+  // onAggregatorUpdate,
 } from ".";
+
+const NODE_URL =
+  process.env.APTOS_NODE_URL ?? "https://fullnode.devnet.aptoslabs.com";
+const FAUCET_URL =
+  process.env.APTOS_FAUCET_URL ?? "https://faucet.devnet.aptoslabs.com";
 
 // run it all at once
 (async () => {
-  const NODE_URL = "https://fullnode.devnet.aptoslabs.com";
-  const FAUCET_URL = "https://faucet.devnet.aptoslabs.com";
-  const SWITCHBOARD_DEVNET_ADDRESS = "publish and place value here";
-
   // INFRA ------
   const client = new AptosClient(NODE_URL);
   const faucetClient = new FaucetClient(NODE_URL, FAUCET_URL);
-  const state = new AptosAccount();
-  await faucetClient.fundAccount(state.address(), 5000);
-
-  // initialize new switchboard
-  await sendAptosTx(
-    client,
-    state,
-    `${SWITCHBOARD_DEVNET_ADDRESS}::SwitchboardInitAction::run`,
-    []
-  );
-  console.log(`State account ${state.address().hex()} created`);
 
   // create new user
   const user = new AptosAccount();
   await faucetClient.fundAccount(user.address(), 5000);
-  console.log(`User account ${state.address().hex()} created`);
 
-  // create an Oracle Queue, pass in user address as queue address
-  const [oracleQueueTx, oracleQueue] = await OracleQueue.init(client, user, {
-    //.... lots of params here ...
+  console.log(`User account ${user.address().hex()} created + funded.`);
+  const [stateTxSig] = await State.init(client, user);
+
+  console.log(
+    `State account: ${user
+      .address()
+      .hex()} \ncreated, tx: ${stateTxSig} (won't be used)`
+  );
+
+  const aggregator_resource_acct = new AptosAccount();
+  const queue_resource_acct = new AptosAccount();
+  const oracle_resource_acct = new AptosAccount();
+  const job_resource_acct = new AptosAccount();
+
+  await faucetClient.fundAccount(aggregator_resource_acct.address(), 5000);
+  await faucetClient.fundAccount(queue_resource_acct.address(), 5000);
+  await faucetClient.fundAccount(oracle_resource_acct.address(), 5000);
+  await faucetClient.fundAccount(job_resource_acct.address(), 5000);
+
+  // user will be authority
+  await faucetClient.fundAccount(user.address(), 500000);
+
+  const [queueTxSig, queue] = await OracleQueue.init(
+    client,
+    queue_resource_acct,
+    {
+      address: queue_resource_acct.address(),
+      name: "Switch Queue",
+      metadata: "Nothing to see here",
+      authority: user.address(),
+      oracleTimeout: 3000,
+      reward: 500,
+      minStake: 0,
+      slashingEnabled: false,
+      varianceToleranceMultiplierValue: 0,
+      varianceToleranceMultiplierScale: 0,
+      feedProbationPeriod: 0,
+      consecutiveFeedFailureLimit: 0,
+      consecutiveOracleFailureLimit: 0,
+      unpermissionedFeedsEnabled: true,
+      unpermissionedVrfEnabled: true,
+      curatorRewardCutScale: 0,
+      curatorRewardCutValue: 0,
+      lockLeaseFunding: false,
+      mint: user.address(),
+      enableBufferRelayers: false,
+      maxSize: 1000,
+    }
+  );
+
+  console.log(`Queue: ${queue.address}, tx: ${queueTxSig}`);
+
+  const [aggregatorTxSig, aggregator] = await Aggregator.init(
+    client,
+    aggregator_resource_acct,
+    {
+      authority: user.address(),
+      address: aggregator_resource_acct.address(),
+      queueAddress: queue_resource_acct.address(),
+      batchSize: 1,
+      minJobResults: 1,
+      minOracleResults: 1,
+      minUpdateDelaySeconds: 5,
+      startAfter: 0,
+      varianceThreshold: 0,
+      varianceThresholdScale: 0,
+      forceReportPeriod: 0,
+      expiration: 0,
+    }
+  );
+
+  console.log(`Aggregator: ${aggregator.address}, tx: ${aggregatorTxSig}`);
+
+  const [oracleTxSig, oracle] = await Oracle.init(
+    client,
+    oracle_resource_acct,
+    {
+      address: oracle_resource_acct.address(),
+      name: "Switchboard Oracle",
+      metadata: "metadata",
+      authority: user.address(),
+      queue: queue.address,
+    }
+  );
+
+  console.log(`Oracle: ${oracle.address}, tx: ${oracleTxSig}`);
+
+  // trigger the oracle heartbeat
+  const heartbeatTxSig = await oracle.heartbeat();
+  console.log("Heartbeat Tx Hash:", heartbeatTxSig);
+
+  // Make Job data for btc price
+  const serializedJob = Buffer.from(
+    sbv2.OracleJob.encodeDelimited(
+      sbv2.OracleJob.create({
+        tasks: [
+          {
+            httpTask: {
+              url: "https://www.binance.us/api/v3/ticker/price?symbol=BTCUSD",
+            },
+          },
+          {
+            jsonParseTask: {
+              path: "$.price",
+            },
+          },
+        ],
+      })
+    ).finish()
+  );
+
+  const [jobTxSig, job] = await Job.init(client, job_resource_acct, {
+    name: "BTC/USD",
+    metadata: "binance",
+    authority: user.address(),
+    data: serializedJob.toString("hex"),
   });
 
-  // more infra
-  const [crankTx, crank] = await Crank.init(client, user, {
-    // ... more params ..
+  console.log(`Job created ${job.address}, hash: ${jobTxSig}`);
+
+  // add btc usd to our aggregator
+  const addJobTxSig = await aggregator.addJob({
+    job: job.address,
   });
 
-  const [oracleTx, oracle] = await Oracle.init(client, user, {
-    // few params
-    // add queue we created here
+  console.log(`Aggregator add job tx: ${addJobTxSig}`);
+
+  // initialize an update
+  const openRoundTxSig = await aggregator.openRound();
+  console.log(`Aggregator open round tx ${openRoundTxSig}`);
+
+  // save result
+  const saveResultTxSig = await aggregator.saveResult({
+    oracle_address: oracle.address,
+    oracle_idx: 0,
+    error: false,
+    value_num: 100,
+    value_scale_factor: 0,
+    value_neg: false,
+    jobs_checksum: "",
+  });
+  console.log(`Save result tx: ${saveResultTxSig}`);
+
+  const onUpdatePoller = onAggregatorOpenRound(client, async (e) => {
+    console.log(`Aggregator Open Round Event:`, e);
+    // (await onUpdatePoller).stop();
   });
 
-  // setup dummy crank
-  setInterval(() => {
-    try {
-      // check if we can update / open round if we can
-    } catch (e) {}
-  });
+  console.log("Starting 5 open rounds");
+  let i = 5;
+  while (i--) {
+    await new Promise((r) => setTimeout(r, 1000));
+    await aggregator.openRound();
+  }
+  (await onUpdatePoller).stop();
 
-  // DEMO
-  const [aggregatorTx, aggregator] = await Aggregator.init(client, user, {
-    // lots of params
-  });
-
-  await aggregator.addJob({
-    // 2 params in here
-  });
-
-  await crank.push({
-    //... even more params
-  });
-
-  // setup polling for open round / respawn
-  const runsforever = await onAggregatorOpenRound(client, (e) => {
-    // respond to aggregator open round
-    // fetch (maybe use the taskrunner api for this)
-    // save result
-  });
-
-  const logsforever = await onAggregatorUpdate(client, (e) => {
-    console.log(e);
-  });
+  console.log("logging all data objects");
+  console.log("Aggregator:", await aggregator.loadData());
+  console.log("Job:", await job.loadData());
+  console.log("Oracle", await oracle.loadData());
+  console.log("OracleQueue", await queue.loadData());
 })();

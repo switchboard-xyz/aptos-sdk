@@ -1,9 +1,12 @@
 {
   "dependencies": {
     "aptos": "^1.2.0",
-    "big.js": "^6.2.1"
+    "big.js": "^6.2.1",
+    "@switchboard-xyz/switchboard-v2": "^0.0.123",
+    "@switchboard-xyz/v2-task-runner": "^0.1.61"
   },
   "devDependencies": {
+    "@types/big.js": "^6.1.5",
     "@types/node": "^18.0.6"
   }
 }
