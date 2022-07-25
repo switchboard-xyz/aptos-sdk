@@ -594,6 +594,15 @@ export class Crank {
       ]
     );
   }
+
+  async loadData(): Promise<any> {
+    return (
+      await this.client.getAccountResource(
+        HexString.ensure(this.address).hex(),
+        `${HexString.ensure(SWITCHBOARD_DEVNET_ADDRESS).hex()}::Crank::Crank`
+      )
+    ).data;
+  }
 }
 
 export class Oracle {
@@ -624,6 +633,15 @@ export class Oracle {
     );
 
     return [new Oracle(client, params.address, account), tx];
+  }
+
+  async loadData(): Promise<any> {
+    return (
+      await this.client.getAccountResource(
+        HexString.ensure(this.address).hex(),
+        `${HexString.ensure(SWITCHBOARD_DEVNET_ADDRESS).hex()}::Oracle::Oracle`
+      )
+    ).data;
   }
 
   /**
@@ -690,5 +708,16 @@ export class OracleQueue {
     );
 
     return [new OracleQueue(client, params.address, account), tx];
+  }
+
+  async loadData(): Promise<any> {
+    return (
+      await this.client.getAccountResource(
+        HexString.ensure(this.address).hex(),
+        `${HexString.ensure(
+          SWITCHBOARD_DEVNET_ADDRESS
+        ).hex()}::OracleQueue::OracleQueue`
+      )
+    ).data;
   }
 }
