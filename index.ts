@@ -6,6 +6,7 @@ import {
   MaybeHexString,
 } from "aptos";
 import Big from "big.js";
+import * as sbv2 from "@switchboard-xyz/switchboard-v2";
 
 // Address that deployed the module
 const SWITCHBOARD_DEVNET_ADDRESS =
@@ -285,13 +286,13 @@ class AptosEvent {
       );
       if (events.length !== 0) {
         // increment sequence number
-        lastSequenceNumber = events.at(-1).sequence_number;
+        lastSequenceNumber = events.at(-1)!.sequence_number;
       }
       for (let e of events) {
         // fire off the callback for all new events
         await callback(e);
       }
-    }, pollIntervalMs);
+    }, this.pollIntervalMs);
   }
 }
 
@@ -336,7 +337,7 @@ export class State {
   static async init(
     client: AptosClient,
     account: AptosAccount
-  ): Promise<[State, tx]> {
+  ): Promise<[State, string]> {
     const tx = await sendAptosTx(
       client,
       account,
@@ -344,7 +345,7 @@ export class State {
       []
     );
 
-    return [tx, new State(client, account.address(), account)];
+    return [new State(client, account.address(), account), tx];
   }
 
   async loadData(): Promise<any> {
@@ -377,7 +378,7 @@ export class Aggregator {
 
   async loadJobs(): Promise<Array<sbv2.OracleJob>> {
     const data = await this.loadData();
-    const jobs = data.job_keys.map((key) => new Job(this.client, key));
+    const jobs = data.job_keys.map((key: string) => new Job(this.client, key));
     const promises: Array<Promise<sbv2.OracleJob>> = [];
     for (let job of jobs) {
       promises.push(job.loadJob());
@@ -522,7 +523,7 @@ export class Job {
       ]
     );
 
-    return [new Job(client, account.address(), account), tx];
+    return [new Job(client, account.address()), tx];
   }
 }
 
@@ -551,21 +552,17 @@ export class Crank {
       ]
     );
 
-    return [new Crank(client, params.address, account), tx];
+    return [new Crank(client, params.address), tx];
   }
 
   /**
    * Push an aggregator to a Crank
    * @param params CrankPushParams
    */
-  async push(params: CrankPushParams): Promise<string> {
-    if (!this.account) {
-      throw "Save Result Error: No Payer Found";
-    }
-
+  async push(account: AptosAccount, params: CrankPushParams): Promise<string> {
     return await sendAptosTx(
       this.client,
-      this.account,
+      account,
       `${SWITCHBOARD_DEVNET_ADDRESS}::CrankPushAction::run`,
       [
         HexString.ensure(SWITCHBOARD_STATE_ADDRESS).hex(),
@@ -579,14 +576,10 @@ export class Crank {
    * Pop an aggregator off the Crank
    * @param params CrankPopParams
    */
-  async pop(params: CrankPopParams): Promise<string> {
-    if (!this.account) {
-      throw "Save Result Error: No Payer Found";
-    }
-
+  async pop(account: AptosAccount, params: CrankPopParams): Promise<string> {
     return await sendAptosTx(
       this.client,
-      this.account,
+      account,
       `${SWITCHBOARD_DEVNET_ADDRESS}::CrankPopAction::run`,
       [
         HexString.ensure(SWITCHBOARD_STATE_ADDRESS).hex(),
@@ -632,7 +625,7 @@ export class Oracle {
       ]
     );
 
-    return [new Oracle(client, params.address, account), tx];
+    return [new Oracle(client, params.address), tx];
   }
 
   async loadData(): Promise<any> {
@@ -647,14 +640,10 @@ export class Oracle {
   /**
    * Oracle Heartbeat Action
    */
-  async heartbeat(): Promise<string> {
-    if (!this.account) {
-      throw "Save Result Error: No Payer Found";
-    }
-
+  async heartbeat(account: AptosAccount): Promise<string> {
     return await sendAptosTx(
       this.client,
-      this.account,
+      account,
       `${SWITCHBOARD_DEVNET_ADDRESS}::OracleHeartbeatAction::run`,
       [
         HexString.ensure(SWITCHBOARD_STATE_ADDRESS).hex(),
@@ -707,7 +696,7 @@ export class OracleQueue {
       ]
     );
 
-    return [new OracleQueue(client, params.address, account), tx];
+    return [new OracleQueue(client, params.address), tx];
   }
 
   async loadData(): Promise<any> {
