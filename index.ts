@@ -23,12 +23,16 @@ export class AptosDecimal {
   ) {}
 
   toBig(): Big {
+    const oldDp = Big.DP;
+    Big.DP = 18;
     let result = new Big(this.mantissa);
     if (this.neg === true) {
       result = result.mul(-1);
     }
     const TEN = new Big(10);
-    return result.div(TEN.pow(this.scale));
+    result = result.div(TEN.pow(this.scale));
+    Big.DP = oldDp;
+    return result;
   }
 
   static fromBig(val: Big): AptosDecimal {
@@ -272,126 +276,47 @@ async function getTableItem(
  * Poll Events on Aptos
  * @Note uncleared setTimeout calls will keep processes from ending organically (SIGTERM is needed)
  */
-export class EventPoller {
-  client: AptosClient;
-  cb: (event: Types.Event) => void; // some effect will happen on event
-  address: MaybeHexString;
-  eventHandleStruct: Types.MoveStructTagId;
-  fieldName: string;
-  pollingIntervalMs: number;
-  lastSequenceNumber: string = "";
-  intervalId?: ReturnType<typeof setInterval>;
-
+class AptosEvent {
   constructor(
-    client: AptosClient,
-    address: MaybeHexString,
-    eventHandleStruct: Types.MoveStructTagId,
-    fieldName: string,
-    pollingIntervalMs: number = 5000,
-    cb: (event: Types.Event) => void | (() => void) // sometimes you don't want args
-  ) {
-    this.client = client;
-    this.cb = cb;
-    this.address = address;
-    this.eventHandleStruct = eventHandleStruct;
-    this.fieldName = fieldName;
-    this.pollingIntervalMs = pollingIntervalMs;
-  }
+    readonly client: AptosClient,
+    readonly eventHandlerOwner: HexString,
+    readonly eventOwnerStruct: string,
+    readonly eventHandlerName: string,
+    readonly pollIntervalMs: number = 1000
+  ) {}
 
-  async start() {
-    try {
-      // Get the start sequence number in the EVENT STREAM, defaulting to the latest event.
-      const [{ sequence_number }] = await this.client.getEventsByEventHandle(
-        this.address,
-        this.eventHandleStruct,
-        this.fieldName,
-        { limit: 1 }
-      );
-      this.lastSequenceNumber = sequence_number;
-    } catch (e) {
-      // type for this is string for some reason
-      this.lastSequenceNumber = "0";
-    }
+  async onTrigger(callback: (e: any) => any) {
+    // Get the start sequence number in the EVENT STREAM, defaulting to the latest event.
+    const [{ sequence_number }] = await this.client.getEventsByEventHandle(
+      this.eventHandlerOwner,
+      this.eventOwnerStruct,
+      this.eventHandlerName,
+      { limit: 1 }
+    );
 
-    this.intervalId = setInterval(async () => {
+    // type for this is string for some reason
+    let lastSequenceNumber = sequence_number;
+
+    setInterval(async () => {
       const events = await this.client.getEventsByEventHandle(
-        this.address,
-        this.eventHandleStruct,
-        this.fieldName,
+        this.eventHandlerOwner,
+        this.eventOwnerStruct,
+        this.eventHandlerName,
         {
-          start: Number(this.lastSequenceNumber) + 1,
+          start: Number(lastSequenceNumber) + 1,
+          limit: 500,
         }
       );
-      for (let e of events) {
-        // fire off cb if new sequence number
-        if (Number(this.lastSequenceNumber) + 1 === Number(e.sequence_number)) {
-          // increment sequence number
-          this.lastSequenceNumber = e.sequence_number;
-
-          // fire off the callback for all new events
-          await this.cb(e);
-        }
+      if (events.length !== 0) {
+        // increment sequence number
+        lastSequenceNumber = events.at(-1).sequence_number;
       }
-    }, this.pollingIntervalMs);
+      for (let e of events) {
+        // fire off the callback for all new events
+        await callback(e);
+      }
+    }, pollIntervalMs);
   }
-
-  stop() {
-    clearInterval(this.intervalId);
-  }
-}
-
-// Returns a started event poller for aggregator updates
-export async function onAggregatorUpdate(
-  client: AptosClient,
-  cb: (e: Types.Event) => void
-): Promise<EventPoller> {
-  const poller = new EventPoller(
-    client,
-    SWITCHBOARD_STATE_ADDRESS,
-    `${SWITCHBOARD_DEVNET_ADDRESS}::Switchboard::State`,
-    "aggregator_update_events",
-    1500,
-    cb
-  );
-
-  await poller.start();
-  return poller;
-}
-
-// Returns a started event poller for aggregator updates
-export async function onAggregatorOpenRound(
-  client: AptosClient,
-  cb: (e: Types.Event) => void
-): Promise<EventPoller> {
-  const poller = new EventPoller(
-    client,
-    SWITCHBOARD_STATE_ADDRESS,
-    `${SWITCHBOARD_DEVNET_ADDRESS}::Switchboard::State`,
-    "aggregator_open_round_events",
-    1500,
-    cb
-  );
-
-  await poller.start();
-  return poller;
-}
-
-// Returns a started event poller for aggregator updates
-export async function onAggregatorSaveResult(
-  client: AptosClient,
-  cb: (e: Types.Event) => void
-): Promise<EventPoller> {
-  const poller = new EventPoller(
-    client,
-    SWITCHBOARD_STATE_ADDRESS,
-    `${SWITCHBOARD_DEVNET_ADDRESS}::Switchboard::State`,
-    "aggregator_save_result_events",
-    1500,
-    cb
-  );
-
-  await poller.start();
-  return poller;
 }
 
 /**
@@ -401,17 +326,17 @@ class SwitchboardResource {
   client: AptosClient;
   address: MaybeHexString;
   tableType: TableType;
-  payer?: AptosAccount;
+  account?: AptosAccount;
 
   constructor(
     tableType: TableType,
     client: AptosClient,
     address: MaybeHexString,
-    payer?: AptosAccount
+    account?: AptosAccount
   ) {
     this.tableType = tableType;
     this.client = client;
-    this.payer = payer;
+    this.account = account;
     this.address = address;
   }
 
@@ -429,21 +354,21 @@ export class State {
   constructor(
     readonly client: AptosClient,
     readonly address: MaybeHexString,
-    readonly payer: AptosAccount
+    readonly account: AptosAccount
   ) {}
 
   static async init(
     client: AptosClient,
-    payer: AptosAccount
-  ): Promise<[string, State]> {
+    account: AptosAccount
+  ): Promise<[State, tx]> {
     const tx = await sendAptosTx(
       client,
-      payer,
+      account,
       `${SWITCHBOARD_DEVNET_ADDRESS}::SwitchboardInitAction::run`,
       []
     );
 
-    return [tx, new State(client, payer.address(), payer)];
+    return [tx, new State(client, account.address(), account)];
   }
 
   async loadData(): Promise<any> {
@@ -460,7 +385,7 @@ export class Aggregator {
   constructor(
     readonly client: AptosClient,
     readonly address: MaybeHexString,
-    readonly payer?: AptosAccount
+    readonly account?: AptosAccount
   ) {}
 
   async loadData(): Promise<any> {
@@ -493,17 +418,17 @@ export class Aggregator {
   /**
    * Initialize an Aggregator
    * @param client
-   * @param payer
+   * @param account
    * @param params AggregatorInitParams initialization params
    */
   static async init(
     client: AptosClient,
-    payer: AptosAccount,
+    account: AptosAccount,
     params: AggregatorInitParams
-  ): Promise<[string, Aggregator]> {
+  ): Promise<[Aggregator, string]> {
     const tx = await sendAptosTx(
       client,
-      payer,
+      account,
       `${SWITCHBOARD_DEVNET_ADDRESS}::AggregatorInitAction::run`,
       [
         HexString.ensure(SWITCHBOARD_STATE_ADDRESS).hex(),
@@ -525,17 +450,17 @@ export class Aggregator {
       ]
     );
 
-    return [tx, new Aggregator(client, params.address, payer)];
+    return [new Aggregator(client, params.address, account), tx];
   }
 
   async addJob(params: AggregatorAddJobParams): Promise<string> {
-    if (!this.payer) {
+    if (!this.account) {
       throw "Add Job Error: No Payer Found";
     }
 
     return await sendAptosTx(
       this.client,
-      this.payer,
+      this.account,
       `${SWITCHBOARD_DEVNET_ADDRESS}::AggregatorAddJobAction::run`,
       [
         HexString.ensure(SWITCHBOARD_STATE_ADDRESS).hex(),
@@ -547,13 +472,13 @@ export class Aggregator {
   }
 
   async saveResult(params: AggregatorSaveResultParams): Promise<string> {
-    if (!this.payer) {
+    if (!this.account) {
       throw "Save Result Error: No Payer Found";
     }
 
     return await sendAptosTx(
       this.client,
-      this.payer,
+      this.account,
       `${SWITCHBOARD_DEVNET_ADDRESS}::AggregatorSaveResultAction::run`,
       [
         HexString.ensure(SWITCHBOARD_STATE_ADDRESS).hex(),
@@ -570,13 +495,13 @@ export class Aggregator {
   }
 
   async openRound(): Promise<string> {
-    if (!this.payer) {
+    if (!this.account) {
       throw "Save Result Error: No Payer Found";
     }
 
     return await sendAptosTx(
       this.client,
-      this.payer,
+      this.account,
       `${SWITCHBOARD_DEVNET_ADDRESS}::AggregatorOpenRoundAction::run`,
       [
         HexString.ensure(SWITCHBOARD_STATE_ADDRESS).hex(),
@@ -590,7 +515,7 @@ export class Job {
   constructor(
     readonly client: AptosClient,
     readonly address: MaybeHexString,
-    readonly payer?: AptosAccount
+    readonly account?: AptosAccount
   ) {}
 
   async loadData(): Promise<any> {
@@ -605,17 +530,17 @@ export class Job {
   /**
    * Initialize a Job stored in the switchboard resource account
    * @param client
-   * @param payer
+   * @param account
    * @param params JobInitParams initialization params
    */
   static async init(
     client: AptosClient,
-    payer: AptosAccount,
+    account: AptosAccount,
     params: JobInitParams
-  ): Promise<[string, Job]> {
+  ): Promise<[Job, string]> {
     const tx = await sendAptosTx(
       client,
-      payer,
+      account,
       `${SWITCHBOARD_DEVNET_ADDRESS}::JobInitAction::run`,
       [
         HexString.ensure(SWITCHBOARD_STATE_ADDRESS).hex(),
@@ -626,7 +551,7 @@ export class Job {
       ]
     );
 
-    return [tx, new Job(client, payer.address(), payer)];
+    return [new Job(client, account.address(), account), tx];
   }
 }
 
@@ -634,25 +559,25 @@ export class Crank extends SwitchboardResource {
   constructor(
     client: AptosClient,
     address: MaybeHexString,
-    payer?: AptosAccount
+    account?: AptosAccount
   ) {
-    super(CrankTable, client, address, payer);
+    super(CrankTable, client, address, account);
   }
 
   /**
    * Initialize a Crank stored in the switchboard resource account
    * @param client
-   * @param payer account that will be the authority of the Crank
+   * @param account account that will be the authority of the Crank
    * @param params CrankInitParams initialization params
    */
   static async init(
     client: AptosClient,
-    payer: AptosAccount,
+    account: AptosAccount,
     params: CrankInitParams
-  ): Promise<[string, Crank]> {
+  ): Promise<[Crank, string]> {
     const tx = await sendAptosTx(
       client,
-      payer,
+      account,
       `${SWITCHBOARD_DEVNET_ADDRESS}::CrankInitAction::run`,
       [
         HexString.ensure(SWITCHBOARD_STATE_ADDRESS).hex(),
@@ -661,7 +586,7 @@ export class Crank extends SwitchboardResource {
       ]
     );
 
-    return [tx, new Crank(client, params.address, payer)];
+    return [new Crank(client, params.address, account), tx];
   }
 
   /**
@@ -669,13 +594,13 @@ export class Crank extends SwitchboardResource {
    * @param params CrankPushParams
    */
   async push(params: CrankPushParams): Promise<string> {
-    if (!this.payer) {
+    if (!this.account) {
       throw "Save Result Error: No Payer Found";
     }
 
     return await sendAptosTx(
       this.client,
-      this.payer,
+      this.account,
       `${SWITCHBOARD_DEVNET_ADDRESS}::CrankPushAction::run`,
       [
         HexString.ensure(SWITCHBOARD_STATE_ADDRESS).hex(),
@@ -690,13 +615,13 @@ export class Crank extends SwitchboardResource {
    * @param params CrankPopParams
    */
   async pop(params: CrankPopParams): Promise<string> {
-    if (!this.payer) {
+    if (!this.account) {
       throw "Save Result Error: No Payer Found";
     }
 
     return await sendAptosTx(
       this.client,
-      this.payer,
+      this.account,
       `${SWITCHBOARD_DEVNET_ADDRESS}::CrankPopAction::run`,
       [
         HexString.ensure(SWITCHBOARD_STATE_ADDRESS).hex(),
@@ -710,25 +635,25 @@ export class Oracle extends SwitchboardResource {
   constructor(
     client: AptosClient,
     address: MaybeHexString,
-    payer?: AptosAccount
+    account?: AptosAccount
   ) {
-    super(OracleTable, client, address, payer);
+    super(OracleTable, client, address, account);
   }
 
   /**
    * Initialize a Oracle stored in the switchboard resource account
    * @param client
-   * @param payer
+   * @param account
    * @param params Oracle initialization params
    */
   static async init(
     client: AptosClient,
-    payer: AptosAccount,
+    account: AptosAccount,
     params: OracleInitParams
-  ): Promise<[string, Oracle]> {
+  ): Promise<[Oracle, string]> {
     const tx = await sendAptosTx(
       client,
-      payer,
+      account,
       `${SWITCHBOARD_DEVNET_ADDRESS}::OracleInitAction::run`,
       [
         HexString.ensure(SWITCHBOARD_STATE_ADDRESS).hex(),
@@ -739,20 +664,20 @@ export class Oracle extends SwitchboardResource {
       ]
     );
 
-    return [tx, new Oracle(client, params.address, payer)];
+    return [new Oracle(client, params.address, account), tx];
   }
 
   /**
    * Oracle Heartbeat Action
    */
   async heartbeat(): Promise<string> {
-    if (!this.payer) {
+    if (!this.account) {
       throw "Save Result Error: No Payer Found";
     }
 
     return await sendAptosTx(
       this.client,
-      this.payer,
+      this.account,
       `${SWITCHBOARD_DEVNET_ADDRESS}::OracleHeartbeatAction::run`,
       [
         HexString.ensure(SWITCHBOARD_STATE_ADDRESS).hex(),
@@ -766,25 +691,25 @@ export class OracleQueue extends SwitchboardResource {
   constructor(
     client: AptosClient,
     address: MaybeHexString,
-    payer?: AptosAccount
+    account?: AptosAccount
   ) {
-    super(OracleQueueTable, client, address, payer);
+    super(OracleQueueTable, client, address, account);
   }
 
   /**
    * Initialize a OracleQueue stored in the switchboard resource account
    * @param client
-   * @param payer
+   * @param account
    * @param params OracleQueue initialization params
    */
   static async init(
     client: AptosClient,
-    payer: AptosAccount,
+    account: AptosAccount,
     params: OracleQueueInitParams
-  ): Promise<[string, OracleQueue]> {
+  ): Promise<[OracleQueue, string]> {
     const tx = await sendAptosTx(
       client,
-      payer,
+      account,
       `${SWITCHBOARD_DEVNET_ADDRESS}::OracleQueueInitAction::run`,
       [
         HexString.ensure(SWITCHBOARD_STATE_ADDRESS).hex(),
@@ -811,6 +736,6 @@ export class OracleQueue extends SwitchboardResource {
       ]
     );
 
-    return [tx, new OracleQueue(client, params.address, payer)];
+    return [new OracleQueue(client, params.address, account), tx];
   }
 }
