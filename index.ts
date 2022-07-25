@@ -197,30 +197,6 @@ interface TableType {
   valueType: string;
 }
 
-const JobTable: TableType = {
-  stateKey: `jobs`,
-  keyType: `address`,
-  valueType: `${SWITCHBOARD_DEVNET_ADDRESS}::Job::Job`,
-};
-
-const CrankTable: TableType = {
-  stateKey: `cranks`,
-  keyType: `address`,
-  valueType: `${SWITCHBOARD_DEVNET_ADDRESS}::Crank::Crank`,
-};
-
-const OracleTable: TableType = {
-  stateKey: `oracles`,
-  keyType: `address`,
-  valueType: `${SWITCHBOARD_DEVNET_ADDRESS}::Oracle::Oracle`,
-};
-
-const OracleQueueTable: TableType = {
-  stateKey: `oracle_queues`,
-  keyType: `address`,
-  valueType: `${SWITCHBOARD_DEVNET_ADDRESS}::OracleQueue::OracleQueue`,
-};
-
 const LeaseTable: TableType = {
   stateKey: `leases`,
   keyType: `vector<u8>`,
@@ -399,20 +375,14 @@ export class Aggregator {
     ).data;
   }
 
-  async loadJobs(): Promise<unknown[]> {
-    const aggregatorData = await this.loadData();
-    const jobs: unknown[] = [];
-    for (let job of aggregatorData.job_keys) {
-      jobs.push(
-        (
-          await this.client.getAccountResource(
-            HexString.ensure(job).hex(),
-            `${HexString.ensure(SWITCHBOARD_DEVNET_ADDRESS).hex()}::Job::Job`
-          )
-        ).data
-      );
+  async loadJobs(): Promise<Array<sbv2.OracleJob>> {
+    const data = await this.loadData();
+    const jobs = data.job_keys.map((key) => new Job(this.client, key));
+    const promises: Array<Promise<sbv2.OracleJob>> = [];
+    for (let job of jobs) {
+      promises.push(job.loadJob());
     }
-    return jobs;
+    return await Promise.all(promises);
   }
 
   /**
@@ -453,32 +423,30 @@ export class Aggregator {
     return [new Aggregator(client, params.address, account), tx];
   }
 
-  async addJob(params: AggregatorAddJobParams): Promise<string> {
-    if (!this.account) {
-      throw "Add Job Error: No Payer Found";
-    }
-
+  async addJob(
+    account: AptosAccount,
+    params: AggregatorAddJobParams
+  ): Promise<string> {
     return await sendAptosTx(
       this.client,
-      this.account,
+      account,
       `${SWITCHBOARD_DEVNET_ADDRESS}::AggregatorAddJobAction::run`,
       [
         HexString.ensure(SWITCHBOARD_STATE_ADDRESS).hex(),
         HexString.ensure(this.address).hex(),
         HexString.ensure(params.job).hex(),
-        params.weight || 0,
+        params.weight || 1,
       ]
     );
   }
 
-  async saveResult(params: AggregatorSaveResultParams): Promise<string> {
-    if (!this.account) {
-      throw "Save Result Error: No Payer Found";
-    }
-
+  async saveResult(
+    account: AptosAccount,
+    params: AggregatorSaveResultParams
+  ): Promise<string> {
     return await sendAptosTx(
       this.client,
-      this.account,
+      account,
       `${SWITCHBOARD_DEVNET_ADDRESS}::AggregatorSaveResultAction::run`,
       [
         HexString.ensure(SWITCHBOARD_STATE_ADDRESS).hex(),
@@ -512,19 +480,22 @@ export class Aggregator {
 }
 
 export class Job {
-  constructor(
-    readonly client: AptosClient,
-    readonly address: MaybeHexString,
-    readonly account?: AptosAccount
-  ) {}
+  constructor(readonly client: AptosClient, readonly address: MaybeHexString) {}
 
   async loadData(): Promise<any> {
     return (
       await this.client.getAccountResource(
-        HexString.ensure(this.address).hex(),
-        `${HexString.ensure(SWITCHBOARD_DEVNET_ADDRESS).hex()}::Job::Job`
+        this.address,
+        `0x${SWITCHBOARD_DEVNET_ADDRESS}::Job::Job`
       )
     ).data;
+  }
+
+  async loadJob(): Promise<sbv2.OracleJob> {
+    const data = await this.loadData();
+    return sbv2.OracleJob.decodeDelimited(
+      Buffer.from(data.data.slice(2), "hex")
+    );
   }
 
   /**
@@ -555,14 +526,8 @@ export class Job {
   }
 }
 
-export class Crank extends SwitchboardResource {
-  constructor(
-    client: AptosClient,
-    address: MaybeHexString,
-    account?: AptosAccount
-  ) {
-    super(CrankTable, client, address, account);
-  }
+export class Crank {
+  constructor(readonly client: AptosClient, readonly address: MaybeHexString) {}
 
   /**
    * Initialize a Crank stored in the switchboard resource account
@@ -631,14 +596,8 @@ export class Crank extends SwitchboardResource {
   }
 }
 
-export class Oracle extends SwitchboardResource {
-  constructor(
-    client: AptosClient,
-    address: MaybeHexString,
-    account?: AptosAccount
-  ) {
-    super(OracleTable, client, address, account);
-  }
+export class Oracle {
+  constructor(readonly client: AptosClient, readonly address: MaybeHexString) {}
 
   /**
    * Initialize a Oracle stored in the switchboard resource account
@@ -687,14 +646,8 @@ export class Oracle extends SwitchboardResource {
   }
 }
 
-export class OracleQueue extends SwitchboardResource {
-  constructor(
-    client: AptosClient,
-    address: MaybeHexString,
-    account?: AptosAccount
-  ) {
-    super(OracleQueueTable, client, address, account);
-  }
+export class OracleQueue {
+  constructor(readonly client: AptosClient, readonly address: MaybeHexString) {}
 
   /**
    * Initialize a OracleQueue stored in the switchboard resource account
