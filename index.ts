@@ -9,11 +9,11 @@ import Big from "big.js";
 import * as sbv2 from "@switchboard-xyz/switchboard-v2";
 
 // Address that deployed the module
-const SWITCHBOARD_DEVNET_ADDRESS =
+export const SWITCHBOARD_DEVNET_ADDRESS =
   "0x348ecb66a5d9edab8d175f647d5e99d6962803da7f5d3d2eb839387aeb118300";
 
 // Address of the account that owns the Switchboard resource
-const SWITCHBOARD_STATE_ADDRESS =
+export const SWITCHBOARD_STATE_ADDRESS =
   "0x348ecb66a5d9edab8d175f647d5e99d6962803da7f5d3d2eb839387aeb118300";
 
 export class AptosDecimal {
@@ -132,7 +132,6 @@ export interface OracleInitParams {
 }
 
 export interface OracleQueueInitParams {
-  address: MaybeHexString;
   name: string;
   metadata: string;
   authority: MaybeHexString;
@@ -147,8 +146,6 @@ export interface OracleQueueInitParams {
   consecutiveOracleFailureLimit: number;
   unpermissionedFeedsEnabled: boolean;
   unpermissionedVrfEnabled: boolean;
-  curatorRewardCutValue: number;
-  curatorRewardCutScale: number;
   lockLeaseFunding: boolean;
 
   // this needs to be swapped with Coin or something later
@@ -156,6 +153,10 @@ export interface OracleQueueInitParams {
   enableBufferRelayers: boolean;
   maxSize: number;
 }
+
+export type EventCallback = (
+  e: Types.Event
+) => Promise<void> | (() => Promise<void>);
 
 /** Convert string to hex-encoded utf-8 bytes. */
 function stringToHex(text: string) {
@@ -186,6 +187,16 @@ export async function sendAptosTx(
     signer.address(),
     payload
   );
+
+  const simulation = await client.simulateTransaction(signer, txnRequest);
+  if (simulation.success === false) {
+    console.log(`TxGas: ${simulation.gas_used}`);
+    console.log(`TxGas: ${simulation.hash}`);
+    throw new Error(`TxFailure: ${simulation.vm_status}`);
+  } else {
+    console.log(`TxGas: ${simulation.gas_used}`);
+  }
+
   const signedTxn = await client.signTransaction(signer, txnRequest);
   const transactionRes = await client.submitTransaction(signedTxn);
   await client.waitForTransaction(transactionRes.hash);
@@ -253,7 +264,8 @@ async function getTableItem(
  * Poll Events on Aptos
  * @Note uncleared setTimeout calls will keep processes from ending organically (SIGTERM is needed)
  */
-class AptosEvent {
+export class AptosEvent {
+  intervalId?: ReturnType<typeof setInterval>;
   constructor(
     readonly client: AptosClient,
     readonly eventHandlerOwner: HexString,
@@ -262,7 +274,7 @@ class AptosEvent {
     readonly pollIntervalMs: number = 1000
   ) {}
 
-  async onTrigger(callback: (e: any) => any) {
+  async onTrigger(callback: EventCallback) {
     // Get the start sequence number in the EVENT STREAM, defaulting to the latest event.
     const [{ sequence_number }] = await this.client.getEventsByEventHandle(
       this.eventHandlerOwner,
@@ -274,7 +286,7 @@ class AptosEvent {
     // type for this is string for some reason
     let lastSequenceNumber = sequence_number;
 
-    setInterval(async () => {
+    this.intervalId = setInterval(async () => {
       const events = await this.client.getEventsByEventHandle(
         this.eventHandlerOwner,
         this.eventOwnerStruct,
@@ -293,6 +305,10 @@ class AptosEvent {
         await callback(e);
       }
     }, this.pollIntervalMs);
+  }
+
+  stop() {
+    clearInterval(this.intervalId);
   }
 }
 
@@ -687,8 +703,6 @@ export class OracleQueue {
         params.consecutiveOracleFailureLimit.toString(),
         params.unpermissionedFeedsEnabled,
         params.unpermissionedVrfEnabled,
-        params.curatorRewardCutValue.toString(),
-        params.curatorRewardCutScale,
         params.lockLeaseFunding,
         HexString.ensure(params.mint).hex(),
         params.enableBufferRelayers,
@@ -696,7 +710,7 @@ export class OracleQueue {
       ]
     );
 
-    return [new OracleQueue(client, params.address), tx];
+    return [new OracleQueue(client, account.address()), tx];
   }
 
   async loadData(): Promise<any> {

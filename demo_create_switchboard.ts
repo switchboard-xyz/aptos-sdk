@@ -27,7 +27,14 @@
  */
 import { Buffer } from "buffer";
 import * as sbv2 from "@switchboard-xyz/switchboard-v2";
-import { AptosClient, AptosAccount, FaucetClient, Types } from "aptos";
+import {
+  AptosClient,
+  AptosAccount,
+  FaucetClient,
+  Types,
+  MaybeHexString,
+  HexString,
+} from "aptos";
 import {
   // Object types
   State,
@@ -35,11 +42,15 @@ import {
   Job,
   Oracle,
   OracleQueue,
+  AptosEvent,
+  SWITCHBOARD_DEVNET_ADDRESS,
+  SWITCHBOARD_STATE_ADDRESS,
+  EventCallback,
   // Crank,
 
   // Event polling
-  onAggregatorOpenRound,
-  onAggregatorUpdate,
+  // onAggregatorOpenRound,
+  // onAggregatorUpdate,
   // onAggregatorSaveResult,
   // onAggregatorUpdate,
 } from ".";
@@ -48,6 +59,54 @@ const NODE_URL =
   process.env.APTOS_NODE_URL ?? "https://fullnode.devnet.aptoslabs.com";
 const FAUCET_URL =
   process.env.APTOS_FAUCET_URL ?? "https://faucet.devnet.aptoslabs.com";
+
+const onAggregatorOpenRound = (
+  client: AptosClient,
+  cb: EventCallback,
+  pollIntervalMs: number = 1000
+) => {
+  const event = new AptosEvent(
+    client,
+    HexString.ensure(SWITCHBOARD_STATE_ADDRESS),
+    `${SWITCHBOARD_DEVNET_ADDRESS}::Switchboard::State`,
+    "aggregator_open_round_events",
+    pollIntervalMs
+  );
+  event.onTrigger(cb);
+  return event;
+};
+
+const onAggregatorSaveResult = (
+  client: AptosClient,
+  cb: EventCallback,
+  pollIntervalMs: number = 1000
+) => {
+  const event = new AptosEvent(
+    client,
+    HexString.ensure(SWITCHBOARD_STATE_ADDRESS),
+    `${SWITCHBOARD_DEVNET_ADDRESS}::Switchboard::State`,
+    "aggregator_save_result_events",
+    pollIntervalMs
+  );
+  event.onTrigger(cb);
+  return event;
+};
+
+const onAggregatorUpdate = (
+  client: AptosClient,
+  cb: EventCallback,
+  pollIntervalMs: number = 1000
+) => {
+  const event = new AptosEvent(
+    client,
+    HexString.ensure(SWITCHBOARD_STATE_ADDRESS),
+    `${SWITCHBOARD_DEVNET_ADDRESS}::Switchboard::State`,
+    "aggregator_update_events",
+    pollIntervalMs
+  );
+  event.onTrigger(cb);
+  return event;
+};
 
 // run it all at once
 (async () => {
@@ -81,11 +140,10 @@ const FAUCET_URL =
   // user will be authority
   await faucetClient.fundAccount(user.address(), 500000);
 
-  const [queueTxSig, queue] = await OracleQueue.init(
+  const [queue, queueTxSig] = await OracleQueue.init(
     client,
     queue_resource_acct,
     {
-      address: queue_resource_acct.address(),
       name: "Switch Queue",
       metadata: "Nothing to see here",
       authority: user.address(),
@@ -100,8 +158,6 @@ const FAUCET_URL =
       consecutiveOracleFailureLimit: 0,
       unpermissionedFeedsEnabled: true,
       unpermissionedVrfEnabled: true,
-      curatorRewardCutScale: 0,
-      curatorRewardCutValue: 0,
       lockLeaseFunding: false,
       mint: user.address(),
       enableBufferRelayers: false,
@@ -111,7 +167,7 @@ const FAUCET_URL =
 
   console.log(`Queue: ${queue.address}, tx: ${queueTxSig}`);
 
-  const [aggregatorTxSig, aggregator] = await Aggregator.init(
+  const [aggregator, aggregatorTxSig] = await Aggregator.init(
     client,
     aggregator_resource_acct,
     {
@@ -132,7 +188,7 @@ const FAUCET_URL =
 
   console.log(`Aggregator: ${aggregator.address}, tx: ${aggregatorTxSig}`);
 
-  const [oracleTxSig, oracle] = await Oracle.init(
+  const [oracle, oracleTxSig] = await Oracle.init(
     client,
     oracle_resource_acct,
     {
@@ -147,7 +203,7 @@ const FAUCET_URL =
   console.log(`Oracle: ${oracle.address}, tx: ${oracleTxSig}`);
 
   // trigger the oracle heartbeat
-  const heartbeatTxSig = await oracle.heartbeat();
+  const heartbeatTxSig = await oracle.heartbeat(oracle_resource_acct);
   console.log("Heartbeat Tx Hash:", heartbeatTxSig);
 
   // Make Job data for btc price
@@ -170,7 +226,7 @@ const FAUCET_URL =
     ).finish()
   );
 
-  const [jobTxSig, job] = await Job.init(client, job_resource_acct, {
+  const [job, jobTxSig] = await Job.init(client, job_resource_acct, {
     name: "BTC/USD",
     metadata: "binance",
     authority: user.address(),
@@ -180,7 +236,7 @@ const FAUCET_URL =
   console.log(`Job created ${job.address}, hash: ${jobTxSig}`);
 
   // add btc usd to our aggregator
-  const addJobTxSig = await aggregator.addJob({
+  const addJobTxSig = await aggregator.addJob(aggregator_resource_acct, {
     job: job.address,
   });
 
@@ -191,15 +247,18 @@ const FAUCET_URL =
   console.log(`Aggregator open round tx ${openRoundTxSig}`);
 
   // save result
-  const saveResultTxSig = await aggregator.saveResult({
-    oracle_address: oracle.address,
-    oracle_idx: 0,
-    error: false,
-    value_num: 100,
-    value_scale_factor: 0,
-    value_neg: false,
-    jobs_checksum: "",
-  });
+  const saveResultTxSig = await aggregator.saveResult(
+    aggregator_resource_acct,
+    {
+      oracle_address: oracle.address,
+      oracle_idx: 0,
+      error: false,
+      value_num: 100,
+      value_scale_factor: 0,
+      value_neg: false,
+      jobs_checksum: "",
+    }
+  );
   console.log(`Save result tx: ${saveResultTxSig}`);
 
   const onOpenRoundPoller = onAggregatorOpenRound(client, async (e) => {
