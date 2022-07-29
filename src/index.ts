@@ -274,7 +274,10 @@ export class AptosEvent {
     readonly pollIntervalMs: number = 1000
   ) {}
 
-  async onTrigger(callback: EventCallback) {
+  async onTrigger(
+    callback: EventCallback,
+    errorHandler?: (error: unknown) => void
+  ) {
     // Get the start sequence number in the EVENT STREAM, defaulting to the latest event.
     const [{ sequence_number }] = await this.client.getEventsByEventHandle(
       this.eventHandlerOwner,
@@ -301,8 +304,10 @@ export class AptosEvent {
         lastSequenceNumber = events.at(-1)!.sequence_number;
       }
       for (let e of events) {
-        // fire off the callback for all new events
-        await callback(e);
+        try {
+          // fire off the callback for all new events
+          await callback(e);
+        } catch (error) {}
       }
     }, this.pollIntervalMs);
     return this.intervalId;

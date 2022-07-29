@@ -1,6 +1,34 @@
 {
   "name": "@switchboard-xyz/sbv2-aptos",
+  "description": "API wrapper for intergating with the Switchboardv2 program on Aptos",
   "version": "0.0.1",
+  "license": "MIT",
+  "bin": {
+    "sbv2-aptos": "./sbv2-aptos.ts"
+  },
+  "files": [
+    "lib",
+    "src",
+    "package.json"
+  ],
+  "exports": {
+    ".": {
+      "import": "./lib/esm/index.js",
+      "require": "./lib/cjs/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "main": "lib/cjs/index.js",
+  "module": "lib/esm/index.js",
+  "types": "lib/cjs/index.d.ts",
+  "scripts": {
+    "build:cjs": "tsc -p tsconfig.cjs.json",
+    "build:esm": "tsc",
+    "build": "yarn build:cjs && yarn build:esm",
+    "watch": "tsc -p tsconfig.cjs.json --watch",
+    "lint": "eslint --fix-dry-run --ext .ts src/**/*.ts",
+    "prepublish": "shx rm -rf lib && yarn build"
+  },
   "dependencies": {
     "@switchboard-xyz/switchboard-v2": "^0.0.123",
     "@switchboard-xyz/v2-task-runner": "^0.1.61",
@@ -11,6 +39,10 @@
   "devDependencies": {
     "@types/big.js": "^6.1.5",
     "@types/node": "^18.0.6",
-    "@types/node-fetch": "^2.6.2"
-  }
+    "@types/node-fetch": "^2.6.2",
+    "shx": "^0.3.4"
+  },
+  "pre-commit": [
+    "build"
+  ]
 }
