@@ -3,6 +3,7 @@
   "description": "API wrapper for intergating with the Switchboardv2 program on Aptos",
   "version": "0.0.1",
   "license": "MIT",
+  "private": true,
   "bin": {
     "sbv2-aptos": "./sbv2-aptos.ts"
   },
