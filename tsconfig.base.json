@@ -1,5 +1,5 @@
 {
-  "include": ["./src/**/*"],
+  "include": ["./src/**/*", "./sbv2-aptos.ts"],
   "exclude": ["tests/**/*", "lib", "node_modules"],
   "files": ["src/index.ts"],
   "compilerOptions": {
