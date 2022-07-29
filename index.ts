@@ -305,6 +305,7 @@ export class AptosEvent {
         await callback(e);
       }
     }, this.pollIntervalMs);
+    return this.intervalId;
   }
 
   stop() {
