@@ -9,6 +9,7 @@
   "files": [
     "lib",
     "src",
+    "sbv2-aptos.ts",
     "package.json"
   ],
   "exports": {
