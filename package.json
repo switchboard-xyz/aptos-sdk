@@ -1,5 +1,6 @@
 {
   "name": "@switchboard-xyz/sbv2-aptos",
+  "version": "0.0.1",
   "dependencies": {
     "@switchboard-xyz/switchboard-v2": "^0.0.123",
     "@switchboard-xyz/v2-task-runner": "^0.1.61",
