@@ -12,12 +12,15 @@ import path from "path";
 import chalk from "chalk";
 import { AptosAccount, AptosClient, FaucetClient, HexString } from "aptos";
 import {
+  Aggregator,
+  Job,
   Oracle,
   OracleQueue,
   State,
   SWITCHBOARD_DEVNET_ADDRESS,
   SWITCHBOARD_STATE_ADDRESS,
 } from "./src";
+import { OracleJob } from "@switchboard-xyz/switchboard-v2";
 
 export const CHECK_ICON = chalk.green("\u2714");
 export const FAILED_ICON = chalk.red("\u2717");
@@ -25,14 +28,10 @@ export const FAILED_ICON = chalk.red("\u2717");
 yargs(hideBin(process.argv))
   .scriptName("sbv2-aptos")
   .command(
-    "create-account [keypair]",
+    "create-account",
     "create an Aptos account and save to fs",
     (y: any) => {
-      return y.positional("keypair", {
-        type: "string",
-        describe: "filesystem path to save aptos secret key",
-        required: true,
-      });
+      return y;
     },
     async function (argv: any) {
       const { rpcUrl, faucetUrl, keypair } = argv;
@@ -58,14 +57,10 @@ yargs(hideBin(process.argv))
     }
   )
   .command(
-    "address [keypair]",
+    "address",
     "print the hex address of the keypair",
     (y: any) => {
-      return y.positional("keypair", {
-        type: "string",
-        describe: "filesystem path to a Solana keypair file",
-        required: true,
-      });
+      return y;
     },
     async function (argv: any) {
       const { rpcUrl, faucetUrl, keypair, numAirdrops } = argv;
@@ -82,21 +77,15 @@ yargs(hideBin(process.argv))
     }
   )
   .command(
-    "airdrop [keypair]",
+    "airdrop",
     "request from faucet",
     (y: any) => {
-      return y
-        .positional("keypair", {
-          type: "string",
-          describe: "filesystem path to a Solana keypair file",
-          required: true,
-        })
-        .option("numAirdrops", {
-          type: "number",
-          describe: "number of airdrops to request",
-          demand: false,
-          default: 2,
-        });
+      return y.option("numAirdrops", {
+        type: "number",
+        describe: "number of airdrops to request",
+        demand: false,
+        default: 2,
+      });
     },
     async function (argv: any) {
       const { rpcUrl, faucetUrl, keypair, numAirdrops } = argv;
@@ -118,14 +107,10 @@ yargs(hideBin(process.argv))
     }
   )
   .command(
-    "create-queue [keypair]",
+    "create-queue",
     "create an oracle queue",
     (y: any) => {
-      return y.positional("keypair", {
-        type: "string",
-        describe: "filesystem path to an AptosAccount keypair file",
-        required: true,
-      });
+      return y;
     },
     async function (argv: any) {
       const { rpcUrl, faucetUrl, keypair } = argv;
@@ -175,20 +160,14 @@ yargs(hideBin(process.argv))
     }
   )
   .command(
-    "create-oracle [queueHex] [keypair]",
+    "create-oracle [queueHex]",
     "action",
     (y: any) => {
-      return y
-        .positional("queueHex", {
-          type: "string",
-          describe: "hexString of the oracle queue to join",
-          required: true,
-        })
-        .positional("keypair", {
-          type: "string",
-          describe: "filesystem path to an AptosAccount keypair file",
-          required: true,
-        });
+      return y.positional("queueHex", {
+        type: "string",
+        describe: "hexString of the oracle queue to join",
+        required: true,
+      });
     },
     async function (argv: any) {
       const { rpcUrl, faucetUrl, keypair, queueHex } = argv;
@@ -214,6 +193,7 @@ yargs(hideBin(process.argv))
 
       console.log(`Signature: ${sig}`);
       console.log(`Oracle: ${oracle.address}`);
+      console.log(`oracleAccount: ${oracleAccount.address()}`);
 
       saveAptosAccount(
         oracleAccount,
@@ -223,15 +203,183 @@ yargs(hideBin(process.argv))
       process.exit(0);
     }
   )
+  .command(
+    "create-aggregator [queueHex]",
+    "action",
+    (y: any) => {
+      return y.positional("queueHex", {
+        type: "string",
+        describe: "hexString of the oracle queue to join",
+        required: true,
+      });
+    },
+    async function (argv: any) {
+      const { rpcUrl, faucetUrl, keypair, queueHex } = argv;
+
+      const { client, faucet, account, state, pid } = await loadCli(
+        rpcUrl,
+        faucetUrl,
+        keypair
+      );
+
+      const queueHexString = new HexString(queueHex);
+      const queue = new OracleQueue(client, queueHexString);
+
+      const aggregatorAccount = new AptosAccount();
+      await faucet.fundAccount(aggregatorAccount.address(), 5000);
+
+      const [aggregator, aggregatorSig] = await Aggregator.init(
+        client,
+        aggregatorAccount,
+        {
+          address: "",
+          authority: account.address(),
+          name: "BTC/USD",
+          metadata: "Switchboard BTC/USD Feed",
+          queueAddress: queue.address,
+          batchSize: 1,
+          minOracleResults: 1,
+          minJobResults: 6,
+          minUpdateDelaySeconds: 8,
+        }
+      );
+      console.log(`Aggregator Address: ${aggregator.address}`);
+      console.log(`Aggregator Signature: ${aggregatorSig}`);
+
+      const job1 = await createJob(
+        client,
+        faucet,
+        account,
+        FTX_COM_BTC_USD_JOB,
+        "Ftx BTC/USD",
+        aggregator
+      );
+
+      const job2 = await createJob(
+        client,
+        faucet,
+        account,
+        COINBASE_BTC_USD_JOB,
+        "Coinbase BTC/USD",
+        aggregator
+      );
+
+      const job3 = await createJob(
+        client,
+        faucet,
+        account,
+        BINANCE_BTC_USD_JOB,
+        "Binance BTC/USD",
+        aggregator
+      );
+      const job4 = await createJob(
+        client,
+        faucet,
+        account,
+        BITFINEX_BTC_USD_JOB,
+        "Bitfinex BTC/USD",
+        aggregator
+      );
+      const job5 = await createJob(
+        client,
+        faucet,
+        account,
+        BITSTAMP_BTC_USD_JOB,
+        "Bitstamp BTC/USD",
+        aggregator
+      );
+      const job6 = await createJob(
+        client,
+        faucet,
+        account,
+        KRAKEN_BTC_USD_JOB,
+        "Kraken BTC/USD",
+        aggregator
+      );
+      const job7 = await createJob(
+        client,
+        faucet,
+        account,
+        HUOBI_BTC_USD_JOB,
+        "Huobi BTC/USD",
+        aggregator
+      );
+      const job8 = await createJob(
+        client,
+        faucet,
+        account,
+        OKEX_BTC_USD_JOB,
+        "Okex BTC/USD",
+        aggregator
+      );
+
+      process.exit(0);
+    }
+  )
+  .command(
+    "open-round [aggregatorHex]",
+    "action",
+    (y: any) => {
+      return y.positional("aggregatorHex", {
+        type: "string",
+        describe: "hexString of the aggregator to call open round for",
+        required: true,
+      });
+    },
+    async function (argv: any) {
+      const { rpcUrl, faucetUrl, keypair, aggregatorHex } = argv;
+
+      const { client, faucet, account, state, pid } = await loadCli(
+        rpcUrl,
+        faucetUrl,
+        keypair
+      );
+
+      const aggregatorHexString = new HexString(aggregatorHex);
+      const aggregator = new Aggregator(client, aggregatorHexString);
+
+      const openRoundSig = await aggregator.openRound();
+      console.log(`OpenRound Signature: ${openRoundSig}`);
+
+      process.exit(0);
+    }
+  )
+  .command(
+    "watch-aggregator [aggregatorHex]",
+    "action",
+    (y: any) => {
+      return y.positional("aggregatorHex", {
+        type: "string",
+        describe: "hexString of the aggregator to call open round for",
+        required: true,
+      });
+    },
+    async function (argv: any) {
+      const { rpcUrl, faucetUrl, keypair, aggregatorHex } = argv;
+
+      const { client, faucet, account, state, pid } = await loadCli(
+        rpcUrl,
+        faucetUrl
+      );
+
+      const aggregatorHexString = new HexString(aggregatorHex);
+      const aggregator = new Aggregator(client, aggregatorHexString);
+
+      const event = await aggregator.watch(async (event) => {
+        console.log(`Aggregator Updated @ ${Date.now()}`);
+        console.log(JSON.stringify(event, undefined, 2));
+      });
+
+      process.exit(0);
+    }
+  )
   .options({
-    // cluster: {
-    //   type: "string",
-    //   alias: "c",
-    //   describe: "Solana cluster to interact with",
-    //   options: ["devnet", "mainnet-beta", "localnet"],
-    //   default: "devnet",
-    //   demand: false,
-    // },
+    keypair: {
+      type: "string",
+      alias: "k",
+      describe: "filesystem path to an AptosAccount keypair file",
+      required: true,
+    },
     rpcUrl: {
       type: "string",
       alias: "u",
@@ -314,3 +462,275 @@ async function loadBalance(
     ).data as any
   ).coin.value;
 }
+
+async function createJob(
+  client: AptosClient,
+  faucet: FaucetClient,
+  authority: AptosAccount,
+  oracleJob: OracleJob,
+  name: string,
+  aggregator: Aggregator
+): Promise<Job> {
+  const jobAccount = new AptosAccount();
+  await faucet.fundAccount(jobAccount.address(), 5000);
+
+  const serializedJob = Buffer.from(
+    OracleJob.encodeDelimited(oracleJob).finish()
+  );
+
+  const [job, jobSig] = await Job.init(client, jobAccount, {
+    name: name,
+    metadata: name,
+    authority: authority.address(),
+    data: serializedJob.toString("hex"),
+  });
+  console.log(`Job5 Address (${name}): ${job.address}`);
+  console.log(`Job5 Signature (${name}): ${jobSig}`);
+
+  const addJobSig = await aggregator.addJob(this.account, {
+    job: job.address,
+  });
+  console.log(`Add Job Signature (${name}): ${addJobSig}`);
+
+  return job;
+}
+
+const FTX_COM_BTC_USD_JOB = OracleJob.create({
+  tasks: [
+    {
+      websocketTask: {
+        url: "wss://ftx.com/ws/",
+        subscription:
+          '{"op":"subscribe","channel":"ticker","market":"BTC/USD"}',
+        maxDataAgeSeconds: 15,
+        filter:
+          "$[?(@.type == 'update' && @.channel == 'ticker' && @.market == 'BTC/USD')]",
+      },
+    },
+    {
+      medianTask: {
+        tasks: [
+          {
+            jsonParseTask: {
+              path: "$.data.bid",
+            },
+          },
+          {
+            jsonParseTask: {
+              path: "$.data.ask",
+            },
+          },
+          {
+            jsonParseTask: {
+              path: "$.data.last",
+            },
+          },
+        ],
+      },
+    },
+  ],
+});
+
+const COINBASE_BTC_USD_JOB = OracleJob.create({
+  tasks: [
+    {
+      websocketTask: {
+        url: "wss://ws-feed.pro.coinbase.com",
+        subscription:
+          '{"type":"subscribe","product_ids":["BTC-USD"],"channels":["ticker",{"name":"ticker","product_ids":["BTC-USD"]}]}',
+        maxDataAgeSeconds: 15,
+        filter: "$[?(@.type == 'ticker' && @.product_id == 'BTC-USD')]",
+      },
+    },
+    {
+      jsonParseTask: {
+        path: "$.price",
+      },
+    },
+  ],
+});
+
+const BINANCE_BTC_USD_JOB = OracleJob.create({
+  tasks: [
+    {
+      httpTask: {
+        url: "https://www.binance.com/api/v3/ticker/price?symbol=BTCUSDT",
+      },
+    },
+    {
+      jsonParseTask: {
+        path: "$.price",
+      },
+    },
+    {
+      multiplyTask: {
+        aggregatorPubkey: "ETAaeeuQBwsh9mC2gCov9WdhJENZuffRMXY2HgjCcSL9",
+      },
+    },
+  ],
+});
+
+const BITFINEX_BTC_USD_JOB = OracleJob.create({
+  tasks: [
+    {
+      httpTask: {
+        url: "https://api-pub.bitfinex.com/v2/tickers?symbols=tBTCUSD",
+      },
+    },
+    {
+      medianTask: {
+        tasks: [
+          {
+            jsonParseTask: {
+              path: "$[0][1]",
+            },
+          },
+          {
+            jsonParseTask: {
+              path: "$[0][3]",
+            },
+          },
+          {
+            jsonParseTask: {
+              path: "$[0][7]",
+            },
+          },
+        ],
+      },
+    },
+  ],
+});
+
+const HUOBI_BTC_USD_JOB = OracleJob.create({
+  tasks: [
+    {
+      httpTask: {
+        url: "https://api.huobi.pro/market/detail/merged?symbol=btcusdt",
+      },
+    },
+    {
+      medianTask: {
+        tasks: [
+          {
+            jsonParseTask: {
+              path: "$.tick.bid[0]",
+            },
+          },
+          {
+            jsonParseTask: {
+              path: "$.tick.ask[0]",
+            },
+          },
+        ],
+      },
+    },
+    {
+      multiplyTask: {
+        aggregatorPubkey: "ETAaeeuQBwsh9mC2gCov9WdhJENZuffRMXY2HgjCcSL9",
+      },
+    },
+  ],
+});
+
+const BITSTAMP_BTC_USD_JOB = OracleJob.create({
+  tasks: [
+    {
+      httpTask: {
+        url: "https://www.bitstamp.net/api/v2/ticker/btcusd",
+      },
+    },
+    {
+      medianTask: {
+        tasks: [
+          {
+            jsonParseTask: {
+              path: "$.ask",
+            },
+          },
+          {
+            jsonParseTask: {
+              path: "$.bid",
+            },
+          },
+          {
+            jsonParseTask: {
+              path: "$.last",
+            },
+          },
+        ],
+      },
+    },
+  ],
+});
+
+const KRAKEN_BTC_USD_JOB = OracleJob.create({
+  tasks: [
+    {
+      httpTask: {
+        url: "https://api.kraken.com/0/public/Ticker?pair=XXBTZUSD",
+      },
+    },
+    {
+      medianTask: {
+        tasks: [
+          {
+            jsonParseTask: {
+              path: "$.result.XXBTZUSD.a[0]",
+            },
+          },
+          {
+            jsonParseTask: {
+              path: "$.result.XXBTZUSD.b[0]",
+            },
+          },
+          {
+            jsonParseTask: {
+              path: "$.result.XXBTZUSD.c[0]",
+            },
+          },
+        ],
+      },
+    },
+  ],
+});
+
+const OKEX_BTC_USD_JOB = OracleJob.create({
+  tasks: [
+    {
+      websocketTask: {
+        url: "wss://ws.okex.com:8443/ws/v5/public",
+        subscription:
+          '{"op":"subscribe","args":[{"channel":"tickers","instId":"BTC-USDT"}]}',
+        maxDataAgeSeconds: 15,
+        filter:
+          "$[?(@.event != 'subscribe' && @.arg.channel == 'tickers' && @.arg.instId == 'BTC-USDT' && @.data[0].instType == 'SPOT' && @.data[0].instId == 'BTC-USDT')]",
+      },
+    },
+    {
+      medianTask: {
+        tasks: [
+          {
+            jsonParseTask: {
+              path: "$.data[0].bidPx",
+            },
+          },
+          {
+            jsonParseTask: {
+              path: "$.data[0].askPx",
+            },
+          },
+          {
+            jsonParseTask: {
+              path: "$.data[0].last",
+            },
+          },
+        ],
+      },
+    },
+    {
+      multiplyTask: {
+        aggregatorPubkey: "ETAaeeuQBwsh9mC2gCov9WdhJENZuffRMXY2HgjCcSL9",
+      },
+    },
+  ],
+});

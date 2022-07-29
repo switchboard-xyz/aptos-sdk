@@ -500,6 +500,18 @@ export class Aggregator {
       ]
     );
   }
+
+  async watch(callback: EventCallback): Promise<AptosEvent> {
+    const event = new AptosEvent(
+      this.client,
+      HexString.ensure(SWITCHBOARD_STATE_ADDRESS),
+      `${SWITCHBOARD_DEVNET_ADDRESS}::Switchboard::State`,
+      "aggregator_update_events",
+      1000
+    );
+    await event.onTrigger(callback);
+    return event;
+  }
 }
 
 export class Job {
