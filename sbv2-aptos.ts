@@ -317,7 +317,7 @@ yargs(hideBin(process.argv))
           queueAddress: queue.address,
           batchSize: 1,
           minOracleResults: 1,
-          minJobResults: 6,
+          minJobResults: 3,
           minUpdateDelaySeconds: 8,
         },
         pid,
@@ -476,7 +476,7 @@ yargs(hideBin(process.argv))
         console.log(JSON.stringify(event, undefined, 2));
       });
 
-      process.exit(0);
+      // process.exit(0);
     }
   )
   .options({

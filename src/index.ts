@@ -45,6 +45,17 @@ export class AptosDecimal {
     }
     return new AptosDecimal(value.join(""), e, val.s === -1);
   }
+
+  static fromObj(obj: Object): AptosDecimal {
+    const properties = ["mantissa", "scale", "neg"];
+    properties.forEach((p) => {
+      if (!(p in obj)) {
+        throw new Error(`Object is missing property ${p}`);
+      }
+    });
+
+    return new AptosDecimal(obj["mantissa"], obj["scale"], obj["neg"]);
+  }
 }
 
 export interface AggregatorAddJobParams {
@@ -156,7 +167,7 @@ export interface OracleQueueInitParams {
 
 export type EventCallback = (
   e: Types.Event
-) => Promise<void> | (() => Promise<void>);
+) => Promise<void> /** |  (() => Promise<void>) */;
 
 /** Convert string to hex-encoded utf-8 bytes. */
 function stringToHex(text: string) {
@@ -271,7 +282,6 @@ async function getTableItem(
     return;
   }
 }
-
 /**
  * Poll Events on Aptos
  * @Note uncleared setTimeout calls will keep processes from ending organically (SIGTERM is needed)
@@ -290,42 +300,46 @@ export class AptosEvent {
     callback: EventCallback,
     errorHandler?: (error: unknown) => void
   ) {
-    // type for this is string for some reason
-    let lastSequenceNumber = "0"; // SHOULD THIS BE UNDEFINED
-
+    let lastSequenceNumber = "0";
+    const ownerData = await this.client.getAccountResource(
+      this.eventHandlerOwner.hex().toString(),
+      this.eventOwnerStruct
+    );
     try {
-      // Get the start sequence number in the EVENT STREAM, defaulting to the latest event.
-      const [{ sequence_number }] = await this.client.getEventsByEventHandle(
-        this.eventHandlerOwner,
-        this.eventOwnerStruct,
-        this.eventHandlerName,
-        { limit: 1 }
-      );
-      lastSequenceNumber = sequence_number;
-    } catch (error) {}
+      lastSequenceNumber = (
+        Number(ownerData.data[this.eventHandlerName].counter) - 1
+      ).toString();
+    } catch (error) {
+      console.error(JSON.stringify(ownerData, undefined, 2), error);
+    }
 
     this.intervalId = setInterval(async () => {
-      const events = await this.client.getEventsByEventHandle(
-        this.eventHandlerOwner,
-        this.eventOwnerStruct,
-        this.eventHandlerName,
-        {
-          start: Number(lastSequenceNumber) + 1, // DOES THIS START COUNTING AT 0 ??!!
-          limit: 500,
-        }
-      );
-      if (events.length !== 0) {
-        // increment sequence number
-        lastSequenceNumber = events.at(-1)!.sequence_number;
-      }
-      for (let e of events) {
-        try {
-          // fire off the callback for all new events
-          await callback(e);
-        } catch (error) {
-          if (errorHandler) {
-            errorHandler(e);
+      try {
+        const events = await this.client.getEventsByEventHandle(
+          this.eventHandlerOwner,
+          this.eventOwnerStruct,
+          this.eventHandlerName,
+          {
+            start: Number(lastSequenceNumber) + 1,
+            limit: 500,
           }
+        );
+        if (events.length !== 0) {
+          // increment sequence number
+          lastSequenceNumber = events.at(-1)!.sequence_number;
+        }
+        for (let event of events) {
+          callback(event).catch((error) => {
+            if (errorHandler) {
+              errorHandler(error);
+            } else {
+              throw error;
+            }
+          });
+        }
+      } catch (error) {
+        if (errorHandler) {
+          errorHandler(error);
         }
       }
     }, this.pollIntervalMs);
@@ -562,10 +576,7 @@ export class Aggregator {
       aggregator.latestConfirmedRound.result.dec,
       aggregator.latestConfirmedRound.result.neg
     ).toBig();
-    const forceReportPeriod= new anchor.BN(
-      aggregator.forceReportPeriod,
-      10
-    );
+    const forceReportPeriod = new anchor.BN(aggregator.forceReportPeriod, 10);
     const lastTimestamp = new anchor.BN(
       aggregator.latestConfirmedRound.roundOpenTimestamp,
       10
@@ -599,7 +610,7 @@ export class Job {
     return (
       await this.client.getAccountResource(
         this.address,
-        `0x${this.devnetAddress}::Job::Job`
+        `${this.devnetAddress}::Job::Job`
       )
     ).data;
   }
