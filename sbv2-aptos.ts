@@ -34,7 +34,7 @@ yargs(hideBin(process.argv))
       return y;
     },
     async function (argv: any) {
-      const { rpcUrl, faucetUrl, keypair } = argv;
+      const { rpcUrl, faucetUrl, keypair, pid, stateAddress } = argv;
 
       const client = new AptosClient(rpcUrl);
       const faucet = new FaucetClient(rpcUrl, faucetUrl);
@@ -64,15 +64,11 @@ yargs(hideBin(process.argv))
     },
     async function (argv: any) {
       const { rpcUrl, faucetUrl, keypair, numAirdrops } = argv;
-
-      const { client, faucet, account, state, pid } = await loadCli(
-        rpcUrl,
-        faucetUrl,
-        keypair
-      );
-
+      const client = new AptosClient(rpcUrl);
+      const account = loadAptosAccount(keypair);
       console.log(`Address: ${account.address()}`);
-
+      const balance = await loadBalance(client, account.address());
+      console.log(`Balance: ${balance}`);
       process.exit(0);
     }
   )
@@ -88,11 +84,14 @@ yargs(hideBin(process.argv))
       });
     },
     async function (argv: any) {
-      const { rpcUrl, faucetUrl, keypair, numAirdrops } = argv;
+      const { rpcUrl, faucetUrl, keypair, numAirdrops, pid, stateAddress } =
+        argv;
 
-      const { client, faucet, account, state, pid } = await loadCli(
+      const { client, faucet, account, state } = await loadCli(
         rpcUrl,
         faucetUrl,
+        pid,
+        stateAddress,
         keypair
       );
 
@@ -107,17 +106,61 @@ yargs(hideBin(process.argv))
     }
   )
   .command(
+    "create-state",
+    "create an oracle queue",
+    (y: any) => {
+      return y;
+    },
+    async function (argv: any) {
+      const { rpcUrl, faucetUrl, keypair, pid, stateAddress } = argv;
+
+      const { client, faucet, account } = await loadCli(
+        rpcUrl,
+        faucetUrl,
+        pid,
+        stateAddress,
+        keypair
+      );
+
+      const stateAccount = new AptosAccount();
+      await faucet.fundAccount(stateAccount.address(), 5000);
+
+      const [state, sig] = await State.init(client, stateAccount, pid);
+
+      console.log(`Signature: ${sig}`);
+      console.log(`State: ${state.address}`);
+
+      saveAptosAccount(
+        stateAccount,
+        `state-${new Date().toJSON().slice(0, 10)}-${stateAccount.address}.json`
+      );
+
+      console.log(`stateAccount: ${stateAccount.address()}`);
+
+      try {
+        const stateData = await state.loadData();
+        console.log(JSON.stringify(stateData, undefined, 2));
+      } catch (error) {
+        console.error(`Error fetching state data: ${error}`);
+      }
+
+      process.exit(0);
+    }
+  )
+  .command(
     "create-queue",
     "create an oracle queue",
     (y: any) => {
       return y;
     },
     async function (argv: any) {
-      const { rpcUrl, faucetUrl, keypair } = argv;
+      const { rpcUrl, faucetUrl, keypair, pid, stateAddress } = argv;
 
-      const { client, faucet, account, state, pid } = await loadCli(
+      const { client, faucet, account, state } = await loadCli(
         rpcUrl,
         faucetUrl,
+        pid,
+        stateAddress,
         keypair
       );
 
@@ -125,33 +168,39 @@ yargs(hideBin(process.argv))
       await faucet.fundAccount(queueAccount.address(), 5000);
       await faucet.fundAccount(queueAccount.address(), 5000);
 
-      const [queue, sig] = await OracleQueue.init(client, queueAccount, {
-        name: "TestQueue",
-        metadata: "Testing123",
-        authority: account.address(),
-        oracleTimeout: 180,
-        reward: 0,
-        minStake: 0,
-        slashingEnabled: false,
-        varianceToleranceMultiplierValue: 0,
-        varianceToleranceMultiplierScale: 0,
-        feedProbationPeriod: 0,
-        consecutiveFeedFailureLimit: 0,
-        consecutiveOracleFailureLimit: 0,
-        unpermissionedFeedsEnabled: true,
-        unpermissionedVrfEnabled: true,
-        lockLeaseFunding: false,
-        mint: account.address(),
-        enableBufferRelayers: false,
-        maxSize: 10,
-      });
+      const [queue, sig] = await OracleQueue.init(
+        client,
+        queueAccount,
+        {
+          name: "TestQueue",
+          metadata: "Testing123",
+          authority: account.address().hex(),
+          oracleTimeout: 180,
+          reward: 0,
+          minStake: 0,
+          slashingEnabled: false,
+          varianceToleranceMultiplierValue: 0,
+          varianceToleranceMultiplierScale: 0,
+          feedProbationPeriod: 0,
+          consecutiveFeedFailureLimit: 0,
+          consecutiveOracleFailureLimit: 0,
+          unpermissionedFeedsEnabled: true,
+          unpermissionedVrfEnabled: true,
+          lockLeaseFunding: false,
+          mint: account.address().hex(),
+          enableBufferRelayers: false,
+          maxSize: 10,
+        },
+        pid,
+        stateAddress
+      );
 
       console.log(`Signature: ${sig}`);
       console.log(`Queue: ${queue.address}`);
 
       saveAptosAccount(
         queueAccount,
-        `queue-${new Date().toJSON().slice(0, 10)}.json`
+        `queue-${new Date().toJSON().slice(0, 10)}-${queueAccount.address}.json`
       );
 
       console.log(`queueAccount: ${queueAccount.address()}`);
@@ -177,11 +226,13 @@ yargs(hideBin(process.argv))
       });
     },
     async function (argv: any) {
-      const { rpcUrl, faucetUrl, keypair, queueHex } = argv;
+      const { rpcUrl, faucetUrl, keypair, queueHex, pid, stateAddress } = argv;
 
-      const { client, faucet, account, state, pid } = await loadCli(
+      const { client, faucet, account, state } = await loadCli(
         rpcUrl,
         faucetUrl,
+        pid,
+        stateAddress,
         keypair
       );
 
@@ -192,13 +243,19 @@ yargs(hideBin(process.argv))
 
       console.log(`authority = ${account.address()}`);
 
-      const [oracle, sig] = await Oracle.init(client, oracleAccount, {
-        address: SWITCHBOARD_STATE_ADDRESS,
-        name: "TestOracle",
-        metadata: "Testing123",
-        authority: account.address(),
-        queue: queueHexString,
-      });
+      const [oracle, sig] = await Oracle.init(
+        client,
+        oracleAccount,
+        {
+          address: SWITCHBOARD_STATE_ADDRESS,
+          name: "TestOracle",
+          metadata: "Testing123",
+          authority: account.address(),
+          queue: queueHexString,
+        },
+        pid,
+        stateAddress
+      );
 
       console.log(`Signature: ${sig}`);
       console.log(`Oracle: ${oracle.address}`);
@@ -206,7 +263,9 @@ yargs(hideBin(process.argv))
 
       saveAptosAccount(
         oracleAccount,
-        `oracle-${new Date().toJSON().slice(0, 10)}.json`
+        `oracle-${new Date()
+          .toJSON()
+          .slice(0, 10)}-${oracleAccount.address()}.json`
       );
 
       try {
@@ -230,11 +289,13 @@ yargs(hideBin(process.argv))
       });
     },
     async function (argv: any) {
-      const { rpcUrl, faucetUrl, keypair, queueHex } = argv;
+      const { rpcUrl, faucetUrl, keypair, queueHex, pid, stateAddress } = argv;
 
-      const { client, faucet, account, state, pid } = await loadCli(
+      const { client, faucet, account, state } = await loadCli(
         rpcUrl,
         faucetUrl,
+        pid,
+        stateAddress,
         keypair
       );
 
@@ -243,21 +304,24 @@ yargs(hideBin(process.argv))
 
       const aggregatorAccount = new AptosAccount();
       await faucet.fundAccount(aggregatorAccount.address(), 5000);
+      await faucet.fundAccount(aggregatorAccount.address(), 5000);
+      await faucet.fundAccount(aggregatorAccount.address(), 5000);
 
       const [aggregator, aggregatorSig] = await Aggregator.init(
         client,
         aggregatorAccount,
         {
-          address: "",
           authority: account.address(),
           name: "BTC/USD",
           metadata: "Switchboard BTC/USD Feed",
           queueAddress: queue.address,
           batchSize: 1,
           minOracleResults: 1,
-          minJobResults: 6,
+          minJobResults: 3,
           minUpdateDelaySeconds: 8,
-        }
+        },
+        pid,
+        stateAddress
       );
       console.log(`Aggregator Address: ${aggregator.address}`);
       console.log(`Aggregator Signature: ${aggregatorSig}`);
@@ -304,30 +368,44 @@ yargs(hideBin(process.argv))
         "Bitstamp BTC/USD",
         aggregator
       );
-      const job6 = await createJob(
-        client,
-        faucet,
-        account,
-        KRAKEN_BTC_USD_JOB,
-        "Kraken BTC/USD",
-        aggregator
+      // const job6 = await createJob(
+      //   client,
+      //   faucet,
+      //   account,
+      //   KRAKEN_BTC_USD_JOB,
+      //   "Kraken BTC/USD",
+      //   aggregator
+      // );
+      // const job7 = await createJob(
+      //   client,
+      //   faucet,
+      //   account,
+      //   HUOBI_BTC_USD_JOB,
+      //   "Huobi BTC/USD",
+      //   aggregator
+      // );
+      // const job8 = await createJob(
+      //   client,
+      //   faucet,
+      //   account,
+      //   OKEX_BTC_USD_JOB,
+      //   "Okex BTC/USD",
+      //   aggregator
+      // );
+
+      saveAptosAccount(
+        aggregatorAccount,
+        `aggregator-${new Date().toJSON().slice(0, 10)}-${
+          aggregator.address
+        }.json`
       );
-      const job7 = await createJob(
-        client,
-        faucet,
-        account,
-        HUOBI_BTC_USD_JOB,
-        "Huobi BTC/USD",
-        aggregator
-      );
-      const job8 = await createJob(
-        client,
-        faucet,
-        account,
-        OKEX_BTC_USD_JOB,
-        "Okex BTC/USD",
-        aggregator
-      );
+
+      try {
+        const aggregatorData = await aggregator.loadData();
+        console.log(JSON.stringify(aggregatorData, undefined, 2));
+      } catch (error) {
+        console.error(`Error fetching aggregator data: ${error}`);
+      }
 
       process.exit(0);
     }
@@ -343,16 +421,25 @@ yargs(hideBin(process.argv))
       });
     },
     async function (argv: any) {
-      const { rpcUrl, faucetUrl, keypair, aggregatorHex } = argv;
+      const { rpcUrl, faucetUrl, keypair, aggregatorHex, pid, stateAddress } =
+        argv;
 
-      const { client, faucet, account, state, pid } = await loadCli(
+      const { client, faucet, account, state } = await loadCli(
         rpcUrl,
         faucetUrl,
+        pid,
+        stateAddress,
         keypair
       );
 
       const aggregatorHexString = new HexString(aggregatorHex);
-      const aggregator = new Aggregator(client, aggregatorHexString);
+      const aggregator = new Aggregator(
+        client,
+        aggregatorHexString,
+        account,
+        pid,
+        stateAddress
+      );
 
       const openRoundSig = await aggregator.openRound();
       console.log(`OpenRound Signature: ${openRoundSig}`);
@@ -371,11 +458,14 @@ yargs(hideBin(process.argv))
       });
     },
     async function (argv: any) {
-      const { rpcUrl, faucetUrl, keypair, aggregatorHex } = argv;
+      const { rpcUrl, faucetUrl, keypair, aggregatorHex, pid, stateAddress } =
+        argv;
 
-      const { client, faucet, account, state, pid } = await loadCli(
+      const { client, faucet, account, state } = await loadCli(
         rpcUrl,
-        faucetUrl
+        faucetUrl,
+        pid,
+        stateAddress
       );
 
       const aggregatorHexString = new HexString(aggregatorHex);
@@ -386,7 +476,7 @@ yargs(hideBin(process.argv))
         console.log(JSON.stringify(event, undefined, 2));
       });
 
-      process.exit(0);
+      // process.exit(0);
     }
   )
   .options({
@@ -407,6 +497,16 @@ yargs(hideBin(process.argv))
       describe: "Alternative Faucet URL",
       default: "https://faucet.devnet.aptoslabs.com",
     },
+    pid: {
+      type: "string",
+      describe: "devnet program ID",
+      default: SWITCHBOARD_DEVNET_ADDRESS,
+    },
+    stateAddress: {
+      type: "string",
+      describe: "state address",
+      default: SWITCHBOARD_STATE_ADDRESS,
+    },
   })
   .help().argv;
 
@@ -416,7 +516,7 @@ function loadAptosAccount(keypairPath: string): AptosAccount {
   );
 }
 
-function saveAptosAccount(account: AptosAccount, keypairPath: string) {
+function saveAptosAccount(account: AptosAccount, keypairName: string) {
   const privateKeyObject = account.toPrivateKeyObject();
 
   const buffer = Buffer.from(privateKeyObject.privateKeyHex.slice(2), "hex");
@@ -424,8 +524,12 @@ function saveAptosAccount(account: AptosAccount, keypairPath: string) {
     throw new Error("buffer empty");
   }
 
+  const outputDir = path.join(process.cwd(), ".switchboard");
+
+  fs.mkdirSync(outputDir, { recursive: true });
+
   fs.writeFileSync(
-    keypairPath,
+    path.join(outputDir, keypairName),
     `[${new Uint8Array(buffer).map((i) => Number(i)).toString()}]`,
     "utf-8"
   );
@@ -434,13 +538,14 @@ function saveAptosAccount(account: AptosAccount, keypairPath: string) {
 async function loadCli(
   rpcUrl: string,
   faucetUrl: string,
+  pid: string,
+  stateAddress: string,
   keypairPath?: string
 ): Promise<{
   client: AptosClient;
   account: AptosAccount;
   faucet: FaucetClient;
   state: State;
-  pid: string;
 }> {
   const client = new AptosClient(rpcUrl);
   const faucet = new FaucetClient(rpcUrl, faucetUrl);
@@ -454,14 +559,13 @@ async function loadCli(
     await faucet.fundAccount(account.address(), 5000);
   }
 
-  const state = new State(client, SWITCHBOARD_STATE_ADDRESS, account);
+  const state = new State(client, stateAddress, account, pid);
 
   return {
     client,
     faucet,
     account,
     state,
-    pid: SWITCHBOARD_DEVNET_ADDRESS,
   };
 }
 
@@ -489,24 +593,36 @@ async function createJob(
 ): Promise<Job> {
   const jobAccount = new AptosAccount();
   await faucet.fundAccount(jobAccount.address(), 5000);
+  // await faucet.fundAccount(jobAccount.address(), 5000);
 
   const serializedJob = Buffer.from(
     OracleJob.encodeDelimited(oracleJob).finish()
   );
 
-  const [job, jobSig] = await Job.init(client, jobAccount, {
-    name: name,
-    metadata: name,
-    authority: authority.address(),
-    data: serializedJob.toString("hex"),
-  });
-  console.log(`Job5 Address (${name}): ${job.address}`);
-  console.log(`Job5 Signature (${name}): ${jobSig}`);
+  const [job, jobSig] = await Job.init(
+    client,
+    jobAccount,
+    {
+      name: name,
+      metadata: name,
+      authority: authority.address(),
+      data: serializedJob.toString("hex"),
+    },
+    aggregator.devnetAddress,
+    aggregator.stateAddress
+  );
+  console.log(`Job Address (${name}): ${job.address}`);
+  console.log(`Job Signature (${name}): ${jobSig}`);
 
-  const addJobSig = await aggregator.addJob(this.account, {
+  const addJobSig = await aggregator.addJob(authority, {
     job: job.address,
   });
   console.log(`Add Job Signature (${name}): ${addJobSig}`);
+
+  saveAptosAccount(
+    jobAccount,
+    `job-${new Date().toJSON().slice(0, 10)}-${job.address}.json`
+  );
 
   return job;
 }

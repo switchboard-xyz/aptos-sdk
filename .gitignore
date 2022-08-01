@@ -2,3 +2,5 @@ node_modules/**
 # lib
 *-keypair.json
 .switchboard
+
+*.env
