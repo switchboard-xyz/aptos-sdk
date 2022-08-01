@@ -51,7 +51,7 @@ yargs(hideBin(process.argv))
       console.log(`Account: ${account.address()}`);
       console.log(`Balance: ${await loadBalance(client, account.address())}`);
 
-      saveAptosAccount(account, keypair);
+      saveAptosAccount(account, keypair, true);
 
       process.exit(0);
     }
@@ -516,7 +516,11 @@ function loadAptosAccount(keypairPath: string): AptosAccount {
   );
 }
 
-function saveAptosAccount(account: AptosAccount, keypairName: string) {
+function saveAptosAccount(
+  account: AptosAccount,
+  keypairName: string,
+  skipSwitchboardDir = false
+) {
   const privateKeyObject = account.toPrivateKeyObject();
 
   const buffer = Buffer.from(privateKeyObject.privateKeyHex.slice(2), "hex");
@@ -524,7 +528,9 @@ function saveAptosAccount(account: AptosAccount, keypairName: string) {
     throw new Error("buffer empty");
   }
 
-  const outputDir = path.join(process.cwd(), ".switchboard");
+  const outputDir = skipSwitchboardDir
+    ? process.cwd()
+    : path.join(process.cwd(), ".switchboard");
 
   fs.mkdirSync(outputDir, { recursive: true });
 
@@ -582,6 +588,13 @@ async function loadBalance(
     ).data as any
   ).coin.value;
 }
+
+async function createAggregatorFromJson(
+  client: AptosClient,
+  faucet: FaucetClient,
+  authority: AptosAccount,
+  jsonFilePath: string
+) {}
 
 async function createJob(
   client: AptosClient,
