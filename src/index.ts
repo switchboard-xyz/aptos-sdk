@@ -278,16 +278,19 @@ export class AptosEvent {
     callback: EventCallback,
     errorHandler?: (error: unknown) => void
   ) {
-    // Get the start sequence number in the EVENT STREAM, defaulting to the latest event.
-    const [{ sequence_number }] = await this.client.getEventsByEventHandle(
-      this.eventHandlerOwner,
-      this.eventOwnerStruct,
-      this.eventHandlerName,
-      { limit: 1 }
-    );
-
     // type for this is string for some reason
-    let lastSequenceNumber = sequence_number;
+    let lastSequenceNumber = "0"; // SHOULD THIS BE UNDEFINED
+
+    try {
+      // Get the start sequence number in the EVENT STREAM, defaulting to the latest event.
+      const [{ sequence_number }] = await this.client.getEventsByEventHandle(
+        this.eventHandlerOwner,
+        this.eventOwnerStruct,
+        this.eventHandlerName,
+        { limit: 1 }
+      );
+      lastSequenceNumber = sequence_number;
+    } catch (error) {}
 
     this.intervalId = setInterval(async () => {
       const events = await this.client.getEventsByEventHandle(
@@ -295,7 +298,7 @@ export class AptosEvent {
         this.eventOwnerStruct,
         this.eventHandlerName,
         {
-          start: Number(lastSequenceNumber) + 1,
+          start: Number(lastSequenceNumber) + 1, // DOES THIS START COUNTING AT 0 ??!!
           limit: 500,
         }
       );
@@ -307,7 +310,11 @@ export class AptosEvent {
         try {
           // fire off the callback for all new events
           await callback(e);
-        } catch (error) {}
+        } catch (error) {
+          if (errorHandler) {
+            errorHandler(e);
+          }
+        }
       }
     }, this.pollIntervalMs);
     return this.intervalId;
@@ -443,7 +450,7 @@ export class Aggregator {
       ]
     );
 
-    return [new Aggregator(client, params.address, account), tx];
+    return [new Aggregator(client, account.address(), account), tx];
   }
 
   async addJob(
@@ -586,7 +593,7 @@ export class Crank {
       ]
     );
 
-    return [new Crank(client, params.address), tx];
+    return [new Crank(client, account.address()), tx];
   }
 
   /**
@@ -659,7 +666,7 @@ export class Oracle {
       ]
     );
 
-    return [new Oracle(client, params.address), tx];
+    return [new Oracle(client, account.address()), tx];
   }
 
   async loadData(): Promise<any> {

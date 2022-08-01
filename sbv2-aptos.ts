@@ -156,6 +156,13 @@ yargs(hideBin(process.argv))
 
       console.log(`queueAccount: ${queueAccount.address()}`);
 
+      try {
+        const queueData = await queue.loadData();
+        console.log(JSON.stringify(queueData, undefined, 2));
+      } catch (error) {
+        console.error(`Error fetching queue data: ${error}`);
+      }
+
       process.exit(0);
     }
   )
@@ -183,11 +190,13 @@ yargs(hideBin(process.argv))
       const oracleAccount = new AptosAccount();
       await faucet.fundAccount(oracleAccount.address(), 5000);
 
+      console.log(`authority = ${account.address()}`);
+
       const [oracle, sig] = await Oracle.init(client, oracleAccount, {
         address: SWITCHBOARD_STATE_ADDRESS,
         name: "TestOracle",
         metadata: "Testing123",
-        authority: account.pubKey(),
+        authority: account.address(),
         queue: queueHexString,
       });
 
@@ -199,6 +208,13 @@ yargs(hideBin(process.argv))
         oracleAccount,
         `oracle-${new Date().toJSON().slice(0, 10)}.json`
       );
+
+      try {
+        const oracleData = await oracle.loadData();
+        console.log(JSON.stringify(oracleData, undefined, 2));
+      } catch (error) {
+        console.error(`Error fetching oracle data: ${error}`);
+      }
 
       process.exit(0);
     }
