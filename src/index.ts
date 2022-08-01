@@ -4,17 +4,17 @@ import {
   Types,
   HexString,
   MaybeHexString,
+  FaucetClient,
 } from "aptos";
 import Big from "big.js";
 import * as sbv2 from "@switchboard-xyz/switchboard-v2";
+import * as anchor from "@project-serum/anchor";
 
 // Address that deployed the module
-export const SWITCHBOARD_DEVNET_ADDRESS =
-  "0x348ecb66a5d9edab8d175f647d5e99d6962803da7f5d3d2eb839387aeb118300";
+export const SWITCHBOARD_DEVNET_ADDRESS = `0x${"2B3C332C6C95D3B717FDF3644A7633E8EFA7B1451193891A504A6A292EDC0039".toLowerCase()}`;
 
 // Address of the account that owns the Switchboard resource
-export const SWITCHBOARD_STATE_ADDRESS =
-  "0x348ecb66a5d9edab8d175f647d5e99d6962803da7f5d3d2eb839387aeb118300";
+export const SWITCHBOARD_STATE_ADDRESS = `0x${"2B3C332C6C95D3B717FDF3644A7633E8EFA7B1451193891A504A6A292EDC0039".toLowerCase()}`;
 
 export class AptosDecimal {
   constructor(
@@ -53,11 +53,11 @@ export interface AggregatorAddJobParams {
 }
 
 export interface AggregatorInitParams {
-  address: MaybeHexString; // arbitrary key associated with aggregator @NOTE: Cannot be altered
+  // address: MaybeHexString; // arbitrary key associated with aggregator @NOTE: Cannot be altered
   authority: MaybeHexString; // owner of aggregator
   name?: string;
   metadata?: string;
-  queueAddress?: MaybeHexString;
+  queueAddress: MaybeHexString;
   batchSize: number;
   minOracleResults: number;
   minJobResults: number;
@@ -175,7 +175,8 @@ export async function sendAptosTx(
   client: AptosClient,
   signer: AptosAccount,
   method: string,
-  args: Array<any>
+  args: Array<any>,
+  retryCount = 2
 ): Promise<string> {
   const payload: Types.TransactionPayload = {
     type: "script_function_payload",
@@ -189,9 +190,20 @@ export async function sendAptosTx(
   );
 
   const simulation = await client.simulateTransaction(signer, txnRequest);
+  if (simulation.vm_status === "Out of gas") {
+    if (retryCount > 0) {
+      const faucetClient = new FaucetClient(
+        client.nodeUrl,
+        "https://faucet.devnet.aptoslabs.com"
+      );
+      await faucetClient.fundAccount(signer.address(), 5000);
+      return sendAptosTx(client, signer, method, args, --retryCount);
+    }
+  }
   if (simulation.success === false) {
     console.log(`TxGas: ${simulation.gas_used}`);
     console.log(`TxGas: ${simulation.hash}`);
+
     throw new Error(`TxFailure: ${simulation.vm_status}`);
   } else {
     console.log(`TxGas: ${simulation.gas_used}`);
@@ -360,21 +372,23 @@ export class State {
   constructor(
     readonly client: AptosClient,
     readonly address: MaybeHexString,
-    readonly account: AptosAccount
+    readonly account: AptosAccount,
+    readonly devnetAddress: MaybeHexString = SWITCHBOARD_DEVNET_ADDRESS
   ) {}
 
   static async init(
     client: AptosClient,
-    account: AptosAccount
+    account: AptosAccount,
+    devnetAddress: MaybeHexString = SWITCHBOARD_DEVNET_ADDRESS
   ): Promise<[State, string]> {
     const tx = await sendAptosTx(
       client,
       account,
-      `${SWITCHBOARD_DEVNET_ADDRESS}::SwitchboardInitAction::run`,
+      `${devnetAddress}::SwitchboardInitAction::run`,
       []
     );
 
-    return [new State(client, account.address(), account), tx];
+    return [new State(client, account.address(), account, devnetAddress), tx];
   }
 
   async loadData(): Promise<any> {
@@ -391,16 +405,16 @@ export class Aggregator {
   constructor(
     readonly client: AptosClient,
     readonly address: MaybeHexString,
-    readonly account?: AptosAccount
+    readonly account?: AptosAccount,
+    readonly devnetAddress: MaybeHexString = SWITCHBOARD_DEVNET_ADDRESS,
+    readonly stateAddress: MaybeHexString = SWITCHBOARD_STATE_ADDRESS
   ) {}
 
   async loadData(): Promise<any> {
     return (
       await this.client.getAccountResource(
         HexString.ensure(this.address).hex(),
-        `${HexString.ensure(
-          SWITCHBOARD_DEVNET_ADDRESS
-        ).hex()}::Aggregator::Aggregator`
+        `${HexString.ensure(this.devnetAddress).hex()}::Aggregator::Aggregator`
       )
     ).data;
   }
@@ -424,19 +438,19 @@ export class Aggregator {
   static async init(
     client: AptosClient,
     account: AptosAccount,
-    params: AggregatorInitParams
+    params: AggregatorInitParams,
+    devnetAddress: MaybeHexString = SWITCHBOARD_DEVNET_ADDRESS,
+    stateAddress: MaybeHexString = SWITCHBOARD_STATE_ADDRESS
   ): Promise<[Aggregator, string]> {
     const tx = await sendAptosTx(
       client,
       account,
-      `${SWITCHBOARD_DEVNET_ADDRESS}::AggregatorInitAction::run`,
+      `${devnetAddress}::AggregatorInitAction::run`,
       [
-        HexString.ensure(SWITCHBOARD_STATE_ADDRESS).hex(),
+        HexString.ensure(stateAddress).hex(),
         Buffer.from(params.name ?? "").toString("hex"),
         Buffer.from(params.metadata ?? "").toString("hex"),
-        params.queueAddress
-          ? HexString.ensure(params.queueAddress).hex()
-          : HexString.ensure("0x0").hex(),
+        HexString.ensure(params.queueAddress).hex(),
         params.batchSize.toString(),
         params.minOracleResults.toString(),
         params.minJobResults.toString(),
@@ -450,7 +464,16 @@ export class Aggregator {
       ]
     );
 
-    return [new Aggregator(client, account.address(), account), tx];
+    return [
+      new Aggregator(
+        client,
+        account.address(),
+        account,
+        devnetAddress,
+        stateAddress
+      ),
+      tx,
+    ];
   }
 
   async addJob(
@@ -460,9 +483,9 @@ export class Aggregator {
     return await sendAptosTx(
       this.client,
       account,
-      `${SWITCHBOARD_DEVNET_ADDRESS}::AggregatorAddJobAction::run`,
+      `${this.devnetAddress}::AggregatorAddJobAction::run`,
       [
-        HexString.ensure(SWITCHBOARD_STATE_ADDRESS).hex(),
+        HexString.ensure(this.stateAddress).hex(),
         HexString.ensure(this.address).hex(),
         HexString.ensure(params.job).hex(),
         params.weight || 1,
@@ -477,9 +500,9 @@ export class Aggregator {
     return await sendAptosTx(
       this.client,
       account,
-      `${SWITCHBOARD_DEVNET_ADDRESS}::AggregatorSaveResultAction::run`,
+      `${this.devnetAddress}::AggregatorSaveResultAction::run`,
       [
-        HexString.ensure(SWITCHBOARD_STATE_ADDRESS).hex(),
+        HexString.ensure(this.stateAddress).hex(),
         HexString.ensure(params.oracle_address).hex(),
         HexString.ensure(this.address).hex(),
         params.oracle_idx.toString(),
@@ -500,9 +523,9 @@ export class Aggregator {
     return await sendAptosTx(
       this.client,
       this.account,
-      `${SWITCHBOARD_DEVNET_ADDRESS}::AggregatorOpenRoundAction::run`,
+      `${this.devnetAddress}::AggregatorOpenRoundAction::run`,
       [
-        HexString.ensure(SWITCHBOARD_STATE_ADDRESS).hex(),
+        HexString.ensure(this.stateAddress).hex(),
         HexString.ensure(this.address).hex(),
       ]
     );
@@ -511,24 +534,72 @@ export class Aggregator {
   async watch(callback: EventCallback): Promise<AptosEvent> {
     const event = new AptosEvent(
       this.client,
-      HexString.ensure(SWITCHBOARD_STATE_ADDRESS),
-      `${SWITCHBOARD_DEVNET_ADDRESS}::Switchboard::State`,
+      HexString.ensure(this.stateAddress),
+      `${this.devnetAddress}::Switchboard::State`,
       "aggregator_update_events",
       1000
     );
     await event.onTrigger(callback);
     return event;
   }
+
+  async shouldReportValue(value: Big, aggregator: any): Promise<boolean> {
+    if ((aggregator.latestConfirmedRound?.numSuccess ?? 0) === 0) {
+      return true;
+    }
+    const timestamp = new anchor.BN(Math.round(Date.now() / 1000), 10);
+    const startAfter = new anchor.BN(aggregator.startAfter, 10);
+    if (startAfter.gt(timestamp)) {
+      return false;
+    }
+    const varianceThreshold: Big = new AptosDecimal(
+      aggregator.varianceThreshold.value,
+      aggregator.varianceThreshold.dec,
+      aggregator.varianceThreshold.neg
+    ).toBig();
+    const latestResult: Big = new AptosDecimal(
+      aggregator.latestConfirmedRound.result.value,
+      aggregator.latestConfirmedRound.result.dec,
+      aggregator.latestConfirmedRound.result.neg
+    ).toBig();
+    const forceReportPeriod= new anchor.BN(
+      aggregator.forceReportPeriod,
+      10
+    );
+    const lastTimestamp = new anchor.BN(
+      aggregator.latestConfirmedRound.roundOpenTimestamp,
+      10
+    );
+    if (lastTimestamp.add(forceReportPeriod).lt(timestamp)) {
+      return true;
+    }
+    let diff = safeDiv(latestResult, value);
+    if (diff.abs().gt(1)) {
+      diff = safeDiv(value, latestResult);
+    }
+    // I dont want to think about variance percentage when values cross 0.
+    // Changes the scale of what we consider a "percentage".
+    if (diff.lt(0)) {
+      return true;
+    }
+    const changePercent = new Big(1).minus(diff).mul(100);
+    return changePercent.gt(varianceThreshold);
+  }
 }
 
 export class Job {
-  constructor(readonly client: AptosClient, readonly address: MaybeHexString) {}
+  constructor(
+    readonly client: AptosClient,
+    readonly address: MaybeHexString,
+    readonly devnetAddress: MaybeHexString = SWITCHBOARD_DEVNET_ADDRESS,
+    readonly stateAddress: MaybeHexString = SWITCHBOARD_STATE_ADDRESS
+  ) {}
 
   async loadData(): Promise<any> {
     return (
       await this.client.getAccountResource(
         this.address,
-        `0x${SWITCHBOARD_DEVNET_ADDRESS}::Job::Job`
+        `0x${this.devnetAddress}::Job::Job`
       )
     ).data;
   }
@@ -549,14 +620,16 @@ export class Job {
   static async init(
     client: AptosClient,
     account: AptosAccount,
-    params: JobInitParams
+    params: JobInitParams,
+    devnetAddress: MaybeHexString = SWITCHBOARD_DEVNET_ADDRESS,
+    stateAddress: MaybeHexString = SWITCHBOARD_STATE_ADDRESS
   ): Promise<[Job, string]> {
     const tx = await sendAptosTx(
       client,
       account,
-      `${SWITCHBOARD_DEVNET_ADDRESS}::JobInitAction::run`,
+      `${devnetAddress}::JobInitAction::run`,
       [
-        HexString.ensure(SWITCHBOARD_STATE_ADDRESS).hex(),
+        HexString.ensure(stateAddress).hex(),
         stringToHex(params.name),
         stringToHex(params.metadata),
         HexString.ensure(params.authority).hex(),
@@ -564,12 +637,20 @@ export class Job {
       ]
     );
 
-    return [new Job(client, account.address()), tx];
+    return [
+      new Job(client, account.address(), devnetAddress, stateAddress),
+      tx,
+    ];
   }
 }
 
 export class Crank {
-  constructor(readonly client: AptosClient, readonly address: MaybeHexString) {}
+  constructor(
+    readonly client: AptosClient,
+    readonly address: MaybeHexString,
+    readonly devnetAddress: MaybeHexString = SWITCHBOARD_DEVNET_ADDRESS,
+    readonly stateAddress: MaybeHexString = SWITCHBOARD_STATE_ADDRESS
+  ) {}
 
   /**
    * Initialize a Crank stored in the switchboard resource account
@@ -580,20 +661,25 @@ export class Crank {
   static async init(
     client: AptosClient,
     account: AptosAccount,
-    params: CrankInitParams
+    params: CrankInitParams,
+    devnetAddress: MaybeHexString = SWITCHBOARD_DEVNET_ADDRESS,
+    stateAddress: MaybeHexString = SWITCHBOARD_STATE_ADDRESS
   ): Promise<[Crank, string]> {
     const tx = await sendAptosTx(
       client,
       account,
-      `${SWITCHBOARD_DEVNET_ADDRESS}::CrankInitAction::run`,
+      `${devnetAddress}::CrankInitAction::run`,
       [
-        HexString.ensure(SWITCHBOARD_STATE_ADDRESS).hex(),
+        HexString.ensure(stateAddress).hex(),
         HexString.ensure(params.address).hex(),
         HexString.ensure(params.queueAddress).hex(),
       ]
     );
 
-    return [new Crank(client, account.address()), tx];
+    return [
+      new Crank(client, account.address(), devnetAddress, stateAddress),
+      tx,
+    ];
   }
 
   /**
@@ -604,9 +690,9 @@ export class Crank {
     return await sendAptosTx(
       this.client,
       account,
-      `${SWITCHBOARD_DEVNET_ADDRESS}::CrankPushAction::run`,
+      `${this.devnetAddress}::CrankPushAction::run`,
       [
-        HexString.ensure(SWITCHBOARD_STATE_ADDRESS).hex(),
+        HexString.ensure(this.stateAddress).hex(),
         HexString.ensure(params.crankAddress).hex(),
         HexString.ensure(params.aggregatorAddress).hex(),
       ]
@@ -621,9 +707,9 @@ export class Crank {
     return await sendAptosTx(
       this.client,
       account,
-      `${SWITCHBOARD_DEVNET_ADDRESS}::CrankPopAction::run`,
+      `${this.devnetAddress}::CrankPopAction::run`,
       [
-        HexString.ensure(SWITCHBOARD_STATE_ADDRESS).hex(),
+        HexString.ensure(this.stateAddress).hex(),
         HexString.ensure(params.crankAddress).hex(),
       ]
     );
@@ -633,14 +719,19 @@ export class Crank {
     return (
       await this.client.getAccountResource(
         HexString.ensure(this.address).hex(),
-        `${HexString.ensure(SWITCHBOARD_DEVNET_ADDRESS).hex()}::Crank::Crank`
+        `${HexString.ensure(this.devnetAddress).hex()}::Crank::Crank`
       )
     ).data;
   }
 }
 
 export class Oracle {
-  constructor(readonly client: AptosClient, readonly address: MaybeHexString) {}
+  constructor(
+    readonly client: AptosClient,
+    readonly address: MaybeHexString,
+    readonly devnetAddress: MaybeHexString = SWITCHBOARD_DEVNET_ADDRESS,
+    readonly stateAddress: MaybeHexString = SWITCHBOARD_STATE_ADDRESS
+  ) {}
 
   /**
    * Initialize a Oracle stored in the switchboard resource account
@@ -651,14 +742,16 @@ export class Oracle {
   static async init(
     client: AptosClient,
     account: AptosAccount,
-    params: OracleInitParams
+    params: OracleInitParams,
+    devnetAddress = SWITCHBOARD_DEVNET_ADDRESS,
+    stateAddress = SWITCHBOARD_STATE_ADDRESS
   ): Promise<[Oracle, string]> {
     const tx = await sendAptosTx(
       client,
       account,
-      `${SWITCHBOARD_DEVNET_ADDRESS}::OracleInitAction::run`,
+      `${devnetAddress}::OracleInitAction::run`,
       [
-        HexString.ensure(SWITCHBOARD_STATE_ADDRESS).hex(),
+        HexString.ensure(stateAddress).hex(),
         stringToHex(params.name),
         stringToHex(params.metadata),
         HexString.ensure(params.authority).hex(),
@@ -666,14 +759,17 @@ export class Oracle {
       ]
     );
 
-    return [new Oracle(client, account.address()), tx];
+    return [
+      new Oracle(client, account.address(), devnetAddress, stateAddress),
+      tx,
+    ];
   }
 
   async loadData(): Promise<any> {
     return (
       await this.client.getAccountResource(
         HexString.ensure(this.address).hex(),
-        `${HexString.ensure(SWITCHBOARD_DEVNET_ADDRESS).hex()}::Oracle::Oracle`
+        `${HexString.ensure(this.devnetAddress).hex()}::Oracle::Oracle`
       )
     ).data;
   }
@@ -685,9 +781,9 @@ export class Oracle {
     return await sendAptosTx(
       this.client,
       account,
-      `${SWITCHBOARD_DEVNET_ADDRESS}::OracleHeartbeatAction::run`,
+      `${this.devnetAddress}::OracleHeartbeatAction::run`,
       [
-        HexString.ensure(SWITCHBOARD_STATE_ADDRESS).hex(),
+        HexString.ensure(this.stateAddress).hex(),
         HexString.ensure(this.address).hex(),
       ]
     );
@@ -695,7 +791,12 @@ export class Oracle {
 }
 
 export class OracleQueue {
-  constructor(readonly client: AptosClient, readonly address: MaybeHexString) {}
+  constructor(
+    readonly client: AptosClient,
+    readonly address: MaybeHexString,
+    readonly devnetAddress: MaybeHexString = SWITCHBOARD_DEVNET_ADDRESS,
+    readonly stateAddress: MaybeHexString = SWITCHBOARD_STATE_ADDRESS
+  ) {}
 
   /**
    * Initialize a OracleQueue stored in the switchboard resource account
@@ -706,14 +807,16 @@ export class OracleQueue {
   static async init(
     client: AptosClient,
     account: AptosAccount,
-    params: OracleQueueInitParams
+    params: OracleQueueInitParams,
+    devnetAddress = SWITCHBOARD_DEVNET_ADDRESS,
+    stateAddress = SWITCHBOARD_STATE_ADDRESS
   ): Promise<[OracleQueue, string]> {
     const tx = await sendAptosTx(
       client,
       account,
-      `${SWITCHBOARD_DEVNET_ADDRESS}::OracleQueueInitAction::run`,
+      `${devnetAddress}::OracleQueueInitAction::run`,
       [
-        HexString.ensure(SWITCHBOARD_STATE_ADDRESS).hex(),
+        HexString.ensure(stateAddress).hex(),
         stringToHex(params.name),
         stringToHex(params.metadata),
         HexString.ensure(params.authority).hex(),
@@ -735,7 +838,10 @@ export class OracleQueue {
       ]
     );
 
-    return [new OracleQueue(client, account.address()), tx];
+    return [
+      new OracleQueue(client, account.address(), devnetAddress, stateAddress),
+      tx,
+    ];
   }
 
   async loadData(): Promise<any> {
@@ -743,9 +849,17 @@ export class OracleQueue {
       await this.client.getAccountResource(
         HexString.ensure(this.address).hex(),
         `${HexString.ensure(
-          SWITCHBOARD_DEVNET_ADDRESS
+          this.devnetAddress
         ).hex()}::OracleQueue::OracleQueue`
       )
     ).data;
   }
+}
+
+function safeDiv(number_: Big, denominator: Big, decimals = 20): Big {
+  const oldDp = Big.DP;
+  Big.DP = decimals;
+  const result = number_.div(denominator);
+  Big.DP = oldDp;
+  return result;
 }
