@@ -11,10 +11,10 @@ import * as sbv2 from "@switchboard-xyz/switchboard-v2";
 import * as anchor from "@project-serum/anchor";
 
 // Address that deployed the module
-export const SWITCHBOARD_DEVNET_ADDRESS = `0x${"2B3C332C6C95D3B717FDF3644A7633E8EFA7B1451193891A504A6A292EDC0039".toLowerCase()}`;
-
-// Address of the account that owns the Switchboard resource
-export const SWITCHBOARD_STATE_ADDRESS = `0x${"2B3C332C6C95D3B717FDF3644A7633E8EFA7B1451193891A504A6A292EDC0039".toLowerCase()}`;
+// export const SWITCHBOARD_DEVNET_ADDRESS = `0x${"2B3C332C6C95D3B717FDF3644A7633E8EFA7B1451193891A504A6A292EDC0039".toLowerCase()}`;
+//
+// // Address of the account that owns the Switchboard resource
+// export const SWITCHBOARD_STATE_ADDRESS = `0x${"2B3C332C6C95D3B717FDF3644A7633E8EFA7B1451193891A504A6A292EDC0039".toLowerCase()}`;
 
 export class AptosDecimal {
   constructor(
@@ -232,17 +232,17 @@ interface TableType {
   valueType: string;
 }
 
-const LeaseTable: TableType = {
-  stateKey: `leases`,
-  keyType: `vector<u8>`,
-  valueType: `${SWITCHBOARD_DEVNET_ADDRESS}::Lease::Lease`,
-};
-
-const PermissionTable: TableType = {
-  stateKey: `permissions`,
-  keyType: `vector<u8>`,
-  valueType: `${SWITCHBOARD_DEVNET_ADDRESS}::Permission::Permission`,
-};
+// const LeaseTable: TableType = {
+// stateKey: `leases`,
+// keyType: `vector<u8>`,
+// valueType: `${SWITCHBOARD_DEVNET_ADDRESS}::Lease::Lease`,
+// };
+//
+// const PermissionTable: TableType = {
+// stateKey: `permissions`,
+// keyType: `vector<u8>`,
+// valueType: `${SWITCHBOARD_DEVNET_ADDRESS}::Permission::Permission`,
+// };
 
 /**
  * Retrieve Table Item
@@ -251,14 +251,15 @@ const PermissionTable: TableType = {
  * @param key string to fetch table item by
  */
 async function getTableItem(
+  pid: HexString,
   client: AptosClient,
   tableType: TableType,
   key: string
 ): Promise<unknown | undefined> {
   // get table resource
   const switchboardTableResource = await client.getAccountResource(
-    SWITCHBOARD_STATE_ADDRESS,
-    `${SWITCHBOARD_DEVNET_ADDRESS}::Switchboard::State`
+    pid,
+    `${pid}::Switchboard::State`
   );
 
   const handle = (switchboardTableResource.data as any)[tableType.stateKey]
@@ -373,13 +374,13 @@ class SwitchboardResource {
   }
 
   // try to load data from on-chain
-  async loadData(): Promise<unknown | undefined> {
-    return await getTableItem(
-      this.client,
-      this.tableType,
-      HexString.ensure(this.address).hex()
-    );
-  }
+  // async loadData(): Promise<unknown | undefined> {
+  // return await getTableItem(
+  // this.client,
+  // this.tableType,
+  // HexString.ensure(this.address).hex()
+  // );
+  // }
 }
 
 export class State {
@@ -387,13 +388,13 @@ export class State {
     readonly client: AptosClient,
     readonly address: MaybeHexString,
     readonly account: AptosAccount,
-    readonly devnetAddress: MaybeHexString = SWITCHBOARD_DEVNET_ADDRESS
+    readonly devnetAddress: MaybeHexString
   ) {}
 
   static async init(
     client: AptosClient,
     account: AptosAccount,
-    devnetAddress: MaybeHexString = SWITCHBOARD_DEVNET_ADDRESS
+    devnetAddress: MaybeHexString
   ): Promise<[State, string]> {
     const tx = await sendAptosTx(
       client,
@@ -409,7 +410,7 @@ export class State {
     return (
       await this.client.getAccountResource(
         this.address,
-        `${SWITCHBOARD_STATE_ADDRESS}::Switchboard::State`
+        `${this.devnetAddress}::Switchboard::State`
       )
     ).data;
   }
@@ -419,9 +420,9 @@ export class Aggregator {
   constructor(
     readonly client: AptosClient,
     readonly address: MaybeHexString,
-    readonly account?: AptosAccount,
-    readonly devnetAddress: MaybeHexString = SWITCHBOARD_DEVNET_ADDRESS,
-    readonly stateAddress: MaybeHexString = SWITCHBOARD_STATE_ADDRESS
+    readonly account: AptosAccount,
+    readonly devnetAddress: MaybeHexString,
+    readonly stateAddress: MaybeHexString
   ) {}
 
   async loadData(): Promise<any> {
@@ -435,7 +436,10 @@ export class Aggregator {
 
   async loadJobs(): Promise<Array<sbv2.OracleJob>> {
     const data = await this.loadData();
-    const jobs = data.job_keys.map((key: string) => new Job(this.client, key));
+    const jobs = data.job_keys.map(
+      (key: string) =>
+        new Job(this.client, key, this.devnetAddress, this.stateAddress)
+    );
     const promises: Array<Promise<sbv2.OracleJob>> = [];
     for (let job of jobs) {
       promises.push(job.loadJob());
@@ -453,8 +457,8 @@ export class Aggregator {
     client: AptosClient,
     account: AptosAccount,
     params: AggregatorInitParams,
-    devnetAddress: MaybeHexString = SWITCHBOARD_DEVNET_ADDRESS,
-    stateAddress: MaybeHexString = SWITCHBOARD_STATE_ADDRESS
+    devnetAddress: MaybeHexString,
+    stateAddress: MaybeHexString
   ): Promise<[Aggregator, string]> {
     const tx = await sendAptosTx(
       client,
@@ -602,8 +606,8 @@ export class Job {
   constructor(
     readonly client: AptosClient,
     readonly address: MaybeHexString,
-    readonly devnetAddress: MaybeHexString = SWITCHBOARD_DEVNET_ADDRESS,
-    readonly stateAddress: MaybeHexString = SWITCHBOARD_STATE_ADDRESS
+    readonly devnetAddress: MaybeHexString,
+    readonly stateAddress: MaybeHexString
   ) {}
 
   async loadData(): Promise<any> {
@@ -632,8 +636,8 @@ export class Job {
     client: AptosClient,
     account: AptosAccount,
     params: JobInitParams,
-    devnetAddress: MaybeHexString = SWITCHBOARD_DEVNET_ADDRESS,
-    stateAddress: MaybeHexString = SWITCHBOARD_STATE_ADDRESS
+    devnetAddress: MaybeHexString,
+    stateAddress: MaybeHexString
   ): Promise<[Job, string]> {
     const tx = await sendAptosTx(
       client,
@@ -659,8 +663,8 @@ export class Crank {
   constructor(
     readonly client: AptosClient,
     readonly address: MaybeHexString,
-    readonly devnetAddress: MaybeHexString = SWITCHBOARD_DEVNET_ADDRESS,
-    readonly stateAddress: MaybeHexString = SWITCHBOARD_STATE_ADDRESS
+    readonly devnetAddress: MaybeHexString,
+    readonly stateAddress: MaybeHexString
   ) {}
 
   /**
@@ -673,8 +677,8 @@ export class Crank {
     client: AptosClient,
     account: AptosAccount,
     params: CrankInitParams,
-    devnetAddress: MaybeHexString = SWITCHBOARD_DEVNET_ADDRESS,
-    stateAddress: MaybeHexString = SWITCHBOARD_STATE_ADDRESS
+    devnetAddress: MaybeHexString,
+    stateAddress: MaybeHexString
   ): Promise<[Crank, string]> {
     const tx = await sendAptosTx(
       client,
@@ -740,8 +744,8 @@ export class Oracle {
   constructor(
     readonly client: AptosClient,
     readonly address: MaybeHexString,
-    readonly devnetAddress: MaybeHexString = SWITCHBOARD_DEVNET_ADDRESS,
-    readonly stateAddress: MaybeHexString = SWITCHBOARD_STATE_ADDRESS
+    readonly devnetAddress: MaybeHexString,
+    readonly stateAddress: MaybeHexString
   ) {}
 
   /**
@@ -754,8 +758,8 @@ export class Oracle {
     client: AptosClient,
     account: AptosAccount,
     params: OracleInitParams,
-    devnetAddress = SWITCHBOARD_DEVNET_ADDRESS,
-    stateAddress = SWITCHBOARD_STATE_ADDRESS
+    devnetAddress,
+    stateAddress
   ): Promise<[Oracle, string]> {
     const tx = await sendAptosTx(
       client,
@@ -805,8 +809,8 @@ export class OracleQueue {
   constructor(
     readonly client: AptosClient,
     readonly address: MaybeHexString,
-    readonly devnetAddress: MaybeHexString = SWITCHBOARD_DEVNET_ADDRESS,
-    readonly stateAddress: MaybeHexString = SWITCHBOARD_STATE_ADDRESS
+    readonly devnetAddress: MaybeHexString,
+    readonly stateAddress: MaybeHexString
   ) {}
 
   /**
@@ -819,8 +823,8 @@ export class OracleQueue {
     client: AptosClient,
     account: AptosAccount,
     params: OracleQueueInitParams,
-    devnetAddress = SWITCHBOARD_DEVNET_ADDRESS,
-    stateAddress = SWITCHBOARD_STATE_ADDRESS
+    devnetAddress,
+    stateAddress
   ): Promise<[OracleQueue, string]> {
     const tx = await sendAptosTx(
       client,

@@ -11,15 +11,7 @@ import fs from "fs";
 import path from "path";
 import chalk from "chalk";
 import { AptosAccount, AptosClient, FaucetClient, HexString } from "aptos";
-import {
-  Aggregator,
-  Job,
-  Oracle,
-  OracleQueue,
-  State,
-  SWITCHBOARD_DEVNET_ADDRESS,
-  SWITCHBOARD_STATE_ADDRESS,
-} from "./src";
+import { Aggregator, Job, Oracle, OracleQueue, State } from "./src";
 import { OracleJob } from "@switchboard-xyz/switchboard-v2";
 
 export const CHECK_ICON = chalk.green("\u2714");
@@ -237,7 +229,7 @@ yargs(hideBin(process.argv))
       );
 
       const queueHexString = new HexString(queueHex);
-      const queue = new OracleQueue(client, queueHexString);
+      const queue = new OracleQueue(client, queueHexString, pid, stateAddress);
       const oracleAccount = new AptosAccount();
       await faucet.fundAccount(oracleAccount.address(), 5000);
 
@@ -247,7 +239,7 @@ yargs(hideBin(process.argv))
         client,
         oracleAccount,
         {
-          address: SWITCHBOARD_STATE_ADDRESS,
+          address: stateAddress,
           name: "TestOracle",
           metadata: "Testing123",
           authority: account.address(),
@@ -300,7 +292,7 @@ yargs(hideBin(process.argv))
       );
 
       const queueHexString = new HexString(queueHex);
-      const queue = new OracleQueue(client, queueHexString);
+      const queue = new OracleQueue(client, queueHexString, pid, stateAddress);
 
       const aggregatorAccount = new AptosAccount();
       await faucet.fundAccount(aggregatorAccount.address(), 5000);
@@ -469,7 +461,13 @@ yargs(hideBin(process.argv))
       );
 
       const aggregatorHexString = new HexString(aggregatorHex);
-      const aggregator = new Aggregator(client, aggregatorHexString);
+      const aggregator = new Aggregator(
+        client,
+        aggregatorHexString,
+        new AptosAccount(),
+        pid,
+        stateAddress
+      );
 
       const event = await aggregator.watch(async (event) => {
         console.log(`Aggregator Updated @ ${Date.now()}`);
@@ -500,12 +498,10 @@ yargs(hideBin(process.argv))
     pid: {
       type: "string",
       describe: "devnet program ID",
-      default: SWITCHBOARD_DEVNET_ADDRESS,
     },
     stateAddress: {
       type: "string",
       describe: "state address",
-      default: SWITCHBOARD_STATE_ADDRESS,
     },
   })
   .help().argv;
