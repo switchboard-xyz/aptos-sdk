@@ -11,7 +11,7 @@ import fs from "fs";
 import path from "path";
 import chalk from "chalk";
 import { AptosAccount, AptosClient, FaucetClient, HexString } from "aptos";
-import { Aggregator, Job, Oracle, OracleQueue, State } from "./src";
+import { Aggregator, Job, Oracle, OracleQueue, State, Crank } from "./src";
 import { OracleJob } from "@switchboard-xyz/switchboard-v2";
 
 export const CHECK_ICON = chalk.green("\u2714");
@@ -265,6 +265,66 @@ yargs(hideBin(process.argv))
         console.log(JSON.stringify(oracleData, undefined, 2));
       } catch (error) {
         console.error(`Error fetching oracle data: ${error}`);
+      }
+
+      process.exit(0);
+    }
+  )
+  .command(
+    "create-crank [queueHex]",
+    "action",
+    (y: any) => {
+      return y.positional("queueHex", {
+        type: "string",
+        describe: "hexString of the oracle queue to join",
+        required: true,
+      });
+    },
+    async function (argv: any) {
+      const { rpcUrl, faucetUrl, keypair, queueHex, pid, stateAddress } = argv;
+
+      const { client, faucet, account, state } = await loadCli(
+        rpcUrl,
+        faucetUrl,
+        pid,
+        stateAddress,
+        keypair
+      );
+
+      const queueHexString = new HexString(queueHex);
+      const queue = new OracleQueue(client, queueHexString, pid, stateAddress);
+      const crankAccount = new AptosAccount();
+      await faucet.fundAccount(crankAccount.address(), 5000);
+
+      console.log(`authority = ${account.address()}`);
+
+      const [crank, sig] = await Crank.init(
+        client,
+        crankAccount,
+        {
+          address: stateAddress,
+          queueAddress: HexString.ensure(queueHexString),
+        },
+        pid,
+        stateAddress
+      );
+
+      console.log(`Signature: ${sig}`);
+      console.log(`Crank: ${crank.address}`);
+      console.log(`crankAccount: ${crankAccount.address()}`);
+
+      saveAptosAccount(
+        crankAccount,
+        `crank-${new Date()
+          .toJSON()
+          .slice(0, 10)}-${crankAccount.address()}.json`
+      );
+
+      try {
+        const crankData = await crank.loadData();
+        console.log(JSON.stringify(crankData, undefined, 2));
+      } catch (error) {
+        console.error(`Error fetching crank data: ${error}`);
       }
 
       process.exit(0);

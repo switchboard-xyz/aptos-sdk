@@ -122,7 +122,7 @@ export interface AggregatorSetConfigParams {
 
 export interface CrankInitParams {
   address: string;
-  queueAddress: string;
+  queueAddress: HexString;
 }
 
 export interface CrankPopParams {
