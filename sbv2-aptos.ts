@@ -29,7 +29,10 @@ yargs(hideBin(process.argv))
       const { rpcUrl, faucetUrl, keypair, pid, stateAddress } = argv;
 
       const client = new AptosClient(rpcUrl);
-      const faucet = new FaucetClient(rpcUrl, faucetUrl);
+      const faucet = new FaucetClient(
+        "https://fullnode.devnet.aptoslabs.com/",
+        "https://faucet.devnet.aptoslabs.com"
+      );
 
       const account = new AptosAccount();
 
@@ -350,9 +353,7 @@ yargs(hideBin(process.argv))
       const queue = new OracleQueue(client, queueHexString, pid, stateAddress);
 
       const aggregatorAccount = new AptosAccount();
-      await faucet.fundAccount(aggregatorAccount.address(), 5000);
-      await faucet.fundAccount(aggregatorAccount.address(), 5000);
-      await faucet.fundAccount(aggregatorAccount.address(), 5000);
+      await faucet.fundAccount(aggregatorAccount.address(), 15000);
 
       const [aggregator, aggregatorSig] = await Aggregator.init(
         client,
@@ -605,7 +606,10 @@ async function loadCli(
   state: State;
 }> {
   const client = new AptosClient(rpcUrl);
-  const faucet = new FaucetClient(rpcUrl, faucetUrl);
+  const faucet = new FaucetClient(
+    "https://fullnode.devnet.aptoslabs.com",
+    "https://faucet.devnet.aptoslabs.com"
+  );
 
   let account: AptosAccount;
 
@@ -634,7 +638,7 @@ async function loadBalance(
     (
       await client.getAccountResource(
         addr,
-        "0x1::coin::CoinStore<0x1::aptos_coin::AptosCoin>"
+        "0x1::coin::CoinStore<0x1::aptos_coin::AptosCoin>" as any
       )
     ).data as any
   ).coin.value;

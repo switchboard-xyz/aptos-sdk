@@ -191,7 +191,7 @@ export async function sendAptosTx(
 ): Promise<string> {
   const payload: Types.TransactionPayload = {
     type: "script_function_payload",
-    function: method,
+    function: method as any,
     type_arguments: [],
     arguments: args,
   };
@@ -200,11 +200,11 @@ export async function sendAptosTx(
     payload
   );
 
-  const simulation = await client.simulateTransaction(signer, txnRequest);
+  const simulation = (await client.simulateTransaction(signer, txnRequest))[0];
   if (simulation.vm_status === "Out of gas") {
     if (retryCount > 0) {
       const faucetClient = new FaucetClient(
-        client.nodeUrl,
+        "https://fullnode.devnet.aptoslabs.com/",
         "https://faucet.devnet.aptoslabs.com"
       );
       await faucetClient.fundAccount(signer.address(), 5000);
@@ -259,7 +259,7 @@ async function getTableItem(
   // get table resource
   const switchboardTableResource = await client.getAccountResource(
     pid,
-    `${pid}::Switchboard::State`
+    `${pid}::Switchboard::State` as any
   );
 
   const handle = (switchboardTableResource.data as any)[tableType.stateKey]
@@ -304,7 +304,7 @@ export class AptosEvent {
     let lastSequenceNumber = "0";
     const ownerData = await this.client.getAccountResource(
       this.eventHandlerOwner.hex().toString(),
-      this.eventOwnerStruct
+      this.eventOwnerStruct as any
     );
     try {
       lastSequenceNumber = (
@@ -318,10 +318,10 @@ export class AptosEvent {
       try {
         const events = await this.client.getEventsByEventHandle(
           this.eventHandlerOwner,
-          this.eventOwnerStruct,
+          this.eventOwnerStruct as any,
           this.eventHandlerName,
           {
-            start: Number(lastSequenceNumber) + 1,
+            start: BigInt(Number(lastSequenceNumber) + 1),
             limit: 500,
           }
         );
@@ -410,7 +410,7 @@ export class State {
     return (
       await this.client.getAccountResource(
         this.address,
-        `${this.devnetAddress}::Switchboard::State`
+        `${this.devnetAddress}::Switchboard::State` as any
       )
     ).data;
   }
@@ -429,7 +429,9 @@ export class Aggregator {
     return (
       await this.client.getAccountResource(
         HexString.ensure(this.address).hex(),
-        `${HexString.ensure(this.devnetAddress).hex()}::Aggregator::Aggregator`
+        `${HexString.ensure(
+          this.devnetAddress
+        ).hex()}::Aggregator::Aggregator` as any
       )
     ).data;
   }
@@ -614,7 +616,7 @@ export class Job {
     return (
       await this.client.getAccountResource(
         this.address,
-        `${this.devnetAddress}::Job::Job`
+        `${this.devnetAddress}::Job::Job` as any
       )
     ).data;
   }
@@ -734,7 +736,7 @@ export class Crank {
     return (
       await this.client.getAccountResource(
         HexString.ensure(this.address).hex(),
-        `${HexString.ensure(this.devnetAddress).hex()}::Crank::Crank`
+        `${HexString.ensure(this.devnetAddress).hex()}::Crank::Crank` as any
       )
     ).data;
   }
@@ -784,7 +786,7 @@ export class Oracle {
     return (
       await this.client.getAccountResource(
         HexString.ensure(this.address).hex(),
-        `${HexString.ensure(this.devnetAddress).hex()}::Oracle::Oracle`
+        `${HexString.ensure(this.devnetAddress).hex()}::Oracle::Oracle` as any
       )
     ).data;
   }
@@ -865,7 +867,7 @@ export class OracleQueue {
         HexString.ensure(this.address).hex(),
         `${HexString.ensure(
           this.devnetAddress
-        ).hex()}::OracleQueue::OracleQueue`
+        ).hex()}::OracleQueue::OracleQueue` as any
       )
     ).data;
   }
