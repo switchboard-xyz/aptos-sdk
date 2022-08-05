@@ -33,12 +33,7 @@ yargs(hideBin(process.argv))
 
       const account = new AptosAccount();
 
-      await faucet.fundAccount(account.address(), 5000);
-      await faucet.fundAccount(account.address(), 5000);
-      await faucet.fundAccount(account.address(), 5000);
-      await faucet.fundAccount(account.address(), 5000);
-      await faucet.fundAccount(account.address(), 5000);
-      await faucet.fundAccount(account.address(), 5000);
+      await faucet.fundAccount(account.address(), 5000 * 100);
 
       console.log(`Account: ${account.address()}`);
       console.log(`Balance: ${await loadBalance(client, account.address())}`);
@@ -88,7 +83,7 @@ yargs(hideBin(process.argv))
       );
 
       for await (const _ of new Array(numAirdrops)) {
-        await faucet.fundAccount(account.address(), 5000);
+        await faucet.fundAccount(account.address(), 50_000);
       }
 
       console.log(`Address: ${account.address()}`);
