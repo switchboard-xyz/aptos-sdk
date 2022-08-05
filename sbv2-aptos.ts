@@ -30,7 +30,7 @@ yargs(hideBin(process.argv))
 
       const client = new AptosClient(rpcUrl);
       const faucet = new FaucetClient(
-        "https://fullnode.devnet.aptoslabs.com/",
+        "https://fullnode.devnet.aptoslabs.com/v1",
         "https://faucet.devnet.aptoslabs.com"
       );
 
@@ -544,7 +544,7 @@ yargs(hideBin(process.argv))
       type: "string",
       alias: "u",
       describe: "Alternative RPC URL",
-      default: "https://fullnode.devnet.aptoslabs.com",
+      default: "https://fullnode.devnet.aptoslabs.com/v1",
     },
     faucetUrl: {
       type: "string",
@@ -562,7 +562,17 @@ yargs(hideBin(process.argv))
   })
   .help().argv;
 
-function loadAptosAccount(keypairPath: string): AptosAccount {
+function loadAptosAccount(
+  keypairPath: string,
+  aptosFormat = false
+): AptosAccount {
+  if (aptosFormat) {
+    return new AptosAccount(
+      new Uint8Array(
+        Buffer.from(JSON.parse(fs.readFileSync(keypairPath, "utf-8")), "hex")
+      )
+    );
+  }
   return new AptosAccount(
     new Uint8Array(JSON.parse(fs.readFileSync(keypairPath, "utf-8")))
   );
@@ -607,7 +617,7 @@ async function loadCli(
 }> {
   const client = new AptosClient(rpcUrl);
   const faucet = new FaucetClient(
-    "https://fullnode.devnet.aptoslabs.com",
+    "https://fullnode.devnet.aptoslabs.com/v1",
     "https://faucet.devnet.aptoslabs.com"
   );
 
@@ -638,7 +648,13 @@ async function loadBalance(
     (
       await client.getAccountResource(
         addr,
-        "0x1::coin::CoinStore<0x1::aptos_coin::AptosCoin>" as any
+        {
+          address: "0x1",
+          module: "coin",
+          name: "CoinStore",
+          generic_type_params: ["0x1::aptos_coin::AptosCoin"],
+        }
+        // "0x1::coin::CoinStore<0x1::aptos_coin::AptosCoin>" as any
       )
     ).data as any
   ).coin.value;
