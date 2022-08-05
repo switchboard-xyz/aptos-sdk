@@ -188,6 +188,7 @@ export async function sendAptosTx(
   retryCount = 2
 ): Promise<string> {
   const full_method = `${method.module.address}::${method.module.name}::${method.name}`;
+  console.log(full_method);
   const payload = {
     type: "script_function_payload",
     function: method,
@@ -196,7 +197,8 @@ export async function sendAptosTx(
   };
   const txnRequest = await client.generateTransaction(
     signer.address(),
-    payload
+    payload,
+    { max_gas_amount: "5000" }
   );
 
   const simulation = (await client.simulateTransaction(signer, txnRequest))[0];
@@ -221,6 +223,7 @@ export async function sendAptosTx(
   const signedTxn = await client.signTransaction(signer, txnRequest);
   const transactionRes = await client.submitTransaction(signedTxn);
   await client.waitForTransaction(transactionRes.hash);
+  console.log(transactionRes.hash);
   return transactionRes.hash;
 }
 
@@ -395,14 +398,14 @@ export class State {
   static async init(
     client: AptosClient,
     account: AptosAccount,
-    devnetAddress: MaybeHexString
+    pid: MaybeHexString
   ): Promise<[State, string]> {
     const tx = await sendAptosTx(
       client,
       account,
       {
         module: {
-          address: HexString.ensure(devnetAddress).hex(),
+          address: HexString.ensure(pid).hex(),
           name: "SwitchboardInitAction",
         },
         name: "run",
@@ -410,7 +413,7 @@ export class State {
       []
     );
 
-    return [new State(client, account.address(), account, devnetAddress), tx];
+    return [new State(client, account.address(), account, pid), tx];
   }
 
   async loadData(): Promise<any> {

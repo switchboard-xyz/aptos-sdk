@@ -11,7 +11,15 @@ import fs from "fs";
 import path from "path";
 import chalk from "chalk";
 import { AptosAccount, AptosClient, FaucetClient, HexString } from "aptos";
-import { Aggregator, Job, Oracle, OracleQueue, State, Crank } from "./src";
+import {
+  Aggregator,
+  Job,
+  Oracle,
+  OracleQueue,
+  State,
+  Crank,
+  sendAptosTx,
+} from "./src";
 import { OracleJob } from "@switchboard-xyz/switchboard-v2";
 
 export const CHECK_ICON = chalk.green("\u2714");
@@ -36,7 +44,7 @@ yargs(hideBin(process.argv))
 
       const account = new AptosAccount();
 
-      await faucet.fundAccount(account.address(), 5000 * 100);
+      // await faucet.fundAccount(keypair.address(), 5000);
 
       console.log(`Account: ${account.address()}`);
       console.log(`Balance: ${await loadBalance(client, account.address())}`);
@@ -97,7 +105,7 @@ yargs(hideBin(process.argv))
   )
   .command(
     "create-state",
-    "create an oracle queue",
+    "create a state account",
     (y: any) => {
       return y;
     },
@@ -113,12 +121,16 @@ yargs(hideBin(process.argv))
       );
 
       const stateAccount = new AptosAccount();
-      await faucet.fundAccount(stateAccount.address(), 5000);
+      await faucet.fundAccount(stateAccount.address(), 10000);
+      await faucet.fundAccount(stateAccount.address(), 10000);
+      await faucet.fundAccount(stateAccount.address(), 10000);
+      console.log(
+        `Balance: ${await loadBalance(client, stateAccount.address())}`
+      );
 
       const [state, sig] = await State.init(client, stateAccount, pid);
-
       console.log(`Signature: ${sig}`);
-      console.log(`State: ${state.address}`);
+      console.log(`State: ${stateAccount.address()}`);
 
       saveAptosAccount(
         stateAccount,
