@@ -2,8 +2,6 @@
 import { AptosClient, AptosAccount, Types, HexString, MaybeHexString } from "aptos";
 import Big from "big.js";
 import * as sbv2 from "@switchboard-xyz/switchboard-v2";
-export declare const SWITCHBOARD_DEVNET_ADDRESS: string;
-export declare const SWITCHBOARD_STATE_ADDRESS: string;
 export declare class AptosDecimal {
     readonly mantissa: string;
     readonly scale: number;
@@ -68,7 +66,7 @@ export interface AggregatorSetConfigParams {
 }
 export interface CrankInitParams {
     address: string;
-    queueAddress: string;
+    queueAddress: HexString;
 }
 export interface CrankPopParams {
     crankAddress: string;
@@ -134,17 +132,17 @@ export declare class State {
     readonly address: MaybeHexString;
     readonly account: AptosAccount;
     readonly devnetAddress: MaybeHexString;
-    constructor(client: AptosClient, address: MaybeHexString, account: AptosAccount, devnetAddress?: MaybeHexString);
-    static init(client: AptosClient, account: AptosAccount, devnetAddress?: MaybeHexString): Promise<[State, string]>;
+    constructor(client: AptosClient, address: MaybeHexString, account: AptosAccount, devnetAddress: MaybeHexString);
+    static init(client: AptosClient, account: AptosAccount, devnetAddress: MaybeHexString): Promise<[State, string]>;
     loadData(): Promise<any>;
 }
 export declare class Aggregator {
     readonly client: AptosClient;
     readonly address: MaybeHexString;
-    readonly account?: AptosAccount;
+    readonly account: AptosAccount;
     readonly devnetAddress: MaybeHexString;
     readonly stateAddress: MaybeHexString;
-    constructor(client: AptosClient, address: MaybeHexString, account?: AptosAccount, devnetAddress?: MaybeHexString, stateAddress?: MaybeHexString);
+    constructor(client: AptosClient, address: MaybeHexString, account: AptosAccount, devnetAddress: MaybeHexString, stateAddress: MaybeHexString);
     loadData(): Promise<any>;
     loadJobs(): Promise<Array<sbv2.OracleJob>>;
     /**
@@ -153,7 +151,7 @@ export declare class Aggregator {
      * @param account
      * @param params AggregatorInitParams initialization params
      */
-    static init(client: AptosClient, account: AptosAccount, params: AggregatorInitParams, devnetAddress?: MaybeHexString, stateAddress?: MaybeHexString): Promise<[Aggregator, string]>;
+    static init(client: AptosClient, account: AptosAccount, params: AggregatorInitParams, devnetAddress: MaybeHexString, stateAddress: MaybeHexString): Promise<[Aggregator, string]>;
     addJob(account: AptosAccount, params: AggregatorAddJobParams): Promise<string>;
     saveResult(account: AptosAccount, params: AggregatorSaveResultParams): Promise<string>;
     openRound(): Promise<string>;
@@ -165,7 +163,7 @@ export declare class Job {
     readonly address: MaybeHexString;
     readonly devnetAddress: MaybeHexString;
     readonly stateAddress: MaybeHexString;
-    constructor(client: AptosClient, address: MaybeHexString, devnetAddress?: MaybeHexString, stateAddress?: MaybeHexString);
+    constructor(client: AptosClient, address: MaybeHexString, devnetAddress: MaybeHexString, stateAddress: MaybeHexString);
     loadData(): Promise<any>;
     loadJob(): Promise<sbv2.OracleJob>;
     /**
@@ -174,21 +172,21 @@ export declare class Job {
      * @param account
      * @param params JobInitParams initialization params
      */
-    static init(client: AptosClient, account: AptosAccount, params: JobInitParams, devnetAddress?: MaybeHexString, stateAddress?: MaybeHexString): Promise<[Job, string]>;
+    static init(client: AptosClient, account: AptosAccount, params: JobInitParams, devnetAddress: MaybeHexString, stateAddress: MaybeHexString): Promise<[Job, string]>;
 }
 export declare class Crank {
     readonly client: AptosClient;
     readonly address: MaybeHexString;
     readonly devnetAddress: MaybeHexString;
     readonly stateAddress: MaybeHexString;
-    constructor(client: AptosClient, address: MaybeHexString, devnetAddress?: MaybeHexString, stateAddress?: MaybeHexString);
+    constructor(client: AptosClient, address: MaybeHexString, devnetAddress: MaybeHexString, stateAddress: MaybeHexString);
     /**
      * Initialize a Crank stored in the switchboard resource account
      * @param client
      * @param account account that will be the authority of the Crank
      * @param params CrankInitParams initialization params
      */
-    static init(client: AptosClient, account: AptosAccount, params: CrankInitParams, devnetAddress?: MaybeHexString, stateAddress?: MaybeHexString): Promise<[Crank, string]>;
+    static init(client: AptosClient, account: AptosAccount, params: CrankInitParams, devnetAddress: MaybeHexString, stateAddress: MaybeHexString): Promise<[Crank, string]>;
     /**
      * Push an aggregator to a Crank
      * @param params CrankPushParams
@@ -206,14 +204,14 @@ export declare class Oracle {
     readonly address: MaybeHexString;
     readonly devnetAddress: MaybeHexString;
     readonly stateAddress: MaybeHexString;
-    constructor(client: AptosClient, address: MaybeHexString, devnetAddress?: MaybeHexString, stateAddress?: MaybeHexString);
+    constructor(client: AptosClient, address: MaybeHexString, devnetAddress: MaybeHexString, stateAddress: MaybeHexString);
     /**
      * Initialize a Oracle stored in the switchboard resource account
      * @param client
      * @param account
      * @param params Oracle initialization params
      */
-    static init(client: AptosClient, account: AptosAccount, params: OracleInitParams, devnetAddress?: string, stateAddress?: string): Promise<[Oracle, string]>;
+    static init(client: AptosClient, account: AptosAccount, params: OracleInitParams, devnetAddress: any, stateAddress: any): Promise<[Oracle, string]>;
     loadData(): Promise<any>;
     /**
      * Oracle Heartbeat Action
@@ -225,14 +223,14 @@ export declare class OracleQueue {
     readonly address: MaybeHexString;
     readonly devnetAddress: MaybeHexString;
     readonly stateAddress: MaybeHexString;
-    constructor(client: AptosClient, address: MaybeHexString, devnetAddress?: MaybeHexString, stateAddress?: MaybeHexString);
+    constructor(client: AptosClient, address: MaybeHexString, devnetAddress: MaybeHexString, stateAddress: MaybeHexString);
     /**
      * Initialize a OracleQueue stored in the switchboard resource account
      * @param client
      * @param account
      * @param params OracleQueue initialization params
      */
-    static init(client: AptosClient, account: AptosAccount, params: OracleQueueInitParams, devnetAddress?: string, stateAddress?: string): Promise<[OracleQueue, string]>;
+    static init(client: AptosClient, account: AptosAccount, params: OracleQueueInitParams, devnetAddress: any, stateAddress: any): Promise<[OracleQueue, string]>;
     loadData(): Promise<any>;
 }
 //# sourceMappingURL=index.d.ts.map
