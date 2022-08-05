@@ -1,20 +1,20 @@
 import {
   AptosClient,
   AptosAccount,
-  Types,
   HexString,
   MaybeHexString,
   FaucetClient,
 } from "aptos";
+import { MoveStructTag, ScriptFunctionId } from "aptos/src/generated";
 import Big from "big.js";
 import * as sbv2 from "@switchboard-xyz/switchboard-v2";
 import * as anchor from "@project-serum/anchor";
 
 // Address that deployed the module
-// export const SWITCHBOARD_DEVNET_ADDRESS = `0x${"2B3C332C6C95D3B717FDF3644A7633E8EFA7B1451193891A504A6A292EDC0039".toLowerCase()}`;
-//
-// // Address of the account that owns the Switchboard resource
-// export const SWITCHBOARD_STATE_ADDRESS = `0x${"2B3C332C6C95D3B717FDF3644A7633E8EFA7B1451193891A504A6A292EDC0039".toLowerCase()}`;
+export const SWITCHBOARD_DEVNET_ADDRESS = ``;
+
+// Address of the account that owns the Switchboard resource
+export const SWITCHBOARD_STATE_ADDRESS = ``;
 
 export class AptosDecimal {
   constructor(
@@ -64,7 +64,6 @@ export interface AggregatorAddJobParams {
 }
 
 export interface AggregatorInitParams {
-  // address: MaybeHexString; // arbitrary key associated with aggregator @NOTE: Cannot be altered
   authority: MaybeHexString; // owner of aggregator
   name?: string;
   metadata?: string;
@@ -81,7 +80,6 @@ export interface AggregatorInitParams {
 }
 
 export interface AggregatorSaveResultParams {
-  //state_address: address,
   oracle_address: MaybeHexString;
   oracle_idx: number;
   error: boolean;
@@ -122,7 +120,7 @@ export interface AggregatorSetConfigParams {
 
 export interface CrankInitParams {
   address: string;
-  queueAddress: HexString;
+  queueAddress: MaybeHexString;
 }
 
 export interface CrankPopParams {
@@ -166,8 +164,8 @@ export interface OracleQueueInitParams {
 }
 
 export type EventCallback = (
-  e: Types.Event
-) => Promise<void> /** |  (() => Promise<void>) */;
+  e: any
+) => Promise<void> /** | (() => Promise<void>) */;
 
 /** Convert string to hex-encoded utf-8 bytes. */
 function stringToHex(text: string) {
@@ -185,13 +183,14 @@ function stringToHex(text: string) {
 export async function sendAptosTx(
   client: AptosClient,
   signer: AptosAccount,
-  method: string,
+  method: ScriptFunctionId,
   args: Array<any>,
   retryCount = 2
 ): Promise<string> {
-  const payload: Types.TransactionPayload = {
+  const full_method = `${method.module.address}::${method.module.name}::${method.name}`;
+  const payload = {
     type: "script_function_payload",
-    function: method as any,
+    function: method,
     type_arguments: [],
     arguments: args,
   };
@@ -204,7 +203,7 @@ export async function sendAptosTx(
   if (simulation.vm_status === "Out of gas") {
     if (retryCount > 0) {
       const faucetClient = new FaucetClient(
-        "https://fullnode.devnet.aptoslabs.com/",
+        "https://fullnode.devnet.aptoslabs.com/v1",
         "https://faucet.devnet.aptoslabs.com"
       );
       await faucetClient.fundAccount(signer.address(), 5000);
@@ -212,12 +211,11 @@ export async function sendAptosTx(
     }
   }
   if (simulation.success === false) {
-    console.log(`TxGas: ${simulation.gas_used}`);
-    console.log(`TxGas: ${simulation.hash}`);
-
+    // console.log(`TxGas: ${simulation.gas_used}`);
+    // console.log(`TxGas: ${simulation.hash}`);
     throw new Error(`TxFailure: ${simulation.vm_status}`);
   } else {
-    console.log(`TxGas: ${simulation.gas_used}`);
+    // console.log(`TxGas: ${simulation.gas_used}`);
   }
 
   const signedTxn = await client.signTransaction(signer, txnRequest);
@@ -232,17 +230,17 @@ interface TableType {
   valueType: string;
 }
 
-// const LeaseTable: TableType = {
-// stateKey: `leases`,
-// keyType: `vector<u8>`,
-// valueType: `${SWITCHBOARD_DEVNET_ADDRESS}::Lease::Lease`,
-// };
-//
-// const PermissionTable: TableType = {
-// stateKey: `permissions`,
-// keyType: `vector<u8>`,
-// valueType: `${SWITCHBOARD_DEVNET_ADDRESS}::Permission::Permission`,
-// };
+const LeaseTable: TableType = {
+  stateKey: `leases`,
+  keyType: `vector<u8>`,
+  valueType: `${SWITCHBOARD_DEVNET_ADDRESS}::Lease::Lease`,
+};
+
+const PermissionTable: TableType = {
+  stateKey: `permissions`,
+  keyType: `vector<u8>`,
+  valueType: `${SWITCHBOARD_DEVNET_ADDRESS}::Permission::Permission`,
+};
 
 /**
  * Retrieve Table Item
@@ -250,39 +248,39 @@ interface TableType {
  * @param tableType
  * @param key string to fetch table item by
  */
-async function getTableItem(
-  pid: HexString,
-  client: AptosClient,
-  tableType: TableType,
-  key: string
-): Promise<unknown | undefined> {
-  // get table resource
-  const switchboardTableResource = await client.getAccountResource(
-    pid,
-    `${pid}::Switchboard::State` as any
-  );
+// async function getTableItem(
+// client: AptosClient,
+// tableType: TableType,
+// key: string
+// ): Promise<unknown | undefined> {
+// // get table resource
+// const switchboardTableResource = await client.getAccountResource(
+// SWITCHBOARD_STATE_ADDRESS,
+// `${SWITCHBOARD_DEVNET_ADDRESS}::Switchboard::State`
+// );
+//
+// const handle = (switchboardTableResource.data as any)[tableType.stateKey]
+// ?.handle;
+//
+// const getTokenTableItemRequest = {
+// key_type: tableType.keyType,
+// value_type: tableType.valueType,
+// key: key,
+// };
+//
+// try {
+// // fetch table item (it's an object with the schema structure)
+// const tableItem = await client.getTableItem(
+// handle,
+// getTokenTableItemRequest
+// );
+// return tableItem?.data;
+// } catch (e) {
+// console.log(e);
+// return;
+// }
+// }
 
-  const handle = (switchboardTableResource.data as any)[tableType.stateKey]
-    ?.handle;
-
-  const getTokenTableItemRequest: Types.TableItemRequest = {
-    key_type: tableType.keyType,
-    value_type: tableType.valueType,
-    key: key,
-  };
-
-  try {
-    // fetch table item (it's an object with the schema structure)
-    const tableItem = await client.getTableItem(
-      handle,
-      getTokenTableItemRequest
-    );
-    return tableItem?.data;
-  } catch (e) {
-    console.log(e);
-    return;
-  }
-}
 /**
  * Poll Events on Aptos
  * @Note uncleared setTimeout calls will keep processes from ending organically (SIGTERM is needed)
@@ -292,7 +290,7 @@ export class AptosEvent {
   constructor(
     readonly client: AptosClient,
     readonly eventHandlerOwner: HexString,
-    readonly eventOwnerStruct: string,
+    readonly eventOwnerStruct: MoveStructTag,
     readonly eventHandlerName: string,
     readonly pollIntervalMs: number = 1000
   ) {}
@@ -304,7 +302,7 @@ export class AptosEvent {
     let lastSequenceNumber = "0";
     const ownerData = await this.client.getAccountResource(
       this.eventHandlerOwner.hex().toString(),
-      this.eventOwnerStruct as any
+      this.eventOwnerStruct
     );
     try {
       lastSequenceNumber = (
@@ -313,12 +311,15 @@ export class AptosEvent {
     } catch (error) {
       console.error(JSON.stringify(ownerData, undefined, 2), error);
     }
+    if (Number(ownerData.data[this.eventHandlerName].counter) === -1) {
+      lastSequenceNumber = "0";
+    }
 
     this.intervalId = setInterval(async () => {
       try {
         const events = await this.client.getEventsByEventHandle(
           this.eventHandlerOwner,
-          this.eventOwnerStruct as any,
+          this.eventOwnerStruct,
           this.eventHandlerName,
           {
             start: BigInt(Number(lastSequenceNumber) + 1),
@@ -399,7 +400,13 @@ export class State {
     const tx = await sendAptosTx(
       client,
       account,
-      `${devnetAddress}::SwitchboardInitAction::run`,
+      {
+        module: {
+          address: HexString.ensure(devnetAddress).hex(),
+          name: "SwitchboardInitAction",
+        },
+        name: "run",
+      },
       []
     );
 
@@ -408,10 +415,12 @@ export class State {
 
   async loadData(): Promise<any> {
     return (
-      await this.client.getAccountResource(
-        this.address,
-        `${this.devnetAddress}::Switchboard::State` as any
-      )
+      await this.client.getAccountResource(this.address, {
+        address: HexString.ensure(this.devnetAddress).hex(),
+        module: "Switchboard",
+        name: "State",
+        generic_type_params: [],
+      })
     ).data;
   }
 }
@@ -429,9 +438,12 @@ export class Aggregator {
     return (
       await this.client.getAccountResource(
         HexString.ensure(this.address).hex(),
-        `${HexString.ensure(
-          this.devnetAddress
-        ).hex()}::Aggregator::Aggregator` as any
+        {
+          address: HexString.ensure(this.devnetAddress).hex(),
+          module: "Aggregator",
+          name: "Aggregator",
+          generic_type_params: [],
+        }
       )
     ).data;
   }
@@ -465,7 +477,13 @@ export class Aggregator {
     const tx = await sendAptosTx(
       client,
       account,
-      `${devnetAddress}::AggregatorInitAction::run`,
+      {
+        module: {
+          address: HexString.ensure(devnetAddress).hex(),
+          name: "AggregatorInitAction",
+        },
+        name: "run",
+      },
       [
         HexString.ensure(stateAddress).hex(),
         Buffer.from(params.name ?? "").toString("hex"),
@@ -503,7 +521,13 @@ export class Aggregator {
     return await sendAptosTx(
       this.client,
       account,
-      `${this.devnetAddress}::AggregatorAddJobAction::run`,
+      {
+        module: {
+          address: HexString.ensure(this.devnetAddress).hex(),
+          name: "AggregatorAddJobAction",
+        },
+        name: "run",
+      },
       [
         HexString.ensure(this.stateAddress).hex(),
         HexString.ensure(this.address).hex(),
@@ -520,7 +544,13 @@ export class Aggregator {
     return await sendAptosTx(
       this.client,
       account,
-      `${this.devnetAddress}::AggregatorSaveResultAction::run`,
+      {
+        module: {
+          address: HexString.ensure(this.devnetAddress).hex(),
+          name: "AggregatorSaveResultAction",
+        },
+        name: "run",
+      },
       [
         HexString.ensure(this.stateAddress).hex(),
         HexString.ensure(params.oracle_address).hex(),
@@ -543,7 +573,13 @@ export class Aggregator {
     return await sendAptosTx(
       this.client,
       this.account,
-      `${this.devnetAddress}::AggregatorOpenRoundAction::run`,
+      {
+        module: {
+          address: HexString.ensure(this.devnetAddress).hex(),
+          name: "AggregatorOpenRoundAction",
+        },
+        name: "run",
+      },
       [
         HexString.ensure(this.stateAddress).hex(),
         HexString.ensure(this.address).hex(),
@@ -554,8 +590,13 @@ export class Aggregator {
   async watch(callback: EventCallback): Promise<AptosEvent> {
     const event = new AptosEvent(
       this.client,
-      HexString.ensure(this.stateAddress),
-      `${this.devnetAddress}::Switchboard::State`,
+      HexString.ensure(`${this.devnetAddress}::Switchboard::State`),
+      {
+        address: HexString.ensure(this.devnetAddress).hex(),
+        module: "Switchboard",
+        name: "State",
+        generic_type_params: [],
+      },
       "aggregator_update_events",
       1000
     );
@@ -563,7 +604,10 @@ export class Aggregator {
     return event;
   }
 
-  async shouldReportValue(value: Big, aggregator: any): Promise<boolean> {
+  static async shouldReportValue(
+    value: Big,
+    aggregator: any
+  ): Promise<boolean> {
     if ((aggregator.latestConfirmedRound?.numSuccess ?? 0) === 0) {
       return true;
     }
@@ -573,12 +617,12 @@ export class Aggregator {
       return false;
     }
     const varianceThreshold: Big = new AptosDecimal(
-      aggregator.varianceThreshold.value,
+      aggregator.varianceThreshold.mantissa,
       aggregator.varianceThreshold.dec,
       aggregator.varianceThreshold.neg
     ).toBig();
     const latestResult: Big = new AptosDecimal(
-      aggregator.latestConfirmedRound.result.value,
+      aggregator.latestConfirmedRound.result.mantissa,
       aggregator.latestConfirmedRound.result.dec,
       aggregator.latestConfirmedRound.result.neg
     ).toBig();
@@ -614,10 +658,12 @@ export class Job {
 
   async loadData(): Promise<any> {
     return (
-      await this.client.getAccountResource(
-        this.address,
-        `${this.devnetAddress}::Job::Job` as any
-      )
+      await this.client.getAccountResource(this.address, {
+        address: HexString.ensure(this.devnetAddress).hex(),
+        module: "Job",
+        name: "Job",
+        generic_type_params: [],
+      })
     ).data;
   }
 
@@ -644,7 +690,13 @@ export class Job {
     const tx = await sendAptosTx(
       client,
       account,
-      `${devnetAddress}::JobInitAction::run`,
+      {
+        module: {
+          address: HexString.ensure(devnetAddress).hex(),
+          name: "JobInitAction",
+        },
+        name: "run",
+      },
       [
         HexString.ensure(stateAddress).hex(),
         stringToHex(params.name),
@@ -685,7 +737,13 @@ export class Crank {
     const tx = await sendAptosTx(
       client,
       account,
-      `${devnetAddress}::CrankInitAction::run`,
+      {
+        module: {
+          address: HexString.ensure(devnetAddress).hex(),
+          name: "CrankInitAction",
+        },
+        name: "run",
+      },
       [
         HexString.ensure(stateAddress).hex(),
         HexString.ensure(params.address).hex(),
@@ -707,7 +765,13 @@ export class Crank {
     return await sendAptosTx(
       this.client,
       account,
-      `${this.devnetAddress}::CrankPushAction::run`,
+      {
+        module: {
+          address: HexString.ensure(this.devnetAddress).hex(),
+          name: "CrankPushAction",
+        },
+        name: "run",
+      },
       [
         HexString.ensure(this.stateAddress).hex(),
         HexString.ensure(params.crankAddress).hex(),
@@ -724,7 +788,13 @@ export class Crank {
     return await sendAptosTx(
       this.client,
       account,
-      `${this.devnetAddress}::CrankPopAction::run`,
+      {
+        module: {
+          address: HexString.ensure(this.devnetAddress).hex(),
+          name: "CrankPopAction",
+        },
+        name: "run",
+      },
       [
         HexString.ensure(this.stateAddress).hex(),
         HexString.ensure(params.crankAddress).hex(),
@@ -736,7 +806,12 @@ export class Crank {
     return (
       await this.client.getAccountResource(
         HexString.ensure(this.address).hex(),
-        `${HexString.ensure(this.devnetAddress).hex()}::Crank::Crank` as any
+        {
+          address: HexString.ensure(this.devnetAddress).hex(),
+          module: "Crank",
+          name: "Crank",
+          generic_type_params: [],
+        }
       )
     ).data;
   }
@@ -766,7 +841,13 @@ export class Oracle {
     const tx = await sendAptosTx(
       client,
       account,
-      `${devnetAddress}::OracleInitAction::run`,
+      {
+        module: {
+          address: HexString.ensure(devnetAddress).hex(),
+          name: "OracleInitAction",
+        },
+        name: "run",
+      },
       [
         HexString.ensure(stateAddress).hex(),
         stringToHex(params.name),
@@ -786,7 +867,7 @@ export class Oracle {
     return (
       await this.client.getAccountResource(
         HexString.ensure(this.address).hex(),
-        `${HexString.ensure(this.devnetAddress).hex()}::Oracle::Oracle` as any
+        `${this.devnetAddress}::Oracle::Oracle` as any
       )
     ).data;
   }
@@ -798,7 +879,13 @@ export class Oracle {
     return await sendAptosTx(
       this.client,
       account,
-      `${this.devnetAddress}::OracleHeartbeatAction::run`,
+      {
+        module: {
+          address: HexString.ensure(this.devnetAddress).hex(),
+          name: "OracleHeartbeatAction",
+        },
+        name: "run",
+      },
       [
         HexString.ensure(this.stateAddress).hex(),
         HexString.ensure(this.address).hex(),
@@ -831,7 +918,10 @@ export class OracleQueue {
     const tx = await sendAptosTx(
       client,
       account,
-      `${devnetAddress}::OracleQueueInitAction::run`,
+      {
+        module: { address: devnetAddress, name: "OracleQueueInitAction" },
+        name: "run",
+      },
       [
         HexString.ensure(stateAddress).hex(),
         stringToHex(params.name),
@@ -865,9 +955,12 @@ export class OracleQueue {
     return (
       await this.client.getAccountResource(
         HexString.ensure(this.address).hex(),
-        `${HexString.ensure(
-          this.devnetAddress
-        ).hex()}::OracleQueue::OracleQueue` as any
+        {
+          address: HexString.ensure(this.devnetAddress).hex(),
+          module: "OracleQueue",
+          name: "OracleQueue",
+          generic_type_params: [],
+        }
       )
     ).data;
   }
