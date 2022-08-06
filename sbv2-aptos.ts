@@ -688,6 +688,7 @@ async function createJob(
   aggregator: Aggregator
 ): Promise<Job> {
   const jobAccount = new AptosAccount();
+  await faucet.fundAccount(authority.address(), 5000);
   await faucet.fundAccount(jobAccount.address(), 5000);
   // await faucet.fundAccount(jobAccount.address(), 5000);
 

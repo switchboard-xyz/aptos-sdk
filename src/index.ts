@@ -749,7 +749,6 @@ export class Crank {
       },
       [
         HexString.ensure(stateAddress).hex(),
-        HexString.ensure(params.address).hex(),
         HexString.ensure(params.queueAddress).hex(),
       ]
     );
@@ -870,7 +869,12 @@ export class Oracle {
     return (
       await this.client.getAccountResource(
         HexString.ensure(this.address).hex(),
-        `${this.devnetAddress}::Oracle::Oracle` as any
+        {
+          address: HexString.ensure(this.devnetAddress).hex(),
+          module: "Oracle",
+          name: "Oracle",
+          generic_type_params: [],
+        }
       )
     ).data;
   }
