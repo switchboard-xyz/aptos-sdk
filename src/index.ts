@@ -431,7 +431,6 @@ export class Aggregator {
   constructor(
     readonly client: AptosClient,
     readonly address: MaybeHexString,
-    readonly payer: AptosAccount,
     readonly devnetAddress: MaybeHexString,
     readonly stateAddress: MaybeHexString
   ) {}
@@ -505,13 +504,7 @@ export class Aggregator {
     );
 
     return [
-      new Aggregator(
-        client,
-        account.address(),
-        account,
-        devnetAddress,
-        stateAddress
-      ),
+      new Aggregator(client, account.address(), devnetAddress, stateAddress),
       tx,
     ];
   }
@@ -522,7 +515,7 @@ export class Aggregator {
   ): Promise<string> {
     return await sendAptosTx(
       this.client,
-      this.payer,
+      account,
       {
         module: {
           address: HexString.ensure(this.devnetAddress).hex(),
@@ -545,7 +538,7 @@ export class Aggregator {
   ): Promise<string> {
     return await sendAptosTx(
       this.client,
-      this.payer,
+      account,
       {
         module: {
           address: HexString.ensure(this.devnetAddress).hex(),
@@ -567,14 +560,10 @@ export class Aggregator {
     );
   }
 
-  async openRound(): Promise<string> {
-    if (!this.payer) {
-      throw "Save Result Error: No Payer Found";
-    }
-
+  async openRound(account: AptosAccount): Promise<string> {
     return await sendAptosTx(
       this.client,
-      this.payer,
+      account,
       {
         module: {
           address: HexString.ensure(this.devnetAddress).hex(),

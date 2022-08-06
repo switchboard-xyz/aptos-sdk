@@ -384,7 +384,6 @@ yargs(hideBin(process.argv))
       const aggregator = new Aggregator(
         client,
         aggregatorHexString,
-        payer,
         pid,
         stateAddress
       );
@@ -551,12 +550,13 @@ yargs(hideBin(process.argv))
       const aggregator = new Aggregator(
         client,
         aggregatorHexString,
-        account,
         pid,
         stateAddress
       );
 
-      const openRoundSig = await aggregator.openRound();
+      const payer = new AptosAccount();
+      await faucet.fundAccount(payer.address(), 5000);
+      const openRoundSig = await aggregator.openRound(payer);
       console.log(`OpenRound Signature: ${openRoundSig}`);
 
       process.exit(0);
@@ -587,7 +587,6 @@ yargs(hideBin(process.argv))
       const aggregator = new Aggregator(
         client,
         aggregatorHexString,
-        new AptosAccount(),
         pid,
         stateAddress
       );
