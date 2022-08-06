@@ -344,18 +344,18 @@ yargs(hideBin(process.argv))
     "crank-push [crankHex] [aggregatorHex]",
     "action",
     (y: any) => {
-      return y.positional("crankHex", {
-        type: "string",
-        describe: "hexString of the crank",
-        required: true,
-      });
-    },
-    (y: any) => {
-      return y.positional("aggregatorHex", {
-        type: "string",
-        describe: "hexString of the aggregator",
-        required: true,
-      });
+      return [
+        y.positional("crankHex", {
+          type: "string",
+          describe: "hexString of the crank",
+          required: true,
+        }),
+        y.positional("aggregatorHex", {
+          type: "string",
+          describe: "hexString of the aggregator",
+          required: true,
+        }),
+      ];
     },
     async function (argv: any) {
       const {
@@ -380,7 +380,7 @@ yargs(hideBin(process.argv))
       const crank = new Crank(client, crankHexString, pid, stateAddress);
       const aggregatorHexString = new HexString(aggregatorHex);
       const payer = new AptosAccount();
-      await faucet.fundAccount(payer.address(), 5000);
+      await faucet.fundAccount(payer.address(), 10000);
       const aggregator = new Aggregator(
         client,
         aggregatorHexString,
@@ -388,6 +388,10 @@ yargs(hideBin(process.argv))
         pid,
         stateAddress
       );
+      const sig = await crank.push(payer, {
+        aggregatorAddress: HexString.ensure(aggregator.address).hex(),
+      });
+      console.log(sig);
       process.exit(0);
     }
   )

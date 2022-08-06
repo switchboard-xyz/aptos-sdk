@@ -128,7 +128,6 @@ export interface CrankPopParams {
 }
 
 export interface CrankPushParams {
-  crankAddress: string;
   aggregatorAddress: string;
 }
 
@@ -776,7 +775,7 @@ export class Crank {
       },
       [
         HexString.ensure(this.stateAddress).hex(),
-        HexString.ensure(params.crankAddress).hex(),
+        HexString.ensure(this.address).hex(),
         HexString.ensure(params.aggregatorAddress).hex(),
       ]
     );
