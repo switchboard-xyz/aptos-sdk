@@ -341,6 +341,57 @@ yargs(hideBin(process.argv))
     }
   )
   .command(
+    "crank-push [crankHex] [aggregatorHex]",
+    "action",
+    (y: any) => {
+      return y.positional("crankHex", {
+        type: "string",
+        describe: "hexString of the crank",
+        required: true,
+      });
+    },
+    (y: any) => {
+      return y.positional("aggregatorHex", {
+        type: "string",
+        describe: "hexString of the aggregator",
+        required: true,
+      });
+    },
+    async function (argv: any) {
+      const {
+        rpcUrl,
+        faucetUrl,
+        keypair,
+        crankHex,
+        aggregatorHex,
+        pid,
+        stateAddress,
+      } = argv;
+
+      const { client, faucet, account, state } = await loadCli(
+        rpcUrl,
+        faucetUrl,
+        pid,
+        stateAddress,
+        keypair
+      );
+
+      const crankHexString = new HexString(crankHex);
+      const crank = new Crank(client, crankHexString, pid, stateAddress);
+      const aggregatorHexString = new HexString(aggregatorHex);
+      const payer = new AptosAccount();
+      await faucet.fundAccount(payer.address(), 5000);
+      const aggregator = new Aggregator(
+        client,
+        aggregatorHexString,
+        payer,
+        pid,
+        stateAddress
+      );
+      process.exit(0);
+    }
+  )
+  .command(
     "create-aggregator [queueHex]",
     "action",
     (y: any) => {
