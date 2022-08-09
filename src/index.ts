@@ -772,9 +772,8 @@ export class Crank {
 
   /**
    * Pop an aggregator off the Crank
-   * @param params CrankPopParams
    */
-  async pop(account: AptosAccount, params: CrankPopParams): Promise<string> {
+  async pop(account: AptosAccount): Promise<string> {
     return await sendAptosTx(
       this.client,
       account,
@@ -787,7 +786,7 @@ export class Crank {
       },
       [
         HexString.ensure(this.stateAddress).hex(),
-        HexString.ensure(params.crankAddress).hex(),
+        HexString.ensure(this.address).hex(),
       ]
     );
   }
