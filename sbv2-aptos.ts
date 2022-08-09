@@ -44,7 +44,7 @@ yargs(hideBin(process.argv))
 
       const account = new AptosAccount();
 
-      // await faucet.fundAccount(keypair.address(), 5000);
+      await faucet.fundAccount(account.address(), 5000);
 
       console.log(`Account: ${account.address()}`);
       console.log(`Balance: ${await loadBalance(client, account.address())}`);
@@ -65,8 +65,7 @@ yargs(hideBin(process.argv))
       const client = new AptosClient(rpcUrl);
       const account = loadAptosAccount(keypair);
       console.log(`Address: ${account.address()}`);
-      const balance = await loadBalance(client, account.address());
-      console.log(`Balance: ${balance}`);
+      console.log(`Balance: ${await loadBalance(client, account.address())}`);
       process.exit(0);
     }
   )
@@ -628,20 +627,51 @@ yargs(hideBin(process.argv))
   })
   .help().argv;
 
-function loadAptosAccount(
-  keypairPath: string,
-  aptosFormat = false
-): AptosAccount {
-  if (aptosFormat) {
-    return new AptosAccount(
-      new Uint8Array(
-        Buffer.from(JSON.parse(fs.readFileSync(keypairPath, "utf-8")), "hex")
-      )
-    );
-  }
-  return new AptosAccount(
-    new Uint8Array(JSON.parse(fs.readFileSync(keypairPath, "utf-8")))
-  );
+function loadAptosAccount(keypairPath: string): AptosAccount {
+  const parseKeypairString = (fileString: string): AptosAccount => {
+    // check if bytes
+    const parsedFileString = fileString
+      .trim()
+      .replace(/\n/g, "")
+      .replace(/\s/g, "");
+    const bytesRegex = /^\[(\s)?[0-9]+((\s)?,(\s)?[0-9]+){31,}\]/g;
+    if (bytesRegex.test(parsedFileString)) {
+      return new AptosAccount(new Uint8Array(JSON.parse(parsedFileString)));
+    }
+
+    // check if hex
+    const hexRegex = /^(0x|0X)?[a-fA-F0-9]{64}/g;
+    if (hexRegex.test(parsedFileString)) {
+      return new AptosAccount(
+        new Uint8Array(HexString.ensure(parsedFileString).toBuffer())
+      );
+    }
+
+    // check if base64 encoded
+    const base64Regex =
+      /^(?:[A-Za-z\d+\/]{4})*(?:[A-Za-z\d+\/]{3}=|[A-Za-z\d+\/]{2}==)?/g;
+    if (base64Regex.test(parsedFileString)) {
+      return new AptosAccount(
+        new Uint8Array(Buffer.from(parsedFileString, "base64"))
+      );
+    }
+
+    throw new Error(`Failed to derive secret key from input file`);
+  };
+
+  const fileString = fs.readFileSync(keypairPath, "utf-8");
+  return parseKeypairString(fileString);
+
+  // if (aptosFormat) {
+  //   return new AptosAccount(
+  //     new Uint8Array(
+  //       Buffer.from(JSON.parse(fs.readFileSync(keypairPath, "utf-8")), "hex")
+  //     )
+  //   );
+  // }
+  // return new AptosAccount(
+  //   new Uint8Array(JSON.parse(fs.readFileSync(keypairPath, "utf-8")))
+  // );
 }
 
 function saveAptosAccount(

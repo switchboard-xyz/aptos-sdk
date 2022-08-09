@@ -1,7 +1,10 @@
 /// <reference types="node" />
-import { AptosClient, AptosAccount, Types, HexString, MaybeHexString } from "aptos";
+import { AptosClient, AptosAccount, HexString, MaybeHexString } from "aptos";
+import { MoveStructTag, ScriptFunctionId } from "aptos/src/generated";
 import Big from "big.js";
 import * as sbv2 from "@switchboard-xyz/switchboard-v2";
+export declare const SWITCHBOARD_DEVNET_ADDRESS = "";
+export declare const SWITCHBOARD_STATE_ADDRESS = "";
 export declare class AptosDecimal {
     readonly mantissa: string;
     readonly scale: number;
@@ -66,13 +69,12 @@ export interface AggregatorSetConfigParams {
 }
 export interface CrankInitParams {
     address: string;
-    queueAddress: HexString;
+    queueAddress: MaybeHexString;
 }
 export interface CrankPopParams {
     crankAddress: string;
 }
 export interface CrankPushParams {
-    crankAddress: string;
     aggregatorAddress: string;
 }
 export interface OracleInitParams {
@@ -102,7 +104,7 @@ export interface OracleQueueInitParams {
     enableBufferRelayers: boolean;
     maxSize: number;
 }
-export declare type EventCallback = (e: Types.Event) => Promise<void> /** |  (() => Promise<void>) */;
+export declare type EventCallback = (e: any) => Promise<void> /** | (() => Promise<void>) */;
 /**
  * Sends and waits for an aptos tx to be confirmed
  * @param client
@@ -111,7 +113,13 @@ export declare type EventCallback = (e: Types.Event) => Promise<void> /** |  (()
  * @param args Arguments for method (converts numbers to strings)
  * @returns
  */
-export declare function sendAptosTx(client: AptosClient, signer: AptosAccount, method: string, args: Array<any>, retryCount?: number): Promise<string>;
+export declare function sendAptosTx(client: AptosClient, signer: AptosAccount, method: ScriptFunctionId, args: Array<any>, retryCount?: number): Promise<string>;
+/**
+ * Retrieve Table Item
+ * @param client
+ * @param tableType
+ * @param key string to fetch table item by
+ */
 /**
  * Poll Events on Aptos
  * @Note uncleared setTimeout calls will keep processes from ending organically (SIGTERM is needed)
@@ -119,30 +127,29 @@ export declare function sendAptosTx(client: AptosClient, signer: AptosAccount, m
 export declare class AptosEvent {
     readonly client: AptosClient;
     readonly eventHandlerOwner: HexString;
-    readonly eventOwnerStruct: string;
+    readonly eventOwnerStruct: MoveStructTag;
     readonly eventHandlerName: string;
     readonly pollIntervalMs: number;
     intervalId?: ReturnType<typeof setInterval>;
-    constructor(client: AptosClient, eventHandlerOwner: HexString, eventOwnerStruct: string, eventHandlerName: string, pollIntervalMs?: number);
+    constructor(client: AptosClient, eventHandlerOwner: HexString, eventOwnerStruct: MoveStructTag, eventHandlerName: string, pollIntervalMs?: number);
     onTrigger(callback: EventCallback, errorHandler?: (error: unknown) => void): Promise<NodeJS.Timer>;
     stop(): void;
 }
 export declare class State {
     readonly client: AptosClient;
     readonly address: MaybeHexString;
-    readonly account: AptosAccount;
+    readonly payer: AptosAccount;
     readonly devnetAddress: MaybeHexString;
-    constructor(client: AptosClient, address: MaybeHexString, account: AptosAccount, devnetAddress: MaybeHexString);
-    static init(client: AptosClient, account: AptosAccount, devnetAddress: MaybeHexString): Promise<[State, string]>;
+    constructor(client: AptosClient, address: MaybeHexString, payer: AptosAccount, devnetAddress: MaybeHexString);
+    static init(client: AptosClient, account: AptosAccount, pid: MaybeHexString): Promise<[State, string]>;
     loadData(): Promise<any>;
 }
 export declare class Aggregator {
     readonly client: AptosClient;
     readonly address: MaybeHexString;
-    readonly account: AptosAccount;
     readonly devnetAddress: MaybeHexString;
     readonly stateAddress: MaybeHexString;
-    constructor(client: AptosClient, address: MaybeHexString, account: AptosAccount, devnetAddress: MaybeHexString, stateAddress: MaybeHexString);
+    constructor(client: AptosClient, address: MaybeHexString, devnetAddress: MaybeHexString, stateAddress: MaybeHexString);
     loadData(): Promise<any>;
     loadJobs(): Promise<Array<sbv2.OracleJob>>;
     /**
@@ -154,9 +161,9 @@ export declare class Aggregator {
     static init(client: AptosClient, account: AptosAccount, params: AggregatorInitParams, devnetAddress: MaybeHexString, stateAddress: MaybeHexString): Promise<[Aggregator, string]>;
     addJob(account: AptosAccount, params: AggregatorAddJobParams): Promise<string>;
     saveResult(account: AptosAccount, params: AggregatorSaveResultParams): Promise<string>;
-    openRound(): Promise<string>;
+    openRound(account: AptosAccount): Promise<string>;
     watch(callback: EventCallback): Promise<AptosEvent>;
-    shouldReportValue(value: Big, aggregator: any): Promise<boolean>;
+    static shouldReportValue(value: Big, aggregator: any): Promise<boolean>;
 }
 export declare class Job {
     readonly client: AptosClient;
