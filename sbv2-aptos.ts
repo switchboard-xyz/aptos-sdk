@@ -9,6 +9,7 @@ const { hideBin } = require("yargs/helpers");
 // import { hideBin } from "yargs/helpers";
 import fs from "fs";
 import path from "path";
+import YAML from "yaml";
 import chalk from "chalk";
 import { AptosAccount, AptosClient, FaucetClient, HexString } from "aptos";
 import {
@@ -636,12 +637,14 @@ function loadAptosAccount(keypairPath: string): AptosAccount {
       .replace(/\s/g, "");
     const bytesRegex = /^\[(\s)?[0-9]+((\s)?,(\s)?[0-9]+){31,}\]/g;
     if (bytesRegex.test(parsedFileString)) {
+      console.log(`BYTES`);
       return new AptosAccount(new Uint8Array(JSON.parse(parsedFileString)));
     }
 
     // check if hex
     const hexRegex = /^(0x|0X)?[a-fA-F0-9]{64}/g;
     if (hexRegex.test(parsedFileString)) {
+      console.log(`HEX`);
       return new AptosAccount(
         new Uint8Array(HexString.ensure(parsedFileString).toBuffer())
       );
@@ -651,27 +654,35 @@ function loadAptosAccount(keypairPath: string): AptosAccount {
     const base64Regex =
       /^(?:[A-Za-z\d+\/]{4})*(?:[A-Za-z\d+\/]{3}=|[A-Za-z\d+\/]{2}==)?/g;
     if (base64Regex.test(parsedFileString)) {
+      console.log(`BASE64`);
       return new AptosAccount(
         new Uint8Array(Buffer.from(parsedFileString, "base64"))
       );
     }
 
+    // check if yaml file
+
     throw new Error(`Failed to derive secret key from input file`);
   };
 
+  // if file extension ends with yaml
+  if (keypairPath.endsWith(".yaml")) {
+    try {
+      const parsedYaml = YAML.parse(fs.readFileSync(keypairPath, "utf8"));
+      if (
+        "profiles" in parsedYaml &&
+        "default" in parsedYaml.profiles &&
+        "private_key" in parsedYaml.profiles.default
+      ) {
+        return new AptosAccount(
+          HexString.ensure(parsedYaml.profiles.default.private_key).toBuffer()
+        );
+      }
+    } catch {}
+  }
+
   const fileString = fs.readFileSync(keypairPath, "utf-8");
   return parseKeypairString(fileString);
-
-  // if (aptosFormat) {
-  //   return new AptosAccount(
-  //     new Uint8Array(
-  //       Buffer.from(JSON.parse(fs.readFileSync(keypairPath, "utf-8")), "hex")
-  //     )
-  //   );
-  // }
-  // return new AptosAccount(
-  //   new Uint8Array(JSON.parse(fs.readFileSync(keypairPath, "utf-8")))
-  // );
 }
 
 function saveAptosAccount(
