@@ -27,38 +27,27 @@
  */
 import { Buffer } from "buffer";
 import * as sbv2 from "@switchboard-xyz/switchboard-v2";
+import { AptosClient, AptosAccount, FaucetClient, HexString } from "aptos";
 import {
-  AptosClient,
-  AptosAccount,
-  FaucetClient,
-  Types,
-  MaybeHexString,
-  HexString,
-} from "aptos";
-import {
-  // Object types
   State,
   Aggregator,
   Job,
   Oracle,
   OracleQueue,
+  Lease,
   AptosEvent,
-  SWITCHBOARD_DEVNET_ADDRESS,
-  SWITCHBOARD_STATE_ADDRESS,
   EventCallback,
-  // Crank,
-
-  // Event polling
-  // onAggregatorOpenRound,
-  // onAggregatorUpdate,
-  // onAggregatorSaveResult,
-  // onAggregatorUpdate,
-} from ".";
+} from "./src";
 import fetch from "node-fetch";
 const NODE_URL =
   process.env.APTOS_NODE_URL ?? "https://fullnode.devnet.aptoslabs.com";
 const FAUCET_URL =
   process.env.APTOS_FAUCET_URL ?? "https://faucet.devnet.aptoslabs.com";
+
+const SWITCHBOARD_DEVNET_ADDRESS =
+  "0x348ecb66a5d9edab8d175f647d5e99d6962803da7f5d3d2eb839387aeb118300";
+const SWITCHBOARD_STATE_ADDRESS =
+  "0x348ecb66a5d9edab8d175f647d5e99d6962803da7f5d3d2eb839387aeb118300";
 
 const onAggregatorOpenRound = (
   client: AptosClient,
@@ -119,7 +108,11 @@ const onAggregatorUpdate = (
   await faucetClient.fundAccount(user.address(), 5000);
 
   console.log(`User account ${user.address().hex()} created + funded.`);
-  const [stateTxSig] = await State.init(client, user);
+  const [stateTxSig] = await State.init(
+    client,
+    user,
+    SWITCHBOARD_DEVNET_ADDRESS
+  );
 
   console.log(
     `State account: ${user
@@ -132,7 +125,7 @@ const onAggregatorUpdate = (
   const oracle_resource_acct = new AptosAccount();
   const job_resource_acct = new AptosAccount();
 
-  await faucetClient.fundAccount(aggregator_resource_acct.address(), 5000);
+  await faucetClient.fundAccount(aggregator_resource_acct.address(), 50000);
   await faucetClient.fundAccount(queue_resource_acct.address(), 5000);
   await faucetClient.fundAccount(oracle_resource_acct.address(), 5000);
   await faucetClient.fundAccount(job_resource_acct.address(), 5000);
@@ -162,7 +155,10 @@ const onAggregatorUpdate = (
       mint: user.address(),
       enableBufferRelayers: false,
       maxSize: 1000,
-    }
+      coinType: "0x1::aptos_coin::AptosCoin",
+    },
+    SWITCHBOARD_DEVNET_ADDRESS,
+    SWITCHBOARD_STATE_ADDRESS
   );
 
   console.log(`Queue: ${queue.address}, tx: ${queueTxSig}`);
@@ -172,7 +168,6 @@ const onAggregatorUpdate = (
     aggregator_resource_acct,
     {
       authority: user.address(),
-      address: aggregator_resource_acct.address(),
       queueAddress: queue_resource_acct.address(),
       batchSize: 1,
       minJobResults: 1,
@@ -183,7 +178,10 @@ const onAggregatorUpdate = (
       varianceThresholdScale: 0,
       forceReportPeriod: 0,
       expiration: 0,
-    }
+      coinType: "0x1::aptos_coin::AptosCoin",
+    },
+    SWITCHBOARD_DEVNET_ADDRESS,
+    SWITCHBOARD_STATE_ADDRESS
   );
 
   console.log(`Aggregator: ${aggregator.address}, tx: ${aggregatorTxSig}`);
@@ -197,13 +195,16 @@ const onAggregatorUpdate = (
       metadata: "metadata",
       authority: user.address(),
       queue: queue.address,
-    }
+      coinType: "0x1::aptos_coin::AptosCoin",
+    },
+    SWITCHBOARD_DEVNET_ADDRESS,
+    SWITCHBOARD_STATE_ADDRESS
   );
 
   console.log(`Oracle: ${oracle.address}, tx: ${oracleTxSig}`);
 
   // trigger the oracle heartbeat
-  const heartbeatTxSig = await oracle.heartbeat(oracle_resource_acct);
+  const heartbeatTxSig = await oracle.heartbeat(user);
   console.log("Heartbeat Tx Hash:", heartbeatTxSig);
 
   // Make Job data for btc price
@@ -226,39 +227,57 @@ const onAggregatorUpdate = (
     ).finish()
   );
 
-  const [job, jobTxSig] = await Job.init(client, job_resource_acct, {
-    name: "BTC/USD",
-    metadata: "binance",
-    authority: user.address(),
-    data: serializedJob.toString("hex"),
-  });
+  const [job, jobTxSig] = await Job.init(
+    client,
+    job_resource_acct,
+    {
+      name: "BTC/USD",
+      metadata: "binance",
+      authority: user.address(),
+      data: serializedJob.toString("hex"),
+    },
+    SWITCHBOARD_DEVNET_ADDRESS,
+    SWITCHBOARD_STATE_ADDRESS
+  );
 
   console.log(`Job created ${job.address}, hash: ${jobTxSig}`);
 
   // add btc usd to our aggregator
-  const addJobTxSig = await aggregator.addJob(aggregator_resource_acct, {
+  const addJobTxSig = await aggregator.addJob(user, {
     job: job.address,
   });
 
   console.log(`Aggregator add job tx: ${addJobTxSig}`);
 
+  const [lease, leaseTxSig] = await Lease.init(
+    client,
+    aggregator_resource_acct,
+    {
+      queueAddress: queue.address,
+      withdrawAuthority: user.address().hex(),
+      initialAmount: 10,
+      coinType: "0x1::aptos_coin::AptosCoin",
+    },
+    SWITCHBOARD_DEVNET_ADDRESS,
+    SWITCHBOARD_STATE_ADDRESS
+  );
+
+  console.log(lease, leaseTxSig);
+
   // initialize an update
-  const openRoundTxSig = await aggregator.openRound();
+  const openRoundTxSig = await aggregator.openRound(user);
   console.log(`Aggregator open round tx ${openRoundTxSig}`);
 
   // save result
-  const saveResultTxSig = await aggregator.saveResult(
-    aggregator_resource_acct,
-    {
-      oracle_address: oracle.address,
-      oracle_idx: 0,
-      error: false,
-      value_num: 100,
-      value_scale_factor: 0,
-      value_neg: false,
-      jobs_checksum: "",
-    }
-  );
+  const saveResultTxSig = await aggregator.saveResult(user, {
+    oracle_address: oracle.address,
+    oracle_idx: 0,
+    error: false,
+    value_num: 100,
+    value_scale_factor: 0,
+    value_neg: false,
+    jobs_checksum: "",
+  });
   console.log(`Save result tx: ${saveResultTxSig}`);
 
   const onOpenRoundPoller = onAggregatorOpenRound(client, async (e) => {
@@ -268,7 +287,12 @@ const onAggregatorUpdate = (
     const jobsData = (
       await Promise.all(
         e.data?.job_keys?.map((jobAddress: any) =>
-          new Job(client, jobAddress).loadData()
+          new Job(
+            client,
+            jobAddress,
+            SWITCHBOARD_DEVNET_ADDRESS,
+            SWITCHBOARD_STATE_ADDRESS
+          ).loadData()
         )
       )
     ).map((job) => {
@@ -318,12 +342,12 @@ const onAggregatorUpdate = (
   while (i--) {
     // every 5 seconds
     await new Promise((r) => setTimeout(r, 10000));
-    await aggregator.openRound();
+    await aggregator.openRound(user);
   }
 
   // close out listeners so process can end
-  (await onOpenRoundPoller).stop();
-  (await updatePoller).stop();
+  onOpenRoundPoller.stop();
+  updatePoller.stop();
 
   /**
    * Log Data Objects

@@ -68,6 +68,7 @@ export interface AggregatorInitParams {
   name?: string;
   metadata?: string;
   queueAddress: MaybeHexString;
+  coinType: MoveStructTag;
   batchSize: number;
   minOracleResults: number;
   minJobResults: number;
@@ -121,6 +122,7 @@ export interface AggregatorSetConfigParams {
 export interface CrankInitParams {
   address: string;
   queueAddress: MaybeHexString;
+  coinType: MoveStructTag;
 }
 
 export interface CrankPopParams {
@@ -137,6 +139,7 @@ export interface OracleInitParams {
   metadata: string;
   authority: MaybeHexString;
   queue: MaybeHexString;
+  coinType: MoveStructTag;
 }
 
 export interface OracleQueueInitParams {
@@ -160,6 +163,53 @@ export interface OracleQueueInitParams {
   mint: MaybeHexString;
   enableBufferRelayers: boolean;
   maxSize: number;
+  coinType: MoveStructTag;
+}
+
+export interface LeaseInitParams {
+  queueAddress: MaybeHexString;
+  withdrawAuthority: MaybeHexString;
+  initialAmount: number;
+  coinType: MoveStructTag;
+}
+
+export interface LeaseExtendParams {
+  loadAmount: number;
+}
+
+export interface LeaseWithdrawParams {
+  amount: number;
+}
+
+export interface OracleWalletInitParams {
+  queueAddress: MaybeHexString;
+  withdrawAuthority: MaybeHexString;
+  initialAmount: number;
+  coinType: string;
+}
+
+export interface OracleWalletContributeParams {
+  oracleWalletAddr: MaybeHexString;
+  loadAmount: number;
+}
+
+export interface OracleWalletWithdrawParams {
+  oracleWalletAddr: MaybeHexString;
+  amount: number;
+}
+
+export interface PermissionInitParams {
+  authority: MaybeHexString;
+  granter: string;
+  grantee: string;
+}
+
+export interface PermissionSetParams {
+  authority: MaybeHexString;
+  granter: string;
+  grantee: string;
+  permission: number;
+  enable: boolean;
 }
 
 export type EventCallback = (
@@ -184,14 +234,13 @@ export async function sendAptosTx(
   signer: AptosAccount,
   method: ScriptFunctionId,
   args: Array<any>,
+  type_args: Array<string> = [],
   retryCount = 2
 ): Promise<string> {
-  const full_method = `${method.module.address}::${method.module.name}::${method.name}`;
-  console.log(full_method);
   const payload = {
     type: "script_function_payload",
     function: method,
-    type_arguments: [],
+    type_arguments: type_args,
     arguments: args,
   };
   const txnRequest = await client.generateTransaction(
@@ -208,10 +257,11 @@ export async function sendAptosTx(
         "https://faucet.devnet.aptoslabs.com"
       );
       await faucetClient.fundAccount(signer.address(), 5000);
-      return sendAptosTx(client, signer, method, args, --retryCount);
+      return sendAptosTx(client, signer, method, args, type_args, --retryCount);
     }
   }
   if (simulation.success === false) {
+    console.log(simulation);
     // console.log(`TxGas: ${simulation.gas_used}`);
     // console.log(`TxGas: ${simulation.hash}`);
     throw new Error(`TxFailure: ${simulation.vm_status}`);
@@ -222,66 +272,8 @@ export async function sendAptosTx(
   const signedTxn = await client.signTransaction(signer, txnRequest);
   const transactionRes = await client.submitTransaction(signedTxn);
   await client.waitForTransaction(transactionRes.hash);
-  console.log(transactionRes.hash);
   return transactionRes.hash;
 }
-
-interface TableType {
-  stateKey: string;
-  keyType: string;
-  valueType: string;
-}
-
-const LeaseTable: TableType = {
-  stateKey: `leases`,
-  keyType: `vector<u8>`,
-  valueType: `${SWITCHBOARD_DEVNET_ADDRESS}::Lease::Lease`,
-};
-
-const PermissionTable: TableType = {
-  stateKey: `permissions`,
-  keyType: `vector<u8>`,
-  valueType: `${SWITCHBOARD_DEVNET_ADDRESS}::Permission::Permission`,
-};
-
-/**
- * Retrieve Table Item
- * @param client
- * @param tableType
- * @param key string to fetch table item by
- */
-// async function getTableItem(
-// client: AptosClient,
-// tableType: TableType,
-// key: string
-// ): Promise<unknown | undefined> {
-// // get table resource
-// const switchboardTableResource = await client.getAccountResource(
-// SWITCHBOARD_STATE_ADDRESS,
-// `${SWITCHBOARD_DEVNET_ADDRESS}::Switchboard::State`
-// );
-//
-// const handle = (switchboardTableResource.data as any)[tableType.stateKey]
-// ?.handle;
-//
-// const getTokenTableItemRequest = {
-// key_type: tableType.keyType,
-// value_type: tableType.valueType,
-// key: key,
-// };
-//
-// try {
-// // fetch table item (it's an object with the schema structure)
-// const tableItem = await client.getTableItem(
-// handle,
-// getTokenTableItemRequest
-// );
-// return tableItem?.data;
-// } catch (e) {
-// console.log(e);
-// return;
-// }
-// }
 
 /**
  * Poll Events on Aptos
@@ -355,37 +347,6 @@ export class AptosEvent {
   }
 }
 
-/**
- * Common Constructor
- */
-class SwitchboardResource {
-  client: AptosClient;
-  address: MaybeHexString;
-  tableType: TableType;
-  account?: AptosAccount;
-
-  constructor(
-    tableType: TableType,
-    client: AptosClient,
-    address: MaybeHexString,
-    account?: AptosAccount
-  ) {
-    this.tableType = tableType;
-    this.client = client;
-    this.account = account;
-    this.address = address;
-  }
-
-  // try to load data from on-chain
-  // async loadData(): Promise<unknown | undefined> {
-  // return await getTableItem(
-  // this.client,
-  // this.tableType,
-  // HexString.ensure(this.address).hex()
-  // );
-  // }
-}
-
 export class State {
   constructor(
     readonly client: AptosClient,
@@ -397,32 +358,24 @@ export class State {
   static async init(
     client: AptosClient,
     account: AptosAccount,
-    pid: MaybeHexString
+    devnetAddress: MaybeHexString
   ): Promise<[State, string]> {
     const tx = await sendAptosTx(
       client,
       account,
-      {
-        module: {
-          address: HexString.ensure(pid).hex(),
-          name: "SwitchboardInitAction",
-        },
-        name: "run",
-      },
+      `${devnetAddress}::SwitchboardInitAction::run`,
       []
     );
 
-    return [new State(client, account.address(), account, pid), tx];
+    return [new State(client, account.address(), account, devnetAddress), tx];
   }
 
   async loadData(): Promise<any> {
     return (
-      await this.client.getAccountResource(this.address, {
-        address: HexString.ensure(this.devnetAddress).hex(),
-        module: "Switchboard",
-        name: "State",
-        generic_type_params: [],
-      })
+      await this.client.getAccountResource(
+        this.address,
+        `${this.devnetAddress}::Switchboard::State`
+      )
     ).data;
   }
 }
@@ -432,19 +385,15 @@ export class Aggregator {
     readonly client: AptosClient,
     readonly address: MaybeHexString,
     readonly devnetAddress: MaybeHexString,
-    readonly stateAddress: MaybeHexString
+    readonly stateAddress: MaybeHexString,
+    readonly coinType: MoveStructTag = "0x1::aptos_coin::AptosCoin"
   ) {}
 
   async loadData(): Promise<any> {
     return (
       await this.client.getAccountResource(
         HexString.ensure(this.address).hex(),
-        {
-          address: HexString.ensure(this.devnetAddress).hex(),
-          module: "Aggregator",
-          name: "Aggregator",
-          generic_type_params: [],
-        }
+        `${this.devnetAddress}::Aggregator::Aggregator`
       )
     ).data;
   }
@@ -478,13 +427,7 @@ export class Aggregator {
     const tx = await sendAptosTx(
       client,
       account,
-      {
-        module: {
-          address: HexString.ensure(devnetAddress).hex(),
-          name: "AggregatorInitAction",
-        },
-        name: "run",
-      },
+      `${devnetAddress}::AggregatorInitAction::run`,
       [
         HexString.ensure(stateAddress).hex(),
         Buffer.from(params.name ?? "").toString("hex"),
@@ -500,11 +443,18 @@ export class Aggregator {
         (params.forceReportPeriod ?? 0).toString(),
         (params.expiration ?? 0).toString(),
         HexString.ensure(params.authority).hex(),
-      ]
+      ],
+      [params.coinType ?? "0x1::aptos_coin::AptosCoin"]
     );
 
     return [
-      new Aggregator(client, account.address(), devnetAddress, stateAddress),
+      new Aggregator(
+        client,
+        account.address(),
+        devnetAddress,
+        stateAddress,
+        params.coinType ?? "0x1::aptos_coin::AptosCoin"
+      ),
       tx,
     ];
   }
@@ -516,13 +466,7 @@ export class Aggregator {
     return await sendAptosTx(
       this.client,
       account,
-      {
-        module: {
-          address: HexString.ensure(this.devnetAddress).hex(),
-          name: "AggregatorAddJobAction",
-        },
-        name: "run",
-      },
+      `${this.devnetAddress}::AggregatorAddJobAction::run`,
       [
         HexString.ensure(this.stateAddress).hex(),
         HexString.ensure(this.address).hex(),
@@ -539,13 +483,7 @@ export class Aggregator {
     return await sendAptosTx(
       this.client,
       account,
-      {
-        module: {
-          address: HexString.ensure(this.devnetAddress).hex(),
-          name: "AggregatorSaveResultAction",
-        },
-        name: "run",
-      },
+      `${this.devnetAddress}::AggregatorSaveResultAction::run`,
       [
         HexString.ensure(this.stateAddress).hex(),
         HexString.ensure(params.oracle_address).hex(),
@@ -556,7 +494,8 @@ export class Aggregator {
         params.value_scale_factor,
         params.value_neg,
         stringToHex(params.jobs_checksum),
-      ]
+      ],
+      [this.coinType]
     );
   }
 
@@ -564,17 +503,12 @@ export class Aggregator {
     return await sendAptosTx(
       this.client,
       account,
-      {
-        module: {
-          address: HexString.ensure(this.devnetAddress).hex(),
-          name: "AggregatorOpenRoundAction",
-        },
-        name: "run",
-      },
+      `${this.devnetAddress}::AggregatorOpenRoundAction::run`,
       [
         HexString.ensure(this.stateAddress).hex(),
         HexString.ensure(this.address).hex(),
-      ]
+      ],
+      [this.coinType]
     );
   }
 
@@ -582,12 +516,7 @@ export class Aggregator {
     const event = new AptosEvent(
       this.client,
       HexString.ensure(`${this.devnetAddress}::Switchboard::State`),
-      {
-        address: HexString.ensure(this.devnetAddress).hex(),
-        module: "Switchboard",
-        name: "State",
-        generic_type_params: [],
-      },
+      `${this.devnetAddress}::Switchboard::State`,
       "aggregator_update_events",
       1000
     );
@@ -649,12 +578,10 @@ export class Job {
 
   async loadData(): Promise<any> {
     return (
-      await this.client.getAccountResource(this.address, {
-        address: HexString.ensure(this.devnetAddress).hex(),
-        module: "Job",
-        name: "Job",
-        generic_type_params: [],
-      })
+      await this.client.getAccountResource(
+        this.address,
+        `${this.devnetAddress}::Job::Job`
+      )
     ).data;
   }
 
@@ -666,7 +593,7 @@ export class Job {
   }
 
   /**
-   * Initialize a Job stored in the switchboard resource account
+   * Initialize a Job
    * @param client
    * @param account
    * @param params JobInitParams initialization params
@@ -681,13 +608,7 @@ export class Job {
     const tx = await sendAptosTx(
       client,
       account,
-      {
-        module: {
-          address: HexString.ensure(devnetAddress).hex(),
-          name: "JobInitAction",
-        },
-        name: "run",
-      },
+      `${devnetAddress}::JobInitAction::run`,
       [
         HexString.ensure(stateAddress).hex(),
         stringToHex(params.name),
@@ -709,11 +630,12 @@ export class Crank {
     readonly client: AptosClient,
     readonly address: MaybeHexString,
     readonly devnetAddress: MaybeHexString,
-    readonly stateAddress: MaybeHexString
+    readonly stateAddress: MaybeHexString,
+    readonly coinType: MoveStructTag = "0x1::aptos_coin::AptosCoin"
   ) {}
 
   /**
-   * Initialize a Crank stored in the switchboard resource account
+   * Initialize a Crank
    * @param client
    * @param account account that will be the authority of the Crank
    * @param params CrankInitParams initialization params
@@ -728,21 +650,22 @@ export class Crank {
     const tx = await sendAptosTx(
       client,
       account,
-      {
-        module: {
-          address: HexString.ensure(devnetAddress).hex(),
-          name: "CrankInitAction",
-        },
-        name: "run",
-      },
+      `${devnetAddress}::CrankInitAction::run`,
       [
         HexString.ensure(stateAddress).hex(),
         HexString.ensure(params.queueAddress).hex(),
-      ]
+      ],
+      [params.coinType ?? "0x1::aptos_coin::AptosCoin"]
     );
 
     return [
-      new Crank(client, account.address(), devnetAddress, stateAddress),
+      new Crank(
+        client,
+        account.address(),
+        devnetAddress,
+        stateAddress,
+        params.coinType ?? "0x1::aptos_coin::AptosCoin"
+      ),
       tx,
     ];
   }
@@ -755,18 +678,13 @@ export class Crank {
     return await sendAptosTx(
       this.client,
       account,
-      {
-        module: {
-          address: HexString.ensure(this.devnetAddress).hex(),
-          name: "CrankPushAction",
-        },
-        name: "run",
-      },
+      `${this.devnetAddress}::CrankPushAction::run`,
       [
         HexString.ensure(this.stateAddress).hex(),
         HexString.ensure(this.address).hex(),
         HexString.ensure(params.aggregatorAddress).hex(),
-      ]
+      ],
+      [this.coinType]
     );
   }
 
@@ -777,17 +695,12 @@ export class Crank {
     return await sendAptosTx(
       this.client,
       account,
-      {
-        module: {
-          address: HexString.ensure(this.devnetAddress).hex(),
-          name: "CrankPopAction",
-        },
-        name: "run",
-      },
+      `${this.devnetAddress}::CrankPopAction::run`,
       [
         HexString.ensure(this.stateAddress).hex(),
         HexString.ensure(this.address).hex(),
-      ]
+      ],
+      [this.coinType]
     );
   }
 
@@ -795,12 +708,7 @@ export class Crank {
     return (
       await this.client.getAccountResource(
         HexString.ensure(this.address).hex(),
-        {
-          address: HexString.ensure(this.devnetAddress).hex(),
-          module: "Crank",
-          name: "Crank",
-          generic_type_params: [],
-        }
+        `${this.devnetAddress}::Crank::Crank`
       )
     ).data;
   }
@@ -811,11 +719,12 @@ export class Oracle {
     readonly client: AptosClient,
     readonly address: MaybeHexString,
     readonly devnetAddress: MaybeHexString,
-    readonly stateAddress: MaybeHexString
+    readonly stateAddress: MaybeHexString,
+    readonly coinType: MoveStructTag = "0x1::aptos_coin::AptosCoin"
   ) {}
 
   /**
-   * Initialize a Oracle stored in the switchboard resource account
+   * Initialize a Oracle
    * @param client
    * @param account
    * @param params Oracle initialization params
@@ -824,30 +733,31 @@ export class Oracle {
     client: AptosClient,
     account: AptosAccount,
     params: OracleInitParams,
-    devnetAddress,
-    stateAddress
+    devnetAddress: MaybeHexString,
+    stateAddress: MaybeHexString
   ): Promise<[Oracle, string]> {
     const tx = await sendAptosTx(
       client,
       account,
-      {
-        module: {
-          address: HexString.ensure(devnetAddress).hex(),
-          name: "OracleInitAction",
-        },
-        name: "run",
-      },
+      `${devnetAddress}::OracleInitAction::run`,
       [
         HexString.ensure(stateAddress).hex(),
         stringToHex(params.name),
         stringToHex(params.metadata),
         HexString.ensure(params.authority).hex(),
         HexString.ensure(params.queue).hex(),
-      ]
+      ],
+      [params.coinType ?? "0x1::aptos_coin::AptosCoin"]
     );
 
     return [
-      new Oracle(client, account.address(), devnetAddress, stateAddress),
+      new Oracle(
+        client,
+        account.address(),
+        devnetAddress,
+        stateAddress,
+        params.coinType ?? "0x1::aptos_coin::AptosCoin"
+      ),
       tx,
     ];
   }
@@ -856,12 +766,7 @@ export class Oracle {
     return (
       await this.client.getAccountResource(
         HexString.ensure(this.address).hex(),
-        {
-          address: HexString.ensure(this.devnetAddress).hex(),
-          module: "Oracle",
-          name: "Oracle",
-          generic_type_params: [],
-        }
+        `${this.devnetAddress}::Oracle::Oracle`
       )
     ).data;
   }
@@ -873,17 +778,12 @@ export class Oracle {
     return await sendAptosTx(
       this.client,
       account,
-      {
-        module: {
-          address: HexString.ensure(this.devnetAddress).hex(),
-          name: "OracleHeartbeatAction",
-        },
-        name: "run",
-      },
+      `${this.devnetAddress}::OracleHeartbeatAction::run`,
       [
         HexString.ensure(this.stateAddress).hex(),
         HexString.ensure(this.address).hex(),
-      ]
+      ],
+      [this.coinType]
     );
   }
 }
@@ -893,11 +793,12 @@ export class OracleQueue {
     readonly client: AptosClient,
     readonly address: MaybeHexString,
     readonly devnetAddress: MaybeHexString,
-    readonly stateAddress: MaybeHexString
+    readonly stateAddress: MaybeHexString,
+    readonly coinType: MoveStructTag = "0x1::aptos_coin::AptosCoin"
   ) {}
 
   /**
-   * Initialize a OracleQueue stored in the switchboard resource account
+   * Initialize an OracleQueue
    * @param client
    * @param account
    * @param params OracleQueue initialization params
@@ -912,10 +813,7 @@ export class OracleQueue {
     const tx = await sendAptosTx(
       client,
       account,
-      {
-        module: { address: devnetAddress, name: "OracleQueueInitAction" },
-        name: "run",
-      },
+      `${devnetAddress}::OracleQueueInitAction::run`,
       [
         HexString.ensure(stateAddress).hex(),
         stringToHex(params.name),
@@ -936,11 +834,18 @@ export class OracleQueue {
         HexString.ensure(params.mint).hex(),
         params.enableBufferRelayers,
         params.maxSize.toString(),
-      ]
+      ],
+      [params.coinType ?? "0x1::aptos_coin::AptosCoin"]
     );
 
     return [
-      new OracleQueue(client, account.address(), devnetAddress, stateAddress),
+      new OracleQueue(
+        client,
+        account.address(),
+        devnetAddress,
+        stateAddress,
+        params.coinType ?? "0x1::aptos_coin::AptosCoin"
+      ),
       tx,
     ];
   }
@@ -949,12 +854,252 @@ export class OracleQueue {
     return (
       await this.client.getAccountResource(
         HexString.ensure(this.address).hex(),
-        {
-          address: HexString.ensure(this.devnetAddress).hex(),
-          module: "OracleQueue",
-          name: "OracleQueue",
-          generic_type_params: [],
-        }
+        `${this.devnetAddress}::OracleQueue::OracleQueue<${this.coinType}>`
+      )
+    ).data;
+  }
+}
+
+export class Lease {
+  constructor(
+    readonly client: AptosClient,
+    readonly address: MaybeHexString,
+    readonly devnetAddress: MaybeHexString,
+    readonly stateAddress: MaybeHexString,
+    readonly coinType: MoveStructTag = "0x1::aptos_coin::AptosCoin"
+  ) {}
+
+  /**
+   * Initialize a Lease
+   * @param client
+   * @param account account that will be the authority of the Lease
+   * @param params LeaseInitParams initialization params
+   */
+  static async init(
+    client: AptosClient,
+    account: AptosAccount,
+    params: LeaseInitParams,
+    devnetAddress: MaybeHexString,
+    stateAddress: MaybeHexString
+  ): Promise<[Lease, string]> {
+    const tx = await sendAptosTx(
+      client,
+      account,
+      `${devnetAddress}::LeaseInitAction::run`,
+      [
+        HexString.ensure(stateAddress).hex(),
+        HexString.ensure(params.queueAddress).hex(),
+        HexString.ensure(params.withdrawAuthority).hex(),
+        params.initialAmount.toString(),
+      ],
+      [params.coinType ?? "0x1::aptos_coin::AptosCoin"]
+    );
+
+    return [
+      new Lease(
+        client,
+        account.address(),
+        devnetAddress,
+        stateAddress,
+        params.coinType ?? "0x1::aptos_coin::AptosCoin"
+      ),
+      tx,
+    ];
+  }
+
+  /**
+   * Extend a lease
+   * @param params CrankPushParams
+   */
+  async extend(
+    account: AptosAccount,
+    params: LeaseExtendParams
+  ): Promise<string> {
+    return await sendAptosTx(
+      this.client,
+      account,
+      `${this.devnetAddress}::LeaseExtendAction::run`,
+      [HexString.ensure(this.address).hex(), params.loadAmount.toString()],
+      [this.coinType]
+    );
+  }
+
+  /**
+   * Pop an aggregator off the Crank
+   */
+  async withdraw(
+    account: AptosAccount,
+    params: LeaseWithdrawParams
+  ): Promise<string> {
+    return await sendAptosTx(
+      this.client,
+      account,
+      `${this.devnetAddress}::LeaseWithdrawAction::run`,
+      [[HexString.ensure(this.address).hex(), params.amount.toString()]],
+      [this.coinType]
+    );
+  }
+
+  async loadData(): Promise<any> {
+    return (
+      await this.client.getAccountResource(
+        HexString.ensure(this.address).hex(),
+        `${this.devnetAddress}::Lease::Lease<${this.coinType}>`
+      )
+    ).data;
+  }
+}
+
+export class OracleWallet {
+  constructor(
+    readonly client: AptosClient,
+    readonly address: MaybeHexString,
+    readonly devnetAddress: MaybeHexString,
+    readonly stateAddress: MaybeHexString,
+    readonly coinType: MoveStructTag = "0x1::aptos_coin::AptosCoin"
+  ) {}
+
+  /**
+   * Initialize an OracleWallet
+   * @param client
+   * @param account account that will be the authority of the OracleWallet
+   * @param params OracleWalletInitParams initialization params
+   */
+  static async init(
+    client: AptosClient,
+    account: AptosAccount,
+    params: OracleWalletInitParams,
+    devnetAddress: MaybeHexString,
+    stateAddress: MaybeHexString
+  ): Promise<[OracleWallet, string]> {
+    const tx = await sendAptosTx(
+      client,
+      account,
+      `${devnetAddress}::OracleWalletInitAction::run`,
+      [
+        HexString.ensure(stateAddress).hex(),
+        HexString.ensure(params.queueAddress).hex(),
+        HexString.ensure(params.withdrawAuthority).hex(),
+        params.initialAmount.toString(),
+      ],
+      [params.coinType ?? "0x1::aptos_coin::AptosCoin"]
+    );
+
+    return [
+      new OracleWallet(
+        client,
+        account.address(),
+        devnetAddress,
+        stateAddress,
+        params.coinType ?? "0x1::aptos_coin::AptosCoin"
+      ),
+      tx,
+    ];
+  }
+
+  /**
+   * Contributes to an oracle wallet
+   * @param params OracleWalletContributeParams
+   */
+  async contribute(
+    account: AptosAccount,
+    params: OracleWalletContributeParams
+  ): Promise<string> {
+    return await sendAptosTx(
+      this.client,
+      account,
+      `${this.devnetAddress}::OracleWalletContributeAction::run`,
+      [HexString.ensure(this.address).hex(), params.loadAmount.toString()],
+      [this.coinType]
+    );
+  }
+
+  /**
+   * Withdraw from an OracleWallet
+   */
+  async withdraw(
+    account: AptosAccount,
+    params: OracleWalletWithdrawParams
+  ): Promise<string> {
+    return await sendAptosTx(
+      this.client,
+      account,
+      `${this.devnetAddress}::OracleWalletWithdrawAction::run`,
+      [[HexString.ensure(this.address).hex(), params.amount.toString()]],
+      [this.coinType]
+    );
+  }
+
+  async loadData(): Promise<any> {
+    return (
+      await this.client.getAccountResource(
+        HexString.ensure(this.address).hex(),
+        `${this.devnetAddress}::OracleWallet::OracleWallet<${this.coinType}>`
+      )
+    ).data;
+  }
+}
+
+export class Permission {
+  constructor(
+    readonly client: AptosClient,
+    readonly address: MaybeHexString,
+    readonly devnetAddress: MaybeHexString,
+    readonly stateAddress: MaybeHexString
+  ) {}
+
+  /**
+   * Initialize a Permission
+   * @param client
+   * @param account
+   * @param params PermissionInitParams initialization params
+   */
+  static async init(
+    client: AptosClient,
+    account: AptosAccount,
+    params: PermissionInitParams,
+    devnetAddress: MaybeHexString,
+    stateAddress: MaybeHexString
+  ): Promise<[Permission, string]> {
+    const tx = await sendAptosTx(
+      client,
+      account,
+      `${devnetAddress}::PermissionInitAction::run`,
+      [
+        // HexString.ensure(stateAddress).hex(),
+        // HexString.ensure(params.queueAddress).hex(),
+        // HexString.ensure(params.withdrawAuthority).hex(),
+        // params.initialAmount.toString(),
+      ],
+      []
+    );
+
+    return [
+      new Permission(client, account.address(), devnetAddress, stateAddress),
+      tx,
+    ];
+  }
+
+  /**
+   * Set a Permission
+   */
+  async set(
+    account: AptosAccount,
+    params: PermissionSetParams
+  ): Promise<string> {
+    return await sendAptosTx(
+      this.client,
+      account,
+      `${this.devnetAddress}::PermissionSetAction::run`,
+      [[HexString.ensure(this.address).hex(), params.amount.toString()]]
+    );
+  }
+
+  async loadData(): Promise<any> {
+    return (
+      await this.client.getAccountResource(
+        HexString.ensure(this.address).hex(),
+        `${this.devnetAddress}::Permission::Permission`
       )
     ).data;
   }

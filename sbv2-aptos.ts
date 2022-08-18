@@ -192,6 +192,7 @@ yargs(hideBin(process.argv))
           mint: account.address().hex(),
           enableBufferRelayers: false,
           maxSize: 10,
+          coinType: "0x1::aptos_coin::AptosCoin",
         },
         pid,
         stateAddress
@@ -254,6 +255,7 @@ yargs(hideBin(process.argv))
           metadata: "Testing123",
           authority: account.address(),
           queue: queueHexString,
+          coinType: "0x1::aptos_coin::AptosCoin",
         },
         pid,
         stateAddress
@@ -314,6 +316,7 @@ yargs(hideBin(process.argv))
         {
           address: stateAddress,
           queueAddress: HexString.ensure(queueHexString),
+          coinType: "0x1::aptos_coin::AptosCoin",
         },
         pid,
         stateAddress
@@ -433,6 +436,7 @@ yargs(hideBin(process.argv))
           minOracleResults: 1,
           minJobResults: 3,
           minUpdateDelaySeconds: 8,
+          coinType: "0x1::aptos_coin::AptosCoin",
         },
         pid,
         stateAddress
@@ -755,13 +759,7 @@ async function loadBalance(
     (
       await client.getAccountResource(
         addr,
-        {
-          address: "0x1",
-          module: "coin",
-          name: "CoinStore",
-          generic_type_params: ["0x1::aptos_coin::AptosCoin"],
-        }
-        // "0x1::coin::CoinStore<0x1::aptos_coin::AptosCoin>" as any
+        "0x1::coin::CoinStore<0x1::aptos_coin::AptosCoin>"
       )
     ).data as any
   ).coin.value;
