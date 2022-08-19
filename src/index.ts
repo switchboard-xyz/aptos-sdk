@@ -9,6 +9,8 @@ import { MoveStructTag, ScriptFunctionId } from "aptos/src/generated";
 import Big from "big.js";
 import * as sbv2 from "@switchboard-xyz/switchboard-v2";
 import * as anchor from "@project-serum/anchor";
+import * as SHA3 from "js-sha3";
+import { BCS } from "aptos";
 
 // Address that deployed the module
 export const SWITCHBOARD_DEVNET_ADDRESS = ``;
@@ -56,6 +58,12 @@ export class AptosDecimal {
 
     return new AptosDecimal(obj["mantissa"], obj["scale"], obj["neg"]);
   }
+}
+
+export enum SwitchboardPermission {
+  PERMIT_ORACLE_HEARTBEAT,
+  PERMIT_ORACLE_QUEUE_USAGE,
+  PERMIT_VRF_REQUESTS,
 }
 
 export interface AggregatorAddJobParams {
@@ -182,9 +190,7 @@ export interface LeaseWithdrawParams {
 }
 
 export interface OracleWalletInitParams {
-  queueAddress: MaybeHexString;
-  withdrawAuthority: MaybeHexString;
-  initialAmount: number;
+  oracleAddress: MaybeHexString;
   coinType: string;
 }
 
@@ -200,15 +206,15 @@ export interface OracleWalletWithdrawParams {
 
 export interface PermissionInitParams {
   authority: MaybeHexString;
-  granter: string;
-  grantee: string;
+  granter: MaybeHexString;
+  grantee: MaybeHexString;
 }
 
 export interface PermissionSetParams {
   authority: MaybeHexString;
   granter: string;
   grantee: string;
-  permission: number;
+  permission: SwitchboardPermission;
   enable: boolean;
 }
 
@@ -976,12 +982,7 @@ export class OracleWallet {
       client,
       account,
       `${devnetAddress}::OracleWalletInitAction::run`,
-      [
-        HexString.ensure(stateAddress).hex(),
-        HexString.ensure(params.queueAddress).hex(),
-        HexString.ensure(params.withdrawAuthority).hex(),
-        params.initialAmount.toString(),
-      ],
+      [HexString.ensure(params.oracleAddress).hex()],
       [params.coinType ?? "0x1::aptos_coin::AptosCoin"]
     );
 
@@ -1066,12 +1067,11 @@ export class Permission {
       account,
       `${devnetAddress}::PermissionInitAction::run`,
       [
-        // HexString.ensure(stateAddress).hex(),
-        // HexString.ensure(params.queueAddress).hex(),
-        // HexString.ensure(params.withdrawAuthority).hex(),
-        // params.initialAmount.toString(),
-      ],
-      []
+        HexString.ensure(stateAddress).hex(),
+        HexString.ensure(params.authority).hex(),
+        HexString.ensure(params.granter).hex(),
+        HexString.ensure(params.grantee).hex(),
+      ]
     );
 
     return [
@@ -1085,13 +1085,21 @@ export class Permission {
    */
   async set(
     account: AptosAccount,
-    params: PermissionSetParams
+    params: PermissionSetParams,
+    stateAddress: MaybeHexString
   ): Promise<string> {
     return await sendAptosTx(
       this.client,
       account,
       `${this.devnetAddress}::PermissionSetAction::run`,
-      [[HexString.ensure(this.address).hex(), params.amount.toString()]]
+      [
+        HexString.ensure(stateAddress).hex(),
+        HexString.ensure(params.authority).hex(),
+        HexString.ensure(params.granter).hex(),
+        HexString.ensure(params.grantee).hex(),
+        params.permission.toString(),
+        params.enable,
+      ]
     );
   }
 

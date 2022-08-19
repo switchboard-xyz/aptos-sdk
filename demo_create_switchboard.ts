@@ -37,6 +37,8 @@ import {
   Lease,
   AptosEvent,
   EventCallback,
+  Permission,
+  SwitchboardPermission,
 } from "./src";
 import fetch from "node-fetch";
 const NODE_URL =
@@ -141,7 +143,7 @@ const onAggregatorUpdate = (
       metadata: "Nothing to see here",
       authority: user.address(),
       oracleTimeout: 3000,
-      reward: 500,
+      reward: 1,
       minStake: 0,
       slashingEnabled: false,
       varianceToleranceMultiplierValue: 0,
@@ -202,6 +204,32 @@ const onAggregatorUpdate = (
   );
 
   console.log(`Oracle: ${oracle.address}, tx: ${oracleTxSig}`);
+
+  // create permission for oracle
+  const [oraclePermission] = await Permission.init(
+    client,
+    user,
+    {
+      authority: user.address().hex(),
+      granter: queue.address,
+      grantee: oracle.address,
+    },
+    SWITCHBOARD_DEVNET_ADDRESS,
+    SWITCHBOARD_STATE_ADDRESS
+  );
+
+  // enable heartbeat on oracle
+  await oraclePermission.set(
+    user,
+    {
+      authority: user.address().hex(),
+      granter: queue.address.toString(),
+      grantee: oracle.address.toString(),
+      permission: SwitchboardPermission.PERMIT_ORACLE_HEARTBEAT,
+      enable: true,
+    },
+    SWITCHBOARD_STATE_ADDRESS
+  );
 
   // trigger the oracle heartbeat
   const heartbeatTxSig = await oracle.heartbeat(user);
