@@ -5,12 +5,10 @@ import {
   MaybeHexString,
   FaucetClient,
 } from "aptos";
-import { MoveStructTag, ScriptFunctionId } from "aptos/src/generated";
+import { MoveStructTag, EntryFunctionId } from "aptos/src/generated";
 import Big from "big.js";
 import * as sbv2 from "@switchboard-xyz/switchboard-v2";
 import * as anchor from "@project-serum/anchor";
-import * as SHA3 from "js-sha3";
-import { BCS } from "aptos";
 
 // Address that deployed the module
 export const SWITCHBOARD_DEVNET_ADDRESS = ``;
@@ -238,13 +236,13 @@ function stringToHex(text: string) {
 export async function sendAptosTx(
   client: AptosClient,
   signer: AptosAccount,
-  method: ScriptFunctionId,
+  method: EntryFunctionId,
   args: Array<any>,
   type_args: Array<string> = [],
   retryCount = 2
 ): Promise<string> {
   const payload = {
-    type: "script_function_payload",
+    type: "entry_function_payload",
     function: method,
     type_arguments: type_args,
     arguments: args,

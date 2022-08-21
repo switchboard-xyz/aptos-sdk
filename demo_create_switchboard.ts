@@ -38,13 +38,12 @@ import {
   AptosEvent,
   EventCallback,
   Permission,
+  Crank,
   SwitchboardPermission,
 } from "./src";
 import fetch from "node-fetch";
-const NODE_URL =
-  process.env.APTOS_NODE_URL ?? "https://fullnode.devnet.aptoslabs.com";
-const FAUCET_URL =
-  process.env.APTOS_FAUCET_URL ?? "https://faucet.devnet.aptoslabs.com";
+const NODE_URL = "https://fullnode.devnet.aptoslabs.com";
+const FAUCET_URL = "https://faucet.devnet.aptoslabs.com";
 
 const SWITCHBOARD_DEVNET_ADDRESS =
   "0x348ecb66a5d9edab8d175f647d5e99d6962803da7f5d3d2eb839387aeb118300";
@@ -339,16 +338,6 @@ const onAggregatorUpdate = (
     if (!response.ok) console.error(`[Task runner] Error testing jobs json.`);
     const json = await response.json();
     console.log(json);
-    // // save the aggregator result
-    // await aggregator.saveResult({
-    //   oracle_address: oracle.address,
-    //   oracle_idx: 0,
-    //   error: false,
-    //   value_num: Number(json.result.split(".")[0]),
-    //   value_scale_factor: 0,
-    //   value_neg: false,
-    //   jobs_checksum: "",
-    // });
   });
 
   /**
@@ -376,6 +365,19 @@ const onAggregatorUpdate = (
   // close out listeners so process can end
   onOpenRoundPoller.stop();
   updatePoller.stop();
+
+  const [crank, txhash] = await Crank.init(
+    client,
+    user,
+    {
+      address: SWITCHBOARD_STATE_ADDRESS,
+      queueAddress: queue.address,
+      coinType: "0x1::aptos_coin::AptosCoin",
+    },
+    SWITCHBOARD_DEVNET_ADDRESS,
+    SWITCHBOARD_STATE_ADDRESS
+  );
+  console.log(`Created crank at ${crank.address}, tx hash ${txhash}`);
 
   /**
    * Log Data Objects
