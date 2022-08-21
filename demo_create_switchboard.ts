@@ -336,8 +336,12 @@ const onAggregatorUpdate = (
     });
 
     if (!response.ok) console.error(`[Task runner] Error testing jobs json.`);
-    const json = await response.json();
-    console.log(json);
+    try {
+      const json = await response.json();
+      console.log(json);
+    } catch (e) {
+      console.log(e);
+    }
   });
 
   /**
