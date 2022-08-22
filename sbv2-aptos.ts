@@ -614,7 +614,7 @@ yargs(hideBin(process.argv))
       type: "string",
       alias: "u",
       describe: "Alternative RPC URL",
-      default: "https://fullnode.devnet.aptoslabs.com/v1",
+      default: "https://fullnode.devnet.aptoslabs.com/v1/",
     },
     faucetUrl: {
       type: "string",
@@ -624,10 +624,14 @@ yargs(hideBin(process.argv))
     pid: {
       type: "string",
       describe: "devnet program ID",
+      default:
+        "0x348ecb66a5d9edab8d175f647d5e99d6962803da7f5d3d2eb839387aeb118300",
     },
     stateAddress: {
       type: "string",
       describe: "state address",
+      default:
+        "0x348ecb66a5d9edab8d175f647d5e99d6962803da7f5d3d2eb839387aeb118300",
     },
   })
   .help().argv;
@@ -641,14 +645,12 @@ function loadAptosAccount(keypairPath: string): AptosAccount {
       .replace(/\s/g, "");
     const bytesRegex = /^\[(\s)?[0-9]+((\s)?,(\s)?[0-9]+){31,}\]/g;
     if (bytesRegex.test(parsedFileString)) {
-      console.log(`BYTES`);
       return new AptosAccount(new Uint8Array(JSON.parse(parsedFileString)));
     }
 
     // check if hex
     const hexRegex = /^(0x|0X)?[a-fA-F0-9]{64}/g;
     if (hexRegex.test(parsedFileString)) {
-      console.log(`HEX`);
       return new AptosAccount(
         new Uint8Array(HexString.ensure(parsedFileString).toBuffer())
       );
@@ -658,7 +660,6 @@ function loadAptosAccount(keypairPath: string): AptosAccount {
     const base64Regex =
       /^(?:[A-Za-z\d+\/]{4})*(?:[A-Za-z\d+\/]{3}=|[A-Za-z\d+\/]{2}==)?/g;
     if (base64Regex.test(parsedFileString)) {
-      console.log(`BASE64`);
       return new AptosAccount(
         new Uint8Array(Buffer.from(parsedFileString, "base64"))
       );
