@@ -2,12 +2,10 @@ import { AptosClient, AptosAccount, FaucetClient, HexString } from "aptos";
 import {
   Oracle,
   OracleQueue,
-  AptosEvent,
-  EventCallback,
   Permission,
   Crank,
   SwitchboardPermission,
-} from "./src";
+} from "../src";
 import YAML from "yaml";
 import fs from "fs";
 

@@ -15,37 +15,22 @@
  * Adds Job to Aggregator
  * Push Aggregator to Crank - will get popped by the setInterval
  *
- * Set up polling for events
- *
- * - listen for Switchboard::Events::AggregatorUpdateEvent
- *   \__.. just log this one for demo
- * - listen for Switchboard::Events::AggregatorOpenRoundEvent
- *    \___.We'll react to this by fetching whatever job result and calling the Aggregator Save Result Action
- *
- *
- * loading this file should create the infra, log it (so we can reuse, then do all the other, perpetually running)
  */
 import { Buffer } from "buffer";
 import * as sbv2 from "@switchboard-xyz/switchboard-v2";
 import { AptosClient, AptosAccount, FaucetClient, HexString } from "aptos";
 import {
-  State,
   Aggregator,
   Job,
-  Oracle,
-  OracleQueue,
   Lease,
   AptosEvent,
   EventCallback,
-  Permission,
   Crank,
-  SwitchboardPermission,
 } from "./src";
-import fetch from "node-fetch";
 import YAML from "yaml";
 import fs from "fs";
 
-const NODE_URL = "http://aptos-devnet.switchboard.xyz/";
+const NODE_URL = "https://fullnode.devnet.aptoslabs.com";
 const FAUCET_URL = "https://faucet.devnet.aptoslabs.com";
 
 const SWITCHBOARD_DEVNET_ADDRESS =
@@ -197,7 +182,7 @@ const onAggregatorUpdate = (
 
   const crank = new Crank(
     client,
-    user.address().hex(),
+    SWITCHBOARD_DEVNET_ADDRESS,
     SWITCHBOARD_DEVNET_ADDRESS,
     SWITCHBOARD_STATE_ADDRESS
   );
