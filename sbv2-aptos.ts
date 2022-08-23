@@ -12,15 +12,7 @@ import path from "path";
 import YAML from "yaml";
 import chalk from "chalk";
 import { AptosAccount, AptosClient, FaucetClient, HexString } from "aptos";
-import {
-  Aggregator,
-  Job,
-  Oracle,
-  OracleQueue,
-  State,
-  Crank,
-  sendAptosTx,
-} from "./src";
+import { Aggregator, Job, Oracle, OracleQueue, State, Crank } from "./src";
 import { OracleJob } from "@switchboard-xyz/switchboard-v2";
 
 export const CHECK_ICON = chalk.green("\u2714");
