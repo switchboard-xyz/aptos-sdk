@@ -1,0 +1,21 @@
+[package]
+name = "Switchboard_Demo"
+version = "0.0.0"
+
+[addresses]
+Std = "0x1"
+AptosFramework = "0x1"
+Switchboard = "0x348ecb66a5d9edab8d175f647d5e99d6962803da7f5d3d2eb839387aeb118300"# Will change as we iterate on devnet
+Demo = "_"
+
+[dependencies]
+# MoveNursery = { git = "https://github.com/aptos-labs/aptos-core.git", subdir = "aptos-move/framework/move-stdlib/nursery/", rev = "main" }
+MoveStdlib = { git = "https://github.com/aptos-labs/aptos-core.git", subdir = "aptos-move/framework/move-stdlib/", rev = "main" }
+AptosFramework = { git = "https://github.com/aptos-labs/aptos-core.git", subdir = "aptos-move/framework/aptos-framework/", rev = "main" }
+AptosStdlib = { git = "https://github.com/aptos-labs/aptos-core.git", subdir = "aptos-move/framework/aptos-stdlib/", rev = "main" }
+
+[dependencies.Switchboard]
+git = "https://github.com/switchboard-xyz/switchboard-aptos-public.git"
+subdir = "switchboard/"
+rev = "main"
+
