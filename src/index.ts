@@ -31,19 +31,19 @@ export class AptosDecimal {
       result = result.mul(-1);
     }
     const TEN = new Big(10);
-    result = result.div(TEN.pow(this.scale));
+    result = safeDiv(result, TEN.pow(this.scale));
     Big.DP = oldDp;
     return result;
   }
 
   static fromBig(val: Big): AptosDecimal {
     const value = val.c.slice();
-    let e = val.e;
-    while (e > 18) {
+    let e = val.e + 1;
+    console.log(value.length);
+    while (value.length - e > 9) {
       value.pop();
-      e -= 1;
     }
-    return new AptosDecimal(value.join(""), e, val.s === -1);
+    return new AptosDecimal(value.join(""), value.length - e, val.s === -1);
   }
 
   static fromObj(obj: Object): AptosDecimal {

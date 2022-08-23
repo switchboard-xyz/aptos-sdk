@@ -35,8 +35,6 @@ const FAUCET_URL = "https://faucet.devnet.aptoslabs.com";
 
 const SWITCHBOARD_DEVNET_ADDRESS =
   "0x348ecb66a5d9edab8d175f647d5e99d6962803da7f5d3d2eb839387aeb118300";
-const SWITCHBOARD_STATE_ADDRESS =
-  "0x348ecb66a5d9edab8d175f647d5e99d6962803da7f5d3d2eb839387aeb118300";
 
 const onAggregatorUpdate = (
   client: AptosClient,
@@ -45,7 +43,7 @@ const onAggregatorUpdate = (
 ) => {
   const event = new AptosEvent(
     client,
-    HexString.ensure(SWITCHBOARD_STATE_ADDRESS),
+    HexString.ensure(SWITCHBOARD_DEVNET_ADDRESS),
     `${SWITCHBOARD_DEVNET_ADDRESS}::Switchboard::State`,
     "aggregator_update_events",
     pollIntervalMs
@@ -63,40 +61,25 @@ const onAggregatorUpdate = (
   // create new user
   let user = new AptosAccount();
 
-  // if file extension ends with yaml
-  try {
-    const parsedYaml = YAML.parse(
-      fs.readFileSync("./.aptos/config.yaml", "utf8")
-    );
-    if (
-      "profiles" in parsedYaml &&
-      "default" in parsedYaml.profiles &&
-      "private_key" in parsedYaml.profiles.default
-    ) {
-      user = new AptosAccount(
-        HexString.ensure(parsedYaml.profiles.default.private_key).toBuffer()
-      );
-    }
-  } catch {}
   await faucetClient.fundAccount(user.address(), 5000);
 
   console.log(`User account ${user.address().hex()} created + funded.`);
 
-  const aggregator_resource_acct = new AptosAccount();
-  const job_resource_acct = new AptosAccount();
+  const aggregator_acct = new AptosAccount();
+  const job_acct = new AptosAccount();
 
-  await faucetClient.fundAccount(aggregator_resource_acct.address(), 50000);
-  await faucetClient.fundAccount(job_resource_acct.address(), 5000);
+  await faucetClient.fundAccount(aggregator_acct.address(), 50000);
+  await faucetClient.fundAccount(job_acct.address(), 5000);
 
   // user will be authority
   await faucetClient.fundAccount(user.address(), 500000);
 
   const [aggregator, aggregatorTxSig] = await Aggregator.init(
     client,
-    aggregator_resource_acct,
+    aggregator_acct,
     {
       authority: user.address(),
-      queueAddress: user.address(),
+      queueAddress: SWITCHBOARD_DEVNET_ADDRESS,
       batchSize: 1,
       minJobResults: 1,
       minOracleResults: 1,
@@ -109,7 +92,7 @@ const onAggregatorUpdate = (
       coinType: "0x1::aptos_coin::AptosCoin",
     },
     SWITCHBOARD_DEVNET_ADDRESS,
-    SWITCHBOARD_STATE_ADDRESS
+    SWITCHBOARD_DEVNET_ADDRESS
   );
 
   console.log(`Aggregator: ${aggregator.address}, tx: ${aggregatorTxSig}`);
@@ -136,7 +119,7 @@ const onAggregatorUpdate = (
 
   const [job, jobTxSig] = await Job.init(
     client,
-    job_resource_acct,
+    job_acct,
     {
       name: "BTC/USD",
       metadata: "binance",
@@ -144,7 +127,7 @@ const onAggregatorUpdate = (
       data: serializedJob.toString("hex"),
     },
     SWITCHBOARD_DEVNET_ADDRESS,
-    SWITCHBOARD_STATE_ADDRESS
+    SWITCHBOARD_DEVNET_ADDRESS
   );
 
   console.log(`Job created ${job.address}, hash: ${jobTxSig}`);
@@ -158,15 +141,15 @@ const onAggregatorUpdate = (
 
   const [lease, leaseTxSig] = await Lease.init(
     client,
-    aggregator_resource_acct,
+    aggregator_acct,
     {
-      queueAddress: user.address().hex(),
+      queueAddress: SWITCHBOARD_DEVNET_ADDRESS,
       withdrawAuthority: user.address().hex(),
       initialAmount: 1000,
       coinType: "0x1::aptos_coin::AptosCoin",
     },
     SWITCHBOARD_DEVNET_ADDRESS,
-    SWITCHBOARD_STATE_ADDRESS
+    SWITCHBOARD_DEVNET_ADDRESS
   );
 
   console.log(lease, leaseTxSig);
@@ -177,18 +160,20 @@ const onAggregatorUpdate = (
    */
 
   const updatePoller = onAggregatorUpdate(client, async (e) => {
-    console.log(`NEW RESULT:`, e.data);
+    if (aggregator.address == e.data.aggregator_address) {
+      console.log(`NEW RESULT:`, e.data);
+    }
   });
 
   const crank = new Crank(
     client,
     SWITCHBOARD_DEVNET_ADDRESS,
     SWITCHBOARD_DEVNET_ADDRESS,
-    SWITCHBOARD_STATE_ADDRESS
+    SWITCHBOARD_DEVNET_ADDRESS
   );
 
   crank.push(user, {
-    aggregatorAddress: aggregator_resource_acct.address().hex(),
+    aggregatorAddress: aggregator_acct.address().hex(),
   });
 
   /**
@@ -199,21 +184,4 @@ const onAggregatorUpdate = (
   console.log("Aggregator:", await aggregator.loadData());
   console.log("Job:", await job.loadData());
   console.log("Load aggregator jobs data", await aggregator.loadJobs());
-
-  /**
-   * Run Updates
-   *
-   */
-
-  console.log("Starting open rounds");
-  let i = 5;
-  while (i--) {
-    // every 5 seconds
-    await new Promise((r) => setTimeout(r, 5000));
-  }
-
-  // close out listeners so process can end
-  updatePoller.stop();
-
-  console.log("Aggregator:", await aggregator.loadData());
 })();
