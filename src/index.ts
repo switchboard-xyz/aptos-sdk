@@ -39,7 +39,6 @@ export class AptosDecimal {
   static fromBig(val: Big): AptosDecimal {
     const value = val.c.slice();
     let e = val.e + 1;
-    console.log(value.length);
     while (value.length - e > 9) {
       value.pop();
     }
