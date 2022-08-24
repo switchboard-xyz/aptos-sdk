@@ -3,17 +3,11 @@
  *
  * Using that it should:
  *
- * INFRA --
- * Creates a new Oracle Queue
- * Creates a new Crank (associated with that Oracle Queue)
- * Creates a new Oracle (added to the queue in init action)
- * Adds a dummy crank / a try catch + setInterval will do
- *
  * DEMO --
  * Creates a new Aggregator
  * Creates a new Job (ftx btc/usd),
  * Adds Job to Aggregator
- * Push Aggregator to Crank - will get popped by the setInterval
+ * Push Aggregator to Crank
  *
  */
 import { Buffer } from "buffer";
