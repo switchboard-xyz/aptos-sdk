@@ -1,10 +1,9 @@
-# Switchboard-v2 API module
+# Aptos Switchboard SDK
 
-[![GitHub](https://img.shields.io/badge/--181717?logo=github&logoColor=ffffff)](https://github.com/switchboard-xyz/switchboard-v2/tree/main/libraries/ts)&nbsp;&nbsp;
-[![npm](https://img.shields.io/npm/v/@switchboard-xyz/switchboard-v2)](https://www.npmjs.com/package/@switchboard-xyz/switchboard-v2)&nbsp;&nbsp;
+[![GitHub](https://img.shields.io/badge/--181717?logo=github&logoColor=ffffff)](https://github.com/switchboard-xyz/aptos-sdk)&nbsp;
 [![twitter](https://badgen.net/twitter/follow/switchboardxyz)](https://twitter.com/switchboardxyz)&nbsp;&nbsp;
 
-A library of utility functions to interact with the Switchboardv2 program
+A library of utility functions to interact with Switchboard Modules on Aptos
 
 ## Install
 
