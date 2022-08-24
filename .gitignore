@@ -6,3 +6,5 @@ node_modules/**
 .aptos
 .cache
 *.env
+demo/build
+demo/build/**
