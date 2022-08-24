@@ -36,10 +36,10 @@ module Demo::demo_app {
             latest_result: value,
             latest_result_decimal: dec
         });
-    }    
+    }
 
     #[test(account = @0x1)]
-    public entry fun test_aggregator() {
+    public entry fun test_aggregator(account: &signer) {
 
         // creates test aggregator with data
         let num = Math::zero();
@@ -47,5 +47,11 @@ module Demo::demo_app {
         let out = Math::zero();
         Math::add(&num, &two, &mut out);
         std::debug::print(&out);
+
+        // creates test aggregator with data
+        Aggregator::new_test(account, 100, 0, false);
+
+        // print out value
+        std::debug::print(&Aggregator::latest_value(signer::address_of(account)));
     }
 }
