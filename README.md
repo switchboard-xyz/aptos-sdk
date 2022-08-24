@@ -45,9 +45,6 @@ const job_acct = new AptosAccount();
 await faucetClient.fundAccount(aggregator_acct.address(), 50000);
 await faucetClient.fundAccount(job_acct.address(), 5000);
 
-// user will be authority
-await faucetClient.fundAccount(user.address(), 500000);
-
 // initialize the aggregator
 const [aggregator, aggregatorTxHash] = await Aggregator.init(
   client,
@@ -136,7 +133,7 @@ const crank = new Crank(
   client,
   SWITCHBOARD_DEVNET_ADDRESS, // we've
   SWITCHBOARD_DEVNET_ADDRESS, // assigned many resources
-  SWITCHBOARD_DEVNET_ADDRESS // to the same account for simplicity
+  SWITCHBOARD_DEVNET_ADDRESS  // to the same account for simplicity
 );
 
 // Pushing to the crank enables automatic updates
