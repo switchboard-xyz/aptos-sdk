@@ -1,10 +1,9 @@
-# Switchboard-v2 API module
+# Aptos Switchboard SDK
 
-[![GitHub](https://img.shields.io/badge/--181717?logo=github&logoColor=ffffff)](https://github.com/switchboard-xyz/switchboard-v2/tree/main/libraries/ts)&nbsp;&nbsp;
-[![npm](https://img.shields.io/npm/v/@switchboard-xyz/switchboard-v2)](https://www.npmjs.com/package/@switchboard-xyz/switchboard-v2)&nbsp;&nbsp;
+[![GitHub](https://img.shields.io/badge/--181717?logo=github&logoColor=ffffff)](https://github.com/switchboard-xyz/aptos-sdk)&nbsp;
 [![twitter](https://badgen.net/twitter/follow/switchboardxyz)](https://twitter.com/switchboardxyz)&nbsp;&nbsp;
 
-A library of utility functions to interact with the Switchboardv2 program
+A library of utility functions to interact with Switchboard Modules on Aptos
 
 ## Install
 
@@ -54,9 +53,6 @@ const aggregator_acct = new AptosAccount();
 const job_acct = new AptosAccount();
 await faucetClient.fundAccount(aggregator_acct.address(), 50000);
 await faucetClient.fundAccount(job_acct.address(), 5000);
-
-// user will be authority
-await faucetClient.fundAccount(user.address(), 500000);
 
 // initialize the aggregator
 const [aggregator, aggregatorTxHash] = await Aggregator.init(
@@ -144,9 +140,15 @@ console.log(lease, leaseTxHash);
 // Enable automatic updates
 const crank = new Crank(
   client,
+<<<<<<< HEAD
   SWITCHBOARD_CRANK_ADDRESS,
   SWITCHBOARD_DEVNET_ADDRESS,
   SWITCHBOARD_STATE_ADDRESS
+=======
+  SWITCHBOARD_DEVNET_ADDRESS, // we've
+  SWITCHBOARD_DEVNET_ADDRESS, // assigned many resources
+  SWITCHBOARD_DEVNET_ADDRESS  // to the same account for simplicity
+>>>>>>> 5798127afb1d383161a623c997a6359018528dac
 );
 
 // Pushing to the crank enables automatic updates
