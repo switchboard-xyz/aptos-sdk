@@ -32,6 +32,15 @@ const FAUCET_URL = "https://faucet.devnet.aptoslabs.com";
 const SWITCHBOARD_DEVNET_ADDRESS =
   "0x348ecb66a5d9edab8d175f647d5e99d6962803da7f5d3d2eb839387aeb118300";
 
+const SWITCHBOARD_QUEUE_ADDRESS =
+  "0x348ecb66a5d9edab8d175f647d5e99d6962803da7f5d3d2eb839387aeb118300";
+
+const SWITCHBOARD_CRANK_ADDRESS =
+  "0x348ecb66a5d9edab8d175f647d5e99d6962803da7f5d3d2eb839387aeb118300";
+
+const SWITCHBOARD_STATE_ADDRESS =
+  "0x348ecb66a5d9edab8d175f647d5e99d6962803da7f5d3d2eb839387aeb118300";
+
 const client = new AptosClient(NODE_URL);
 const faucetClient = new FaucetClient(NODE_URL, FAUCET_URL);
 
@@ -55,7 +64,7 @@ const [aggregator, aggregatorTxHash] = await Aggregator.init(
   aggregator_acct,
   {
     authority: user.address(),
-    queueAddress: SWITCHBOARD_DEVNET_ADDRESS,
+    queueAddress: SWITCHBOARD_QUEUE_ADDRESS,
     batchSize: 1,
     minJobResults: 1,
     minOracleResults: 1,
@@ -68,7 +77,7 @@ const [aggregator, aggregatorTxHash] = await Aggregator.init(
     coinType: "0x1::aptos_coin::AptosCoin",
   },
   SWITCHBOARD_DEVNET_ADDRESS,
-  SWITCHBOARD_DEVNET_ADDRESS
+  SWITCHBOARD_STATE_ADDRESS
 );
 
 console.log(`Aggregator: ${aggregator.address}, tx: ${aggregatorTxHash}`);
@@ -105,7 +114,7 @@ const [job, jobTxHash] = await Job.init(
     data: serializedJob.toString("hex"),
   },
   SWITCHBOARD_DEVNET_ADDRESS,
-  SWITCHBOARD_DEVNET_ADDRESS
+  SWITCHBOARD_STATE_ADDRESS
 );
 
 console.log(`Job created ${job.address}, hash: ${jobTxHash}`);
@@ -121,13 +130,13 @@ const [lease, leaseTxHash] = await Lease.init(
   client,
   aggregator_acct,
   {
-    queueAddress: SWITCHBOARD_DEVNET_ADDRESS,
+    queueAddress: SWITCHBOARD_QUEUE_ADDRESS,
     withdrawAuthority: user.address().hex(),
     initialAmount: 1000, // when this drains completely, the aggregator is booted from the crank
     coinType: "0x1::aptos_coin::AptosCoin",
   },
   SWITCHBOARD_DEVNET_ADDRESS,
-  SWITCHBOARD_DEVNET_ADDRESS
+  SWITCHBOARD_STATE_ADDRESS
 );
 
 console.log(lease, leaseTxHash);
@@ -135,9 +144,9 @@ console.log(lease, leaseTxHash);
 // Enable automatic updates
 const crank = new Crank(
   client,
-  SWITCHBOARD_DEVNET_ADDRESS, // we've
-  SWITCHBOARD_DEVNET_ADDRESS, // assigned many resources
-  SWITCHBOARD_DEVNET_ADDRESS // to the same account for simplicity
+  SWITCHBOARD_CRANK_ADDRESS,
+  SWITCHBOARD_DEVNET_ADDRESS,
+  SWITCHBOARD_STATE_ADDRESS
 );
 
 // Pushing to the crank enables automatic updates
@@ -164,7 +173,7 @@ const onAggregatorUpdate = (
 ) => {
   const event = new AptosEvent(
     client,
-    HexString.ensure(SWITCHBOARD_DEVNET_ADDRESS),
+    HexString.ensure(SWITCHBOARD_STATE_ADDRESS),
     `${SWITCHBOARD_DEVNET_ADDRESS}::Switchboard::State`,
     "aggregator_update_events",
     pollIntervalMs

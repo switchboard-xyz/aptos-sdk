@@ -28,6 +28,15 @@ const FAUCET_URL = "https://faucet.devnet.aptoslabs.com";
 const SWITCHBOARD_DEVNET_ADDRESS =
   "0x348ecb66a5d9edab8d175f647d5e99d6962803da7f5d3d2eb839387aeb118300";
 
+const SWITCHBOARD_QUEUE_ADDRESS =
+  "0x348ecb66a5d9edab8d175f647d5e99d6962803da7f5d3d2eb839387aeb118300";
+
+const SWITCHBOARD_CRANK_ADDRESS =
+  "0x348ecb66a5d9edab8d175f647d5e99d6962803da7f5d3d2eb839387aeb118300";
+
+const SWITCHBOARD_STATE_ADDRESS =
+  "0x348ecb66a5d9edab8d175f647d5e99d6962803da7f5d3d2eb839387aeb118300";
+
 const onAggregatorUpdate = (
   client: AptosClient,
   cb: EventCallback,
@@ -35,7 +44,7 @@ const onAggregatorUpdate = (
 ) => {
   const event = new AptosEvent(
     client,
-    HexString.ensure(SWITCHBOARD_DEVNET_ADDRESS),
+    HexString.ensure(SWITCHBOARD_STATE_ADDRESS),
     `${SWITCHBOARD_DEVNET_ADDRESS}::Switchboard::State`,
     "aggregator_update_events",
     pollIntervalMs
@@ -71,7 +80,7 @@ const onAggregatorUpdate = (
     aggregator_acct,
     {
       authority: user.address(),
-      queueAddress: SWITCHBOARD_DEVNET_ADDRESS,
+      queueAddress: SWITCHBOARD_QUEUE_ADDRESS,
       batchSize: 1,
       minJobResults: 1,
       minOracleResults: 1,
@@ -84,7 +93,7 @@ const onAggregatorUpdate = (
       coinType: "0x1::aptos_coin::AptosCoin",
     },
     SWITCHBOARD_DEVNET_ADDRESS,
-    SWITCHBOARD_DEVNET_ADDRESS
+    SWITCHBOARD_STATE_ADDRESS
   );
 
   console.log(`Aggregator: ${aggregator.address}, tx: ${aggregatorTxSig}`);
@@ -119,7 +128,7 @@ const onAggregatorUpdate = (
       data: serializedJob.toString("hex"),
     },
     SWITCHBOARD_DEVNET_ADDRESS,
-    SWITCHBOARD_DEVNET_ADDRESS
+    SWITCHBOARD_STATE_ADDRESS
   );
 
   console.log(`Job created ${job.address}, hash: ${jobTxSig}`);
@@ -135,13 +144,13 @@ const onAggregatorUpdate = (
     client,
     aggregator_acct,
     {
-      queueAddress: SWITCHBOARD_DEVNET_ADDRESS,
+      queueAddress: SWITCHBOARD_QUEUE_ADDRESS,
       withdrawAuthority: user.address().hex(),
       initialAmount: 1000,
       coinType: "0x1::aptos_coin::AptosCoin",
     },
     SWITCHBOARD_DEVNET_ADDRESS,
-    SWITCHBOARD_DEVNET_ADDRESS
+    SWITCHBOARD_STATE_ADDRESS
   );
 
   console.log(lease, leaseTxSig);
@@ -159,9 +168,9 @@ const onAggregatorUpdate = (
 
   const crank = new Crank(
     client,
+    SWITCHBOARD_CRANK_ADDRESS,
     SWITCHBOARD_DEVNET_ADDRESS,
-    SWITCHBOARD_DEVNET_ADDRESS,
-    SWITCHBOARD_DEVNET_ADDRESS
+    SWITCHBOARD_STATE_ADDRESS
   );
 
   crank.push(user, {
