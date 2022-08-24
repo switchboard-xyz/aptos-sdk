@@ -30,7 +30,7 @@ module Demo::demo_app {
         assert!(!exists<AggregatorInfo>(signer::address_of(account)), EAGGREGATOR_INFO_EXISTS);
 
         // get latest value 
-        let (value, dec, _neg) = Math::num_unpack(Aggregator::latest_value(aggregator_addr)); 
+        let (value, dec, _neg) = Math::unpack(Aggregator::latest_value(aggregator_addr)); 
         move_to(account, AggregatorInfo {
             aggregator_addr: aggregator_addr,
             latest_result: value,
@@ -43,7 +43,7 @@ module Demo::demo_app {
 
         // creates test aggregator with data
         let num = Math::zero();
-        let two = Math::num(2, 0, false);
+        let two = Math::new(2, 0, false);
         let out = Math::zero();
         Math::add(&num, &two, &mut out);
         std::debug::print(&out);
