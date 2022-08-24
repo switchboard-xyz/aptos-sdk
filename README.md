@@ -140,15 +140,9 @@ console.log(lease, leaseTxHash);
 // Enable automatic updates
 const crank = new Crank(
   client,
-<<<<<<< HEAD
   SWITCHBOARD_CRANK_ADDRESS,
   SWITCHBOARD_DEVNET_ADDRESS,
   SWITCHBOARD_STATE_ADDRESS
-=======
-  SWITCHBOARD_DEVNET_ADDRESS, // we've
-  SWITCHBOARD_DEVNET_ADDRESS, // assigned many resources
-  SWITCHBOARD_DEVNET_ADDRESS  // to the same account for simplicity
->>>>>>> 5798127afb1d383161a623c997a6359018528dac
 );
 
 // Pushing to the crank enables automatic updates
