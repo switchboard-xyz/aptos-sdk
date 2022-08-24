@@ -10,6 +10,8 @@ import Big from "big.js";
 import * as sbv2 from "@switchboard-xyz/switchboard-v2";
 import * as anchor from "@project-serum/anchor";
 
+export { OracleJob } from "@switchboard-xyz/switchboard-v2";
+
 // Address that deployed the module
 export const SWITCHBOARD_DEVNET_ADDRESS = ``;
 

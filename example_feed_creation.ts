@@ -11,7 +11,6 @@
  *
  */
 import { Buffer } from "buffer";
-import * as sbv2 from "@switchboard-xyz/switchboard-v2";
 import { AptosClient, AptosAccount, FaucetClient, HexString } from "aptos";
 import {
   Aggregator,
@@ -20,9 +19,8 @@ import {
   AptosEvent,
   EventCallback,
   Crank,
+  OracleJob,
 } from "./src";
-import YAML from "yaml";
-import fs from "fs";
 
 const NODE_URL = "https://fullnode.devnet.aptoslabs.com";
 const FAUCET_URL = "https://faucet.devnet.aptoslabs.com";
@@ -93,8 +91,8 @@ const onAggregatorUpdate = (
 
   // Make Job data for btc price
   const serializedJob = Buffer.from(
-    sbv2.OracleJob.encodeDelimited(
-      sbv2.OracleJob.create({
+    OracleJob.encodeDelimited(
+      OracleJob.create({
         tasks: [
           {
             httpTask: {
