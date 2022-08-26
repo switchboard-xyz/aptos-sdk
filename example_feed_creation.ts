@@ -68,7 +68,6 @@ const onAggregatorUpdate = (
 
   const aggregator_acct = new AptosAccount();
   const job_acct = new AptosAccount();
-
   await faucetClient.fundAccount(aggregator_acct.address(), 50000);
   await faucetClient.fundAccount(job_acct.address(), 5000);
 

@@ -29,7 +29,7 @@ const SWITCHBOARD_STATE_ADDRESS =
   // if file extension ends with yaml
   try {
     const parsedYaml = YAML.parse(
-      fs.readFileSync("./.aptos/config.yaml", "utf8")
+      fs.readFileSync("../.aptos/config.yaml", "utf8")
     );
     if (
       "profiles" in parsedYaml &&

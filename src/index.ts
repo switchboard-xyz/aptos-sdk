@@ -306,7 +306,7 @@ export class AptosEvent {
   ) {
     let lastSequenceNumber = "0";
     const ownerData = await this.client.getAccountResource(
-      this.eventHandlerOwner.hex().toString(),
+      this.eventHandlerOwner.hex(),
       this.eventOwnerStruct
     );
     try {
@@ -440,15 +440,15 @@ export class Aggregator {
         Buffer.from(params.name ?? "").toString("hex"),
         Buffer.from(params.metadata ?? "").toString("hex"),
         HexString.ensure(params.queueAddress).hex(),
-        params.batchSize.toString(),
-        params.minOracleResults.toString(),
-        params.minJobResults.toString(),
-        params.minUpdateDelaySeconds.toString(),
-        (params.startAfter ?? 0).toString(),
-        (params.varianceThreshold ?? 0).toString(),
+        params.batchSize,
+        params.minOracleResults,
+        params.minJobResults,
+        params.minUpdateDelaySeconds,
+        params.startAfter ?? 0,
+        params.varianceThreshold ?? 0,
         params.varianceThresholdScale ?? 0,
-        (params.forceReportPeriod ?? 0).toString(),
-        (params.expiration ?? 0).toString(),
+        params.forceReportPeriod ?? 0,
+        params.expiration ?? 0,
         HexString.ensure(params.authority).hex(),
       ],
       [params.coinType ?? "0x1::aptos_coin::AptosCoin"]
@@ -492,16 +492,16 @@ export class Aggregator {
       [
         HexString.ensure(params.oracleAddress).hex(),
         HexString.ensure(this.address).hex(),
-        params.oracleIdx.toString(),
+        params.oracleIdx,
         params.error,
-        params.valueNum.toString(),
+        params.valueNum,
         params.valueScaleFactor,
         params.valueNeg,
         stringToHex(params.jobsChecksum),
-        params.minResponseNum.toString(),
+        params.minResponseNum,
         params.minResponseScaleFactor,
         params.minResponseNeg,
-        params.maxResponseNum.toString(),
+        params.maxResponseNum,
         params.maxResponseScaleFactor,
         params.maxResponseNeg,
       ],
@@ -800,21 +800,21 @@ export class OracleQueue {
         stringToHex(params.name),
         stringToHex(params.metadata),
         HexString.ensure(params.authority).hex(),
-        params.oracleTimeout.toString(),
-        params.reward.toString(),
-        params.minStake.toString(),
+        params.oracleTimeout,
+        params.reward,
+        params.minStake,
         params.slashingEnabled,
-        params.varianceToleranceMultiplierValue.toString(),
+        params.varianceToleranceMultiplierValue,
         params.varianceToleranceMultiplierScale,
-        params.feedProbationPeriod.toString(),
-        params.consecutiveFeedFailureLimit.toString(),
-        params.consecutiveOracleFailureLimit.toString(),
+        params.feedProbationPeriod,
+        params.consecutiveFeedFailureLimit,
+        params.consecutiveOracleFailureLimit,
         params.unpermissionedFeedsEnabled,
         params.unpermissionedVrfEnabled,
         params.lockLeaseFunding,
         HexString.ensure(params.mint).hex(),
         params.enableBufferRelayers,
-        params.maxSize.toString(),
+        params.maxSize,
       ],
       [params.coinType ?? "0x1::aptos_coin::AptosCoin"]
     );
@@ -867,7 +867,7 @@ export class Lease {
       [
         HexString.ensure(params.queueAddress).hex(),
         HexString.ensure(params.withdrawAuthority).hex(),
-        params.initialAmount.toString(),
+        params.initialAmount,
       ],
       [params.coinType ?? "0x1::aptos_coin::AptosCoin"]
     );
@@ -895,7 +895,7 @@ export class Lease {
       this.client,
       account,
       `${this.devnetAddress}::lease_extend_action::run`,
-      [HexString.ensure(this.address).hex(), params.loadAmount.toString()],
+      [HexString.ensure(this.address).hex(), params.loadAmount],
       [this.coinType]
     );
   }
@@ -911,7 +911,7 @@ export class Lease {
       this.client,
       account,
       `${this.devnetAddress}::lease_withdraw_action::run`,
-      [[HexString.ensure(this.address).hex(), params.amount.toString()]],
+      [[HexString.ensure(this.address).hex(), params.amount]],
       [this.coinType]
     );
   }
@@ -977,7 +977,7 @@ export class OracleWallet {
       this.client,
       account,
       `${this.devnetAddress}::oracle_wallet_contribute_action::run`,
-      [HexString.ensure(this.address).hex(), params.loadAmount.toString()],
+      [HexString.ensure(this.address).hex(), params.loadAmount],
       [this.coinType]
     );
   }
@@ -993,7 +993,7 @@ export class OracleWallet {
       this.client,
       account,
       `${this.devnetAddress}::oracle_wallet_withdraw_action::run`,
-      [[HexString.ensure(this.address).hex(), params.amount.toString()]],
+      [[HexString.ensure(this.address).hex(), params.amount]],
       [this.coinType]
     );
   }
@@ -1056,7 +1056,7 @@ export class Permission {
         HexString.ensure(params.authority).hex(),
         HexString.ensure(params.granter).hex(),
         HexString.ensure(params.grantee).hex(),
-        params.permission.toString(),
+        params.permission,
         params.enable,
       ]
     );
@@ -1121,18 +1121,17 @@ async function createFeed(
       Buffer.from(aggregatorParams.name ?? "").toString("hex"),
       Buffer.from(aggregatorParams.metadata ?? "").toString("hex"),
       HexString.ensure(aggregatorParams.queueAddress).hex(),
-      aggregatorParams.batchSize.toString(),
-      aggregatorParams.minOracleResults.toString(),
-      aggregatorParams.minJobResults.toString(),
-      aggregatorParams.minUpdateDelaySeconds.toString(),
-      (aggregatorParams.startAfter ?? 0).toString(),
-      (aggregatorParams.varianceThreshold ?? 0).toString(),
+      aggregatorParams.batchSize,
+      aggregatorParams.minOracleResults,
+      aggregatorParams.minJobResults,
+      aggregatorParams.minUpdateDelaySeconds,
+      aggregatorParams.startAfter ?? 0,
+      aggregatorParams.varianceThreshold ?? 0,
       aggregatorParams.varianceThresholdScale ?? 0,
-      (aggregatorParams.forceReportPeriod ?? 0).toString(),
-      (aggregatorParams.expiration ?? 0).toString(),
-
+      aggregatorParams.forceReportPeriod ?? 0,
+      aggregatorParams.expiration ?? 0,
       // lease
-      initialLoadAmount.toString(),
+      initialLoadAmount,
 
       // jobs
       ...jobs.flatMap((jip) => {
