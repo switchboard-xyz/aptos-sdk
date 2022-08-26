@@ -21,8 +21,6 @@ import {
   EventCallback,
   Crank,
 } from "./src";
-import YAML from "yaml";
-import fs from "fs";
 
 const NODE_URL = "https://fullnode.devnet.aptoslabs.com";
 const FAUCET_URL = "https://faucet.devnet.aptoslabs.com";
@@ -85,7 +83,6 @@ const onAggregatorUpdate = (
       expiration: 0,
       coinType: "0x1::aptos_coin::AptosCoin",
     },
-    SWITCHBOARD_DEVNET_ADDRESS,
     SWITCHBOARD_DEVNET_ADDRESS
   );
 
@@ -120,7 +117,6 @@ const onAggregatorUpdate = (
       authority: user.address().hex(),
       data: serializedJob.toString("hex"),
     },
-    SWITCHBOARD_DEVNET_ADDRESS,
     SWITCHBOARD_DEVNET_ADDRESS
   );
 
@@ -142,7 +138,6 @@ const onAggregatorUpdate = (
       initialAmount: 1000,
       coinType: "0x1::aptos_coin::AptosCoin",
     },
-    SWITCHBOARD_DEVNET_ADDRESS,
     SWITCHBOARD_DEVNET_ADDRESS
   );
 
