@@ -11,7 +11,6 @@
  *
  */
 import { Buffer } from "buffer";
-import * as sbv2 from "@switchboard-xyz/switchboard-v2";
 import { AptosClient, AptosAccount, FaucetClient, HexString } from "aptos";
 import {
   Aggregator,
@@ -20,12 +19,22 @@ import {
   AptosEvent,
   EventCallback,
   Crank,
+  OracleJob,
 } from "./src";
 
 const NODE_URL = "https://fullnode.devnet.aptoslabs.com";
 const FAUCET_URL = "https://faucet.devnet.aptoslabs.com";
 
 const SWITCHBOARD_DEVNET_ADDRESS =
+  "0x348ecb66a5d9edab8d175f647d5e99d6962803da7f5d3d2eb839387aeb118300";
+
+const SWITCHBOARD_QUEUE_ADDRESS =
+  "0x348ecb66a5d9edab8d175f647d5e99d6962803da7f5d3d2eb839387aeb118300";
+
+const SWITCHBOARD_CRANK_ADDRESS =
+  "0x348ecb66a5d9edab8d175f647d5e99d6962803da7f5d3d2eb839387aeb118300";
+
+const SWITCHBOARD_STATE_ADDRESS =
   "0x348ecb66a5d9edab8d175f647d5e99d6962803da7f5d3d2eb839387aeb118300";
 
 const onAggregatorUpdate = (
@@ -35,7 +44,7 @@ const onAggregatorUpdate = (
 ) => {
   const event = new AptosEvent(
     client,
-    HexString.ensure(SWITCHBOARD_DEVNET_ADDRESS),
+    HexString.ensure(SWITCHBOARD_STATE_ADDRESS),
     `${SWITCHBOARD_DEVNET_ADDRESS}::Switchboard::State`,
     "aggregator_update_events",
     pollIntervalMs
@@ -71,7 +80,7 @@ const onAggregatorUpdate = (
     aggregator_acct,
     {
       authority: user.address(),
-      queueAddress: SWITCHBOARD_DEVNET_ADDRESS,
+      queueAddress: SWITCHBOARD_QUEUE_ADDRESS,
       batchSize: 1,
       minJobResults: 1,
       minOracleResults: 1,
@@ -90,8 +99,8 @@ const onAggregatorUpdate = (
 
   // Make Job data for btc price
   const serializedJob = Buffer.from(
-    sbv2.OracleJob.encodeDelimited(
-      sbv2.OracleJob.create({
+    OracleJob.encodeDelimited(
+      OracleJob.create({
         tasks: [
           {
             httpTask: {
@@ -133,7 +142,7 @@ const onAggregatorUpdate = (
     client,
     aggregator_acct,
     {
-      queueAddress: SWITCHBOARD_DEVNET_ADDRESS,
+      queueAddress: SWITCHBOARD_QUEUE_ADDRESS,
       withdrawAuthority: user.address().hex(),
       initialAmount: 1000,
       coinType: "0x1::aptos_coin::AptosCoin",
@@ -156,9 +165,9 @@ const onAggregatorUpdate = (
 
   const crank = new Crank(
     client,
+    SWITCHBOARD_CRANK_ADDRESS,
     SWITCHBOARD_DEVNET_ADDRESS,
-    SWITCHBOARD_DEVNET_ADDRESS,
-    SWITCHBOARD_DEVNET_ADDRESS
+    SWITCHBOARD_STATE_ADDRESS
   );
 
   crank.push(user, {

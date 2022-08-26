@@ -10,6 +10,8 @@ import Big from "big.js";
 import * as sbv2 from "@switchboard-xyz/switchboard-v2";
 import * as anchor from "@project-serum/anchor";
 
+export { OracleJob } from "@switchboard-xyz/switchboard-v2";
+
 // Address that deployed the module
 export const SWITCHBOARD_DEVNET_ADDRESS = ``;
 
@@ -1076,4 +1078,75 @@ function safeDiv(number_: Big, denominator: Big, decimals = 20): Big {
   const result = number_.div(denominator);
   Big.DP = oldDp;
   return result;
+}
+
+async function createFeed(
+  client: AptosClient,
+  account: AptosAccount,
+  devnetAddress: MaybeHexString,
+  aggregatorParams: AggregatorInitParams,
+  jobInitParams: JobInitParams[],
+  initialLoadAmount: number,
+  crank: MaybeHexString
+) {
+  if (jobInitParams.length > 8) {
+    throw new Error(
+      "Max Job limit exceeded. The create_feed_action can only create up to 8 jobs at a time."
+    );
+  }
+
+  // enforce size 8 jobs array
+  let jobs =
+    jobInitParams.length < 8
+      ? [
+          ...jobInitParams,
+          ...new Array<JobInitParams>(8 - jobInitParams.length).fill({
+            name: "",
+            metadata: "",
+            authority: "",
+            data: "",
+          }),
+        ]
+      : jobInitParams;
+
+  const tx = await sendAptosTx(
+    client,
+    account,
+    `${devnetAddress}::aggregator_init_action::run`,
+    [
+      // authority will own everything
+      HexString.ensure(aggregatorParams.authority).hex(),
+
+      // aggregator
+      Buffer.from(aggregatorParams.name ?? "").toString("hex"),
+      Buffer.from(aggregatorParams.metadata ?? "").toString("hex"),
+      HexString.ensure(aggregatorParams.queueAddress).hex(),
+      aggregatorParams.batchSize.toString(),
+      aggregatorParams.minOracleResults.toString(),
+      aggregatorParams.minJobResults.toString(),
+      aggregatorParams.minUpdateDelaySeconds.toString(),
+      (aggregatorParams.startAfter ?? 0).toString(),
+      (aggregatorParams.varianceThreshold ?? 0).toString(),
+      aggregatorParams.varianceThresholdScale ?? 0,
+      (aggregatorParams.forceReportPeriod ?? 0).toString(),
+      (aggregatorParams.expiration ?? 0).toString(),
+
+      // lease
+      initialLoadAmount.toString(),
+
+      // jobs
+      ...jobs.flatMap((jip) => {
+        return [
+          stringToHex(jip.name),
+          stringToHex(jip.metadata),
+          HexString.ensure(jip.authority).hex(),
+          jip.data,
+        ];
+      }),
+
+      // crank
+      HexString.ensure(crank).hex(),
+    ],
+    [aggregatorParams.coinType ?? "0x1::aptos_coin::AptosCoin"]
+  );
 }
