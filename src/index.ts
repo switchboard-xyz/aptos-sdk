@@ -254,6 +254,10 @@ export async function sendAptosTx(
     type_arguments: type_args,
     arguments: args,
   };
+
+  console.log(payload);
+  console.log("WHAT THE HECK!?");
+
   const txnRequest = await client.generateTransaction(
     signer.address(),
     payload,
@@ -410,13 +414,20 @@ export class Aggregator {
 
   async loadJobs(): Promise<Array<sbv2.OracleJob>> {
     const data = await this.loadData();
+    console.log(data);
     const jobs = data.job_keys.map(
-      (key: string) => new Job(this.client, key, this.devnetAddress)
+      (key: string) =>
+        new Job(
+          this.client,
+          HexString.ensure(key).hex(),
+          HexString.ensure(this.devnetAddress).hex()
+        )
     );
     const promises: Array<Promise<sbv2.OracleJob>> = [];
     for (let job of jobs) {
       promises.push(job.loadJob());
     }
+    console.log("FUCK");
     return await Promise.all(promises);
   }
 
@@ -472,7 +483,7 @@ export class Aggregator {
     return await sendAptosTx(
       this.client,
       account,
-      `${this.devnetAddress}::AggregatorAddJobAction::run`,
+      `${this.devnetAddress}::aggregator_add_job_action::run`,
       [
         HexString.ensure(this.address).hex(),
         HexString.ensure(params.job).hex(),
@@ -586,13 +597,14 @@ export class Job {
     return (
       await this.client.getAccountResource(
         this.address,
-        `${this.devnetAddress}::job::Job`
+        `${HexString.ensure(this.devnetAddress).hex()}::job::Job`
       )
     ).data;
   }
 
   async loadJob(): Promise<sbv2.OracleJob> {
     const data = await this.loadData();
+    console.log(data);
     return sbv2.OracleJob.decodeDelimited(
       Buffer.from(data.data.slice(2), "hex")
     );

@@ -352,7 +352,7 @@ __metadata:
     "@types/node": ^18.6.4
     "@types/node-fetch": ^2.6.2
     "@types/yargs": ^17.0.11
-    aptos: ^1.3.9
+    aptos: ^1.3.10
     big.js: ^6.2.1
     js-sha3: ^0.8.0
     node-fetch: ^2.1.6
@@ -653,9 +653,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"aptos@npm:^1.3.9":
-  version: 1.3.9
-  resolution: "aptos@npm:1.3.9"
+"aptos@npm:^1.3.10":
+  version: 1.3.10
+  resolution: "aptos@npm:1.3.10"
   dependencies:
     "@scure/bip39": ^1.1.0
     axios: ^0.27.2
@@ -665,7 +665,7 @@ __metadata:
     tweetnacl: ^1.0.3
     typescript-memoize: ^1.1.0
     yarn: ^1.22.19
-  checksum: c2d20faf28ccdeb3ee3f921e7c7b4ebf9f8f0eb4fb47ca6c4a7a980f4e0eafe2ce46181fc8e944fc88be9b09263d94c5a0040d22fc2d4214159c8609d09bf542
+  checksum: fbee1011ab129113d72ebb66b611bf975c7bdeacaf8db6d4f26cc1b1af2dece5cf3de070a78dfde59679d1fbdd7a68b3af4db9dc12b43955d3ca1f8b17363ccd
   languageName: node
   linkType: hard
 

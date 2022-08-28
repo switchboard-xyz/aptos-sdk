@@ -22,7 +22,7 @@ import {
   OracleJob,
 } from "./src";
 
-const NODE_URL = "https://fullnode.devnet.aptoslabs.com";
+const NODE_URL = "https://fullnode.devnet.aptoslabs.com/v1";
 const FAUCET_URL = "https://faucet.devnet.aptoslabs.com";
 
 const SWITCHBOARD_DEVNET_ADDRESS =
@@ -45,7 +45,7 @@ const onAggregatorUpdate = (
   const event = new AptosEvent(
     client,
     HexString.ensure(SWITCHBOARD_STATE_ADDRESS),
-    `${SWITCHBOARD_DEVNET_ADDRESS}::Switchboard::State`,
+    `${SWITCHBOARD_DEVNET_ADDRESS}::switchboard::State`,
     "aggregator_update_events",
     pollIntervalMs
   );
@@ -153,9 +153,7 @@ const onAggregatorUpdate = (
 
   /**
    * Listen to Aggregator Update Calls
-   *
    */
-
   const updatePoller = onAggregatorUpdate(client, async (e) => {
     if (aggregator.address == e.data.aggregator_address) {
       console.log(`NEW RESULT:`, e.data);
@@ -175,7 +173,6 @@ const onAggregatorUpdate = (
 
   /**
    * Log Data Objects
-   *
    */
   console.log("logging all data objects");
   console.log("Aggregator:", await aggregator.loadData());
