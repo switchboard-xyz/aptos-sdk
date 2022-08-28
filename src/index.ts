@@ -7,10 +7,10 @@ import {
 } from "aptos";
 import { MoveStructTag, EntryFunctionId } from "aptos/src/generated";
 import Big from "big.js";
-import * as sbv2 from "@switchboard-xyz/switchboard-v2";
-import * as anchor from "@project-serum/anchor";
+import { OracleJob } from "@switchboard-xyz/common";
+import BN from "bn.js";
 
-export { OracleJob } from "@switchboard-xyz/switchboard-v2";
+export { OracleJob, IOracleJob } from "@switchboard-xyz/common";
 
 // Address that deployed the module
 export const SWITCHBOARD_DEVNET_ADDRESS = ``;
@@ -256,7 +256,6 @@ export async function sendAptosTx(
   };
 
   console.log(payload);
-  console.log("WHAT THE HECK!?");
 
   const txnRequest = await client.generateTransaction(
     signer.address(),
@@ -412,7 +411,7 @@ export class Aggregator {
     ).data;
   }
 
-  async loadJobs(): Promise<Array<sbv2.OracleJob>> {
+  async loadJobs(): Promise<Array<OracleJob>> {
     const data = await this.loadData();
     console.log(data);
     const jobs = data.job_keys.map(
@@ -423,11 +422,10 @@ export class Aggregator {
           HexString.ensure(this.devnetAddress).hex()
         )
     );
-    const promises: Array<Promise<sbv2.OracleJob>> = [];
+    const promises: Array<Promise<OracleJob>> = [];
     for (let job of jobs) {
       promises.push(job.loadJob());
     }
-    console.log("FUCK");
     return await Promise.all(promises);
   }
 
@@ -549,8 +547,8 @@ export class Aggregator {
     if ((aggregator.latestConfirmedRound?.numSuccess ?? 0) === 0) {
       return true;
     }
-    const timestamp = new anchor.BN(Math.round(Date.now() / 1000), 10);
-    const startAfter = new anchor.BN(aggregator.startAfter, 10);
+    const timestamp = new BN(Math.round(Date.now() / 1000), 10);
+    const startAfter = new BN(aggregator.startAfter, 10);
     if (startAfter.gt(timestamp)) {
       return false;
     }
@@ -564,8 +562,8 @@ export class Aggregator {
       aggregator.latestConfirmedRound.result.dec,
       aggregator.latestConfirmedRound.result.neg
     ).toBig();
-    const forceReportPeriod = new anchor.BN(aggregator.forceReportPeriod, 10);
-    const lastTimestamp = new anchor.BN(
+    const forceReportPeriod = new BN(aggregator.forceReportPeriod, 10);
+    const lastTimestamp = new BN(
       aggregator.latestConfirmedRound.roundOpenTimestamp,
       10
     );
@@ -602,12 +600,9 @@ export class Job {
     ).data;
   }
 
-  async loadJob(): Promise<sbv2.OracleJob> {
+  async loadJob(): Promise<OracleJob> {
     const data = await this.loadData();
-    console.log(data);
-    return sbv2.OracleJob.decodeDelimited(
-      Buffer.from(data.data.slice(2), "hex")
-    );
+    return OracleJob.decodeDelimited(Buffer.from(data.data.slice(2), "hex"));
   }
 
   /**

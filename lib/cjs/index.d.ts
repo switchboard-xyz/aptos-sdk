@@ -2,8 +2,8 @@
 import { AptosClient, AptosAccount, HexString, MaybeHexString } from "aptos";
 import { MoveStructTag, EntryFunctionId } from "aptos/src/generated";
 import Big from "big.js";
-import * as sbv2 from "@switchboard-xyz/switchboard-v2";
-export { OracleJob } from "@switchboard-xyz/switchboard-v2";
+import { OracleJob } from "@switchboard-xyz/common";
+export { OracleJob, IOracleJob } from "@switchboard-xyz/common";
 export declare const SWITCHBOARD_DEVNET_ADDRESS = "";
 export declare const SWITCHBOARD_STATE_ADDRESS = "";
 export declare class AptosDecimal {
@@ -197,7 +197,7 @@ export declare class Aggregator {
     readonly coinType: MoveStructTag;
     constructor(client: AptosClient, address: MaybeHexString, devnetAddress: MaybeHexString, coinType?: MoveStructTag);
     loadData(): Promise<any>;
-    loadJobs(): Promise<Array<sbv2.OracleJob>>;
+    loadJobs(): Promise<Array<OracleJob>>;
     /**
      * Initialize an Aggregator
      * @param client
@@ -217,7 +217,7 @@ export declare class Job {
     readonly devnetAddress: MaybeHexString;
     constructor(client: AptosClient, address: MaybeHexString, devnetAddress: MaybeHexString);
     loadData(): Promise<any>;
-    loadJob(): Promise<sbv2.OracleJob>;
+    loadJob(): Promise<OracleJob>;
     /**
      * Initialize a Job
      * @param client
