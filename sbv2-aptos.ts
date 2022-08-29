@@ -13,7 +13,7 @@ import YAML from "yaml";
 import chalk from "chalk";
 import { AptosAccount, AptosClient, FaucetClient, HexString } from "aptos";
 import { Aggregator, Job, Oracle, OracleQueue, State, Crank } from "./src";
-import { OracleJob } from "@switchboard-xyz/switchboard-v2";
+import { OracleJob } from "@switchboard-xyz/common";
 
 export const CHECK_ICON = chalk.green("\u2714");
 export const FAILED_ICON = chalk.red("\u2717");
