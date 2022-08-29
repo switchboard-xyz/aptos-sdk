@@ -176,7 +176,7 @@ struct AggregatorInfo has copy, drop, store, key {
 }
 
 // get latest value
-public fun save_latest_value(aggregator_addr) {
+public fun save_latest_value(aggregator_addr: address) {
     // get latest value
     let latest_value = aggregator::latest_value(aggregator_addr);
     let (value, scaling_factor, neg) = math::unpack(latest_value);
