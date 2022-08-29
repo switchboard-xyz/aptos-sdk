@@ -36,7 +36,6 @@ const SWITCHBOARD_QUEUE_ADDRESS =
 
 const SWITCHBOARD_CRANK_ADDRESS =
   "0x348ecb66a5d9edab8d175f647d5e99d6962803da7f5d3d2eb839387aeb118300";
-<<<<<<< HEAD
 
 const client = new AptosClient(NODE_URL);
 const faucetClient = new FaucetClient(NODE_URL, FAUCET_URL);
