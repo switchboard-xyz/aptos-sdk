@@ -8,7 +8,7 @@ A library of utility functions to interact with Switchboard Modules on Aptos
 ## Install
 
 ```
-npm i sbv2-aptos@https://github.com/switchboard-xyz/aptos-sdk --save
+npm i --save https://www.npmjs.com/package/@switchboard-xyz/aptos.js
 ```
 
 ## Creating Feeds
@@ -163,7 +163,7 @@ const onAggregatorUpdate = (
   const event = new AptosEvent(
     client,
     HexString.ensure(SWITCHBOARD_DEVNET_ADDRESS),
-    `${SWITCHBOARD_DEVNET_ADDRESS}::Switchboard::State`,
+    `${SWITCHBOARD_DEVNET_ADDRESS}::switchboard::State`,
     "aggregator_update_events",
     pollIntervalMs
   );
