@@ -255,8 +255,6 @@ export async function sendAptosTx(
     arguments: args,
   };
 
-  console.log(payload);
-
   const txnRequest = await client.generateTransaction(
     signer.address(),
     payload,
@@ -413,7 +411,6 @@ export class Aggregator {
 
   async loadJobs(): Promise<Array<OracleJob>> {
     const data = await this.loadData();
-    console.log(data);
     const jobs = data.job_keys.map(
       (key: string) =>
         new Job(
@@ -602,7 +599,10 @@ export class Job {
 
   async loadJob(): Promise<OracleJob> {
     const data = await this.loadData();
-    return OracleJob.decodeDelimited(Buffer.from(data.data.slice(2), "hex"));
+    const job = OracleJob.decodeDelimited(
+      Buffer.from(data.data.slice(2), "hex")
+    );
+    return job;
   }
 
   /**
@@ -685,7 +685,7 @@ export class Crank {
         HexString.ensure(this.address).hex(),
         HexString.ensure(params.aggregatorAddress).hex(),
       ],
-      [this.coinType]
+      [this.coinType ?? "0x1::aptos_coin::AptosCoin"]
     );
   }
 

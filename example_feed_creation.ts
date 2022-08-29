@@ -115,6 +115,7 @@ const onAggregatorUpdate = (
       })
     ).finish()
   );
+  console.log("The job is:", serializedJob.toString("hex"));
 
   const [job, jobTxSig] = await Job.init(
     client,
@@ -123,7 +124,7 @@ const onAggregatorUpdate = (
       name: "BTC/USD",
       metadata: "binance",
       authority: user.address().hex(),
-      data: serializedJob.toString("hex"),
+      data: serializedJob.toString(),
     },
     SWITCHBOARD_DEVNET_ADDRESS
   );
@@ -167,7 +168,9 @@ const onAggregatorUpdate = (
     SWITCHBOARD_STATE_ADDRESS
   );
 
-  crank.push(user, {
+  console.log(await crank.loadData());
+
+  await crank.push(user, {
     aggregatorAddress: aggregator_acct.address().hex(),
   });
 

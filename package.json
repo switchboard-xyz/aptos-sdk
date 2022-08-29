@@ -30,6 +30,7 @@
   },
   "dependencies": {
     "@switchboard-xyz/common": "^2.0.0",
+    "@switchboard-xyz/switchboard-v2": "^0.0.129",
     "aptos": "^1.3.10",
     "big.js": "^6.2.1",
     "bn.js": "^5.2.1",
