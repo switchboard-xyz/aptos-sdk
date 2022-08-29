@@ -16,15 +16,8 @@ npm i --save https://www.npmjs.com/package/@switchboard-xyz/aptos.js
 ```ts
 import { Buffer } from "buffer";
 import { AptosClient, AptosAccount, FaucetClient, HexString } from "aptos";
-import {
-  Aggregator,
-  Job,
-  Lease,
-  AptosEvent,
-  EventCallback,
-  Crank,
-  OracleJob,
-} from "sbv2-aptos";
+import { Lease, AptosEvent, EventCallback, OracleJob, createFeed } from "./src";
+
 const NODE_URL = "https://fullnode.devnet.aptoslabs.com";
 const FAUCET_URL = "https://faucet.devnet.aptoslabs.com";
 
@@ -42,40 +35,14 @@ const faucetClient = new FaucetClient(NODE_URL, FAUCET_URL);
 
 // create new user
 let user = new AptosAccount();
-await faucetClient.fundAccount(user.address(), 5000);
+
+await faucetClient.fundAccount(user.address(), 50000);
 console.log(`User account ${user.address().hex()} created + funded.`);
 
-// create and fund accounts to assign an aggregator and job to
 const aggregator_acct = new AptosAccount();
-const job_acct = new AptosAccount();
 await faucetClient.fundAccount(aggregator_acct.address(), 50000);
-await faucetClient.fundAccount(job_acct.address(), 5000);
-
-// initialize the aggregator
-const [aggregator, aggregatorTxHash] = await Aggregator.init(
-  client,
-  aggregator_acct,
-  {
-    authority: user.address(),
-    queueAddress: SWITCHBOARD_QUEUE_ADDRESS,
-    batchSize: 1,
-    minJobResults: 1,
-    minOracleResults: 1,
-    minUpdateDelaySeconds: 5, // update every 5 seconds
-    startAfter: 0,
-    varianceThreshold: 0,
-    varianceThresholdScale: 0,
-    forceReportPeriod: 0,
-    expiration: 0,
-    coinType: "0x1::aptos_coin::AptosCoin",
-  },
-  SWITCHBOARD_DEVNET_ADDRESS
-);
-
-console.log(`Aggregator: ${aggregator.address}, tx: ${aggregatorTxHash}`);
 
 // Make Job data for btc price
-// https://docs.switchboard.xyz/api/tasks
 const serializedJob = Buffer.from(
   OracleJob.encodeDelimited(
     OracleJob.create({
@@ -95,53 +62,39 @@ const serializedJob = Buffer.from(
   ).finish()
 );
 
-// initialize job -- our data fetching definition
-const [job, jobTxHash] = await Job.init(
-  client,
-  job_acct,
-  {
-    name: "BTC/USD",
-    metadata: "binance",
-    authority: user.address().hex(),
-    data: serializedJob.toString("hex"),
-  },
-  SWITCHBOARD_DEVNET_ADDRESS
-);
-
-console.log(`Job created ${job.address}, hash: ${jobTxHash}`);
-
-// add btc usd to our aggregator
-const addJobTxHash = await aggregator.addJob(user, {
-  job: job.address,
-});
-
-console.log(`Aggregator add job tx: ${addJobTxHash}`);
-
-const [lease, leaseTxHash] = await Lease.init(
+const [aggregator, createFeedTx] = await createFeed(
   client,
   aggregator_acct,
+  SWITCHBOARD_DEVNET_ADDRESS,
   {
+    authority: user.address(),
     queueAddress: SWITCHBOARD_QUEUE_ADDRESS,
-    withdrawAuthority: user.address().hex(),
-    initialAmount: 1000, // when this drains completely, the aggregator is booted from the crank
+    batchSize: 1,
+    minJobResults: 1,
+    minOracleResults: 1,
+    minUpdateDelaySeconds: 5,
+    startAfter: 0,
+    varianceThreshold: 0,
+    varianceThresholdScale: 0,
+    forceReportPeriod: 0,
+    expiration: 0,
     coinType: "0x1::aptos_coin::AptosCoin",
   },
-  SWITCHBOARD_DEVNET_ADDRESS
+  [
+    {
+      name: "BTC/USD",
+      metadata: "binance",
+      authority: user.address().hex(),
+      data: serializedJob.toString(),
+    },
+  ],
+  1000, // initial load amount
+  SWITCHBOARD_CRANK_ADDRESS
 );
 
-console.log(lease, leaseTxHash);
-
-// Enable automatic updates
-const crank = new Crank(
-  client,
-  SWITCHBOARD_CRANK_ADDRESS,
-  SWITCHBOARD_DEVNET_ADDRESS
+console.log(
+  `Created Aggregator and Lease resources at account address ${aggregator.address}. Tx hash ${createFeedTx}`
 );
-
-// Pushing to the crank enables automatic updates
-await crank.push(user, {
-  aggregatorAddress: aggregator_acct.address().hex(),
-});
 
 // Manually trigger an update
 await aggregator.openRound(user);

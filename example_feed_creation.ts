@@ -8,20 +8,10 @@
  * Creates a new Job (ftx btc/usd),
  * Adds Job to Aggregator
  * Push Aggregator to Crank
- *
  */
 import { Buffer } from "buffer";
 import { AptosClient, AptosAccount, FaucetClient, HexString } from "aptos";
-import {
-  Aggregator,
-  Job,
-  Lease,
-  AptosEvent,
-  EventCallback,
-  Crank,
-  OracleJob,
-  createFeed,
-} from "./src";
+import { Lease, AptosEvent, EventCallback, OracleJob, createFeed } from "./src";
 
 const NODE_URL = "https://fullnode.devnet.aptoslabs.com/v1";
 const FAUCET_URL = "https://faucet.devnet.aptoslabs.com";
@@ -35,9 +25,6 @@ const SWITCHBOARD_QUEUE_ADDRESS =
 const SWITCHBOARD_CRANK_ADDRESS =
   "0x348ecb66a5d9edab8d175f647d5e99d6962803da7f5d3d2eb839387aeb118300";
 
-const SWITCHBOARD_STATE_ADDRESS =
-  "0x348ecb66a5d9edab8d175f647d5e99d6962803da7f5d3d2eb839387aeb118300";
-
 const onAggregatorUpdate = (
   client: AptosClient,
   cb: EventCallback,
@@ -45,7 +32,7 @@ const onAggregatorUpdate = (
 ) => {
   const event = new AptosEvent(
     client,
-    HexString.ensure(SWITCHBOARD_STATE_ADDRESS),
+    HexString.ensure(SWITCHBOARD_DEVNET_ADDRESS),
     `${SWITCHBOARD_DEVNET_ADDRESS}::switchboard::State`,
     "aggregator_update_events",
     pollIntervalMs
@@ -63,15 +50,11 @@ const onAggregatorUpdate = (
   // create new user
   let user = new AptosAccount();
 
-  await faucetClient.fundAccount(user.address(), 5000);
-
+  await faucetClient.fundAccount(user.address(), 50000);
   console.log(`User account ${user.address().hex()} created + funded.`);
 
   const aggregator_acct = new AptosAccount();
   await faucetClient.fundAccount(aggregator_acct.address(), 50000);
-
-  // user will be authority
-  await faucetClient.fundAccount(user.address(), 500000);
 
   // Make Job data for btc price
   const serializedJob = Buffer.from(
@@ -95,7 +78,7 @@ const onAggregatorUpdate = (
 
   const [aggregator, createFeedTx] = await createFeed(
     client,
-    user,
+    aggregator_acct,
     SWITCHBOARD_DEVNET_ADDRESS,
     {
       authority: user.address(),
