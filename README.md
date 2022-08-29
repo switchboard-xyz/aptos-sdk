@@ -165,7 +165,7 @@ Switchboard = { git = "https://github.com/switchboard-xyz/switchboard-aptos-publ
 
 ```move
 use switchboard::aggregator;
-use switchbiard::math::{Self, SwitchboardDecimal};
+use switchboard::math::{Self, SwitchboardDecimal};
 
 // store latest value
 struct AggregatorInfo has copy, drop, store, key {
@@ -176,7 +176,7 @@ struct AggregatorInfo has copy, drop, store, key {
 }
 
 // get latest value
-public fun save_latest_value(aggregator_addr) {
+public fun save_latest_value(aggregator_addr: address) {
     // get latest value
     let latest_value = aggregator::latest_value(aggregator_addr);
     let (value, scaling_factor, neg) = math::unpack(latest_value);
