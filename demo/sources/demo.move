@@ -1,7 +1,7 @@
-module Demo::demo_app {
-    use Std::signer;
-    use Switchboard::Aggregator; // For reading aggregators
-    use Switchboard::Math;
+module demo::demo_app {
+    use std::signer;
+    use switchboard::aggregator; // For reading aggregators
+    use switchboard::math;
 
     const EAGGREGATOR_INFO_EXISTS:u64 = 0;
     const ENO_AGGREGATOR_INFO_EXISTS:u64 = 1;
@@ -10,7 +10,7 @@ module Demo::demo_app {
       Num 
       {
         neg: bool,   // sign
-        dec: u8,     // how many decimals value is shifted over
+        dec: u8,     // scaling factor
         value: u128, // value
       }
 
@@ -19,7 +19,7 @@ module Demo::demo_app {
     struct AggregatorInfo has copy, drop, store, key {
         aggregator_addr: address,
         latest_result: u128,
-        latest_result_decimal: u8,
+        latest_result_scaling_factor: u8,
     }
 
     // add AggregatorInfo resource with latest value + aggregator address
@@ -30,11 +30,11 @@ module Demo::demo_app {
         assert!(!exists<AggregatorInfo>(signer::address_of(account)), EAGGREGATOR_INFO_EXISTS);
 
         // get latest value 
-        let (value, dec, _neg) = Math::num_unpack(Aggregator::latest_value(aggregator_addr)); 
+        let (value, scaling_factor, _neg) = math::unpack(aggregator::latest_value(aggregator_addr)); 
         move_to(account, AggregatorInfo {
             aggregator_addr: aggregator_addr,
             latest_result: value,
-            latest_result_decimal: dec
+            latest_result_scale: scaling_factor
         });
     }
 
@@ -42,16 +42,16 @@ module Demo::demo_app {
     public entry fun test_aggregator(account: &signer) {
 
         // creates test aggregator with data
-        let num = Math::zero();
-        let two = Math::num(2, 0, false);
-        let out = Math::zero();
-        Math::add(&num, &two, &mut out);
+        let num = math::zero();
+        let two = math::new(2, 0, false);
+        let out = math::zero();
+        math::add(&num, &two, &mut out);
         std::debug::print(&out);
 
         // creates test aggregator with data
-        Aggregator::new_test(account, 100, 0, false);
+        aggregator::new_test(account, 100, 0, false);
 
         // print out value
-        std::debug::print(&Aggregator::latest_value(signer::address_of(account)));
+        std::debug::print(&aggregator::latest_value(signer::address_of(account)));
     }
 }

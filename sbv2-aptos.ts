@@ -13,7 +13,7 @@ import YAML from "yaml";
 import chalk from "chalk";
 import { AptosAccount, AptosClient, FaucetClient, HexString } from "aptos";
 import { Aggregator, Job, Oracle, OracleQueue, State, Crank } from "./src";
-import { OracleJob } from "@switchboard-xyz/switchboard-v2";
+import { OracleJob } from "@switchboard-xyz/common";
 
 export const CHECK_ICON = chalk.green("\u2714");
 export const FAILED_ICON = chalk.red("\u2717");
@@ -186,8 +186,7 @@ yargs(hideBin(process.argv))
           maxSize: 10,
           coinType: "0x1::aptos_coin::AptosCoin",
         },
-        pid,
-        stateAddress
+        pid
       );
 
       console.log(`Signature: ${sig}`);
@@ -249,8 +248,7 @@ yargs(hideBin(process.argv))
           queue: queueHexString,
           coinType: "0x1::aptos_coin::AptosCoin",
         },
-        pid,
-        stateAddress
+        pid
       );
 
       console.log(`Signature: ${sig}`);
@@ -310,8 +308,7 @@ yargs(hideBin(process.argv))
           queueAddress: HexString.ensure(queueHexString),
           coinType: "0x1::aptos_coin::AptosCoin",
         },
-        pid,
-        stateAddress
+        pid
       );
 
       console.log(`Signature: ${sig}`);
@@ -430,8 +427,7 @@ yargs(hideBin(process.argv))
           minUpdateDelaySeconds: 8,
           coinType: "0x1::aptos_coin::AptosCoin",
         },
-        pid,
-        stateAddress
+        pid
       );
       console.log(`Aggregator Address: ${aggregator.address}`);
       console.log(`Aggregator Signature: ${aggregatorSig}`);
@@ -791,8 +787,7 @@ async function createJob(
       authority: authority.address(),
       data: serializedJob.toString("hex"),
     },
-    aggregator.devnetAddress,
-    aggregator.stateAddress
+    aggregator.devnetAddress
   );
   console.log(`Job Address (${name}): ${job.address}`);
   console.log(`Job Signature (${name}): ${jobSig}`);

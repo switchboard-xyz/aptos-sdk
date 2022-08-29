@@ -22,7 +22,7 @@ import {
   OracleJob,
 } from "./src";
 
-const NODE_URL = "https://fullnode.devnet.aptoslabs.com";
+const NODE_URL = "https://fullnode.devnet.aptoslabs.com/v1";
 const FAUCET_URL = "https://faucet.devnet.aptoslabs.com";
 
 const SWITCHBOARD_DEVNET_ADDRESS =
@@ -45,7 +45,7 @@ const onAggregatorUpdate = (
   const event = new AptosEvent(
     client,
     HexString.ensure(SWITCHBOARD_STATE_ADDRESS),
-    `${SWITCHBOARD_DEVNET_ADDRESS}::Switchboard::State`,
+    `${SWITCHBOARD_DEVNET_ADDRESS}::switchboard::State`,
     "aggregator_update_events",
     pollIntervalMs
   );
@@ -68,7 +68,6 @@ const onAggregatorUpdate = (
 
   const aggregator_acct = new AptosAccount();
   const job_acct = new AptosAccount();
-
   await faucetClient.fundAccount(aggregator_acct.address(), 50000);
   await faucetClient.fundAccount(job_acct.address(), 5000);
 
@@ -92,8 +91,7 @@ const onAggregatorUpdate = (
       expiration: 0,
       coinType: "0x1::aptos_coin::AptosCoin",
     },
-    SWITCHBOARD_DEVNET_ADDRESS,
-    SWITCHBOARD_STATE_ADDRESS
+    SWITCHBOARD_DEVNET_ADDRESS
   );
 
   console.log(`Aggregator: ${aggregator.address}, tx: ${aggregatorTxSig}`);
@@ -117,6 +115,7 @@ const onAggregatorUpdate = (
       })
     ).finish()
   );
+  console.log("The job is:", serializedJob.toString("hex"));
 
   const [job, jobTxSig] = await Job.init(
     client,
@@ -125,10 +124,9 @@ const onAggregatorUpdate = (
       name: "BTC/USD",
       metadata: "binance",
       authority: user.address().hex(),
-      data: serializedJob.toString("hex"),
+      data: serializedJob.toString(),
     },
-    SWITCHBOARD_DEVNET_ADDRESS,
-    SWITCHBOARD_STATE_ADDRESS
+    SWITCHBOARD_DEVNET_ADDRESS
   );
 
   console.log(`Job created ${job.address}, hash: ${jobTxSig}`);
@@ -149,17 +147,14 @@ const onAggregatorUpdate = (
       initialAmount: 1000,
       coinType: "0x1::aptos_coin::AptosCoin",
     },
-    SWITCHBOARD_DEVNET_ADDRESS,
-    SWITCHBOARD_STATE_ADDRESS
+    SWITCHBOARD_DEVNET_ADDRESS
   );
 
   console.log(lease, leaseTxSig);
 
   /**
    * Listen to Aggregator Update Calls
-   *
    */
-
   const updatePoller = onAggregatorUpdate(client, async (e) => {
     if (aggregator.address == e.data.aggregator_address) {
       console.log(`NEW RESULT:`, e.data);
@@ -173,13 +168,14 @@ const onAggregatorUpdate = (
     SWITCHBOARD_STATE_ADDRESS
   );
 
-  crank.push(user, {
+  console.log(await crank.loadData());
+
+  await crank.push(user, {
     aggregatorAddress: aggregator_acct.address().hex(),
   });
 
   /**
    * Log Data Objects
-   *
    */
   console.log("logging all data objects");
   console.log("Aggregator:", await aggregator.loadData());

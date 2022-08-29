@@ -36,9 +36,7 @@ const SWITCHBOARD_QUEUE_ADDRESS =
 
 const SWITCHBOARD_CRANK_ADDRESS =
   "0x348ecb66a5d9edab8d175f647d5e99d6962803da7f5d3d2eb839387aeb118300";
-
-const SWITCHBOARD_STATE_ADDRESS =
-  "0x348ecb66a5d9edab8d175f647d5e99d6962803da7f5d3d2eb839387aeb118300";
+<<<<<<< HEAD
 
 const client = new AptosClient(NODE_URL);
 const faucetClient = new FaucetClient(NODE_URL, FAUCET_URL);
@@ -72,8 +70,7 @@ const [aggregator, aggregatorTxHash] = await Aggregator.init(
     expiration: 0,
     coinType: "0x1::aptos_coin::AptosCoin",
   },
-  SWITCHBOARD_DEVNET_ADDRESS,
-  SWITCHBOARD_STATE_ADDRESS
+  SWITCHBOARD_DEVNET_ADDRESS
 );
 
 console.log(`Aggregator: ${aggregator.address}, tx: ${aggregatorTxHash}`);
@@ -109,8 +106,7 @@ const [job, jobTxHash] = await Job.init(
     authority: user.address().hex(),
     data: serializedJob.toString("hex"),
   },
-  SWITCHBOARD_DEVNET_ADDRESS,
-  SWITCHBOARD_STATE_ADDRESS
+  SWITCHBOARD_DEVNET_ADDRESS
 );
 
 console.log(`Job created ${job.address}, hash: ${jobTxHash}`);
@@ -131,8 +127,7 @@ const [lease, leaseTxHash] = await Lease.init(
     initialAmount: 1000, // when this drains completely, the aggregator is booted from the crank
     coinType: "0x1::aptos_coin::AptosCoin",
   },
-  SWITCHBOARD_DEVNET_ADDRESS,
-  SWITCHBOARD_STATE_ADDRESS
+  SWITCHBOARD_DEVNET_ADDRESS
 );
 
 console.log(lease, leaseTxHash);
@@ -141,8 +136,7 @@ console.log(lease, leaseTxHash);
 const crank = new Crank(
   client,
   SWITCHBOARD_CRANK_ADDRESS,
-  SWITCHBOARD_DEVNET_ADDRESS,
-  SWITCHBOARD_STATE_ADDRESS
+  SWITCHBOARD_DEVNET_ADDRESS
 );
 
 // Pushing to the crank enables automatic updates
@@ -169,7 +163,7 @@ const onAggregatorUpdate = (
 ) => {
   const event = new AptosEvent(
     client,
-    HexString.ensure(SWITCHBOARD_STATE_ADDRESS),
+    HexString.ensure(SWITCHBOARD_DEVNET_ADDRESS),
     `${SWITCHBOARD_DEVNET_ADDRESS}::Switchboard::State`,
     "aggregator_update_events",
     pollIntervalMs
@@ -194,7 +188,6 @@ import { Aggregator } from "sbv2-aptos";
 const aggregatorAccount: Aggregator = new Aggregator(
   client,
   aggregator_address,
-  SWITCHBOARD_DEVNET_ADDRESS,
   SWITCHBOARD_DEVNET_ADDRESS
 );
 
@@ -207,7 +200,7 @@ console.log(await aggregatorAccount.loadData());
 
 ```toml
 [addresses]
-Switchboard = "0x348ecb66a5d9edab8d175f647d5e99d6962803da7f5d3d2eb839387aeb118300"
+switchboard = "0x348ecb66a5d9edab8d175f647d5e99d6962803da7f5d3d2eb839387aeb118300"
 
 [dependencies]
 MoveStdlib = { git = "https://github.com/aptos-labs/aptos-core.git", subdir = "aptos-move/framework/move-stdlib/", rev = "main" }
@@ -219,26 +212,26 @@ Switchboard = { git = "https://github.com/switchboard-xyz/switchboard-aptos-publ
 ### Reading Feeds
 
 ```move
-use Switchboard::Aggregator;
-use Switchbiard::Math::{Self, SwitchboardDecimal};
+use switchboard::aggregator;
+use switchbiard::math::{Self, SwitchboardDecimal};
 
 // store latest value
 struct AggregatorInfo has copy, drop, store, key {
     aggregator_addr: address,
     latest_result: u128,
-    latest_result_decimal: u8,
+    latest_result_scaling_factor: u8,
     latest_result_neg: bool,
 }
 
 // get latest value
 public fun save_latest_value(aggregator_addr) {
     // get latest value
-    let latest_value = Aggregator::latest_value(aggregator_addr);
-    let (value, dec, neg) = Math::num_unpack(latest_value);
+    let latest_value = aggregator::latest_value(aggregator_addr);
+    let (value, scaling_factor, neg) = math::unpack(latest_value);
     move_to(account, AggregatorInfo {
         aggregator_addr: aggregator_addr,
         latest_result: value,
-        latest_result_decimal: dec,
+        latest_result_scaling_factor: scaling_factor,
         latest_result_neg: neg,
     });
 }
@@ -248,11 +241,9 @@ public fun save_latest_value(aggregator_addr) {
 public entry fun test_aggregator(account: &signer) {
 
     // creates test aggregator with data
-    Aggregator::new_test(account, 100, 0, false);
+    aggregator::new_test(account, 100, 0, false);
 
     // print out value
-    std::debug::print(&Aggregator::latest_value(signer::address_of(account)));
+    std::debug::print(&aggregator::latest_value(signer::address_of(account)));
 }
-
-
 ```

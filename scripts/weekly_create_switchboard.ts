@@ -29,7 +29,7 @@ const SWITCHBOARD_STATE_ADDRESS =
   // if file extension ends with yaml
   try {
     const parsedYaml = YAML.parse(
-      fs.readFileSync("./.aptos/config.yaml", "utf8")
+      fs.readFileSync("../.aptos/config.yaml", "utf8")
     );
     if (
       "profiles" in parsedYaml &&
@@ -72,8 +72,7 @@ const SWITCHBOARD_STATE_ADDRESS =
       maxSize: 1000,
       coinType: "0x1::aptos_coin::AptosCoin",
     },
-    SWITCHBOARD_DEVNET_ADDRESS,
-    SWITCHBOARD_STATE_ADDRESS
+    SWITCHBOARD_DEVNET_ADDRESS
   );
 
   console.log(`Queue: ${queue.address}, tx: ${queueTxSig}`);
@@ -89,8 +88,7 @@ const SWITCHBOARD_STATE_ADDRESS =
       queue: queue.address,
       coinType: "0x1::aptos_coin::AptosCoin",
     },
-    SWITCHBOARD_DEVNET_ADDRESS,
-    SWITCHBOARD_STATE_ADDRESS
+    SWITCHBOARD_DEVNET_ADDRESS
   );
 
   console.log(`Oracle: ${oracle.address}, tx: ${oracleTxSig}`);
@@ -104,22 +102,17 @@ const SWITCHBOARD_STATE_ADDRESS =
       granter: queue.address,
       grantee: oracle.address,
     },
-    SWITCHBOARD_DEVNET_ADDRESS,
-    SWITCHBOARD_STATE_ADDRESS
+    SWITCHBOARD_DEVNET_ADDRESS
   );
 
   // enable heartbeat on oracle
-  await oraclePermission.set(
-    user,
-    {
-      authority: user.address().hex(),
-      granter: queue.address.toString(),
-      grantee: oracle.address.toString(),
-      permission: SwitchboardPermission.PERMIT_ORACLE_HEARTBEAT,
-      enable: true,
-    },
-    SWITCHBOARD_STATE_ADDRESS
-  );
+  await oraclePermission.set(user, {
+    authority: user.address().hex(),
+    granter: queue.address.toString(),
+    grantee: oracle.address.toString(),
+    permission: SwitchboardPermission.PERMIT_ORACLE_HEARTBEAT,
+    enable: true,
+  });
 
   // trigger the oracle heartbeat
   const heartbeatTxSig = await oracle.heartbeat(user);
@@ -134,8 +127,7 @@ const SWITCHBOARD_STATE_ADDRESS =
         queueAddress: queue.address,
         coinType: "0x1::aptos_coin::AptosCoin",
       },
-      SWITCHBOARD_DEVNET_ADDRESS,
-      SWITCHBOARD_STATE_ADDRESS
+      SWITCHBOARD_DEVNET_ADDRESS
     );
     console.log(`Created crank at ${crank.address}, tx hash ${txhash}`);
     console.log("Crank", await crank.loadData());

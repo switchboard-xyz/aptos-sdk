@@ -1,7 +1,7 @@
 {
-  "name": "@switchboard-xyz/sbv2-aptos",
+  "name": "@switchboard-xyz/aptos.js",
   "description": "API wrapper for intergating with the Switchboardv2 program on Aptos",
-  "version": "0.0.2",
+  "version": "2.0.0",
   "license": "MIT",
   "bin": "./sbv2-aptos.ts",
   "files": [
@@ -29,14 +29,16 @@
     "prepublish": "shx rm -rf lib && npm run build"
   },
   "dependencies": {
-    "@switchboard-xyz/switchboard-v2": "^0.0.123",
-    "aptos": "^1.3.7",
+    "@switchboard-xyz/common": "^2.0.0",
+    "aptos": "^1.3.10",
     "big.js": "^6.2.1",
+    "bn.js": "^5.2.1",
     "js-sha3": "^0.8.0",
     "node-fetch": "^2.1.6"
   },
   "devDependencies": {
     "@types/big.js": "^6.1.5",
+    "@types/bn.js": "^5.1.0",
     "@types/node": "^18.6.4",
     "@types/node-fetch": "^2.6.2",
     "@types/yargs": "^17.0.11",
