@@ -350,4 +350,5 @@ export declare class Permission {
     set(account: AptosAccount, params: PermissionSetParams): Promise<string>;
     loadData(): Promise<any>;
 }
+export declare function createFeed(client: AptosClient, account: AptosAccount, devnetAddress: MaybeHexString, aggregatorParams: AggregatorInitParams, jobInitParams: JobInitParams[], initialLoadAmount: number, crank: MaybeHexString): Promise<[Aggregator, string]>;
 //# sourceMappingURL=index.d.ts.map

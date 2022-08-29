@@ -78,7 +78,7 @@ const onAggregatorUpdate = (
 
   const [aggregator, createFeedTx] = await createFeed(
     client,
-    aggregator_acct,
+    user,
     SWITCHBOARD_DEVNET_ADDRESS,
     {
       authority: user.address(),
