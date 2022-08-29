@@ -1087,7 +1087,7 @@ function safeDiv(number_: Big, denominator: Big, decimals = 20): Big {
   return result;
 }
 
-async function createFeed(
+export async function createFeed(
   client: AptosClient,
   account: AptosAccount,
   devnetAddress: MaybeHexString,
@@ -1095,7 +1095,7 @@ async function createFeed(
   jobInitParams: JobInitParams[],
   initialLoadAmount: number,
   crank: MaybeHexString
-) {
+): Promise<[Aggregator, string]> {
   if (jobInitParams.length > 8) {
     throw new Error(
       "Max Job limit exceeded. The create_feed_action can only create up to 8 jobs at a time."
@@ -1119,7 +1119,7 @@ async function createFeed(
   const tx = await sendAptosTx(
     client,
     account,
-    `${devnetAddress}::aggregator_init_action::run`,
+    `${devnetAddress}::create_feed_action::run`,
     [
       // authority will own everything
       HexString.ensure(aggregatorParams.authority).hex(),
@@ -1142,12 +1142,7 @@ async function createFeed(
 
       // jobs
       ...jobs.flatMap((jip) => {
-        return [
-          stringToHex(jip.name),
-          stringToHex(jip.metadata),
-          HexString.ensure(jip.authority).hex(),
-          jip.data,
-        ];
+        return [stringToHex(jip.name), stringToHex(jip.metadata), jip.data];
       }),
 
       // crank
@@ -1155,4 +1150,14 @@ async function createFeed(
     ],
     [aggregatorParams.coinType ?? "0x1::aptos_coin::AptosCoin"]
   );
+
+  return [
+    new Aggregator(
+      client,
+      account.address(),
+      devnetAddress,
+      aggregatorParams.coinType ?? "0x1::aptos_coin::AptosCoin"
+    ),
+    tx,
+  ];
 }

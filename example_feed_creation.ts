@@ -20,6 +20,7 @@ import {
   EventCallback,
   Crank,
   OracleJob,
+  createFeed,
 } from "./src";
 
 const NODE_URL = "https://fullnode.devnet.aptoslabs.com/v1";
@@ -67,34 +68,10 @@ const onAggregatorUpdate = (
   console.log(`User account ${user.address().hex()} created + funded.`);
 
   const aggregator_acct = new AptosAccount();
-  const job_acct = new AptosAccount();
   await faucetClient.fundAccount(aggregator_acct.address(), 50000);
-  await faucetClient.fundAccount(job_acct.address(), 5000);
 
   // user will be authority
   await faucetClient.fundAccount(user.address(), 500000);
-
-  const [aggregator, aggregatorTxSig] = await Aggregator.init(
-    client,
-    aggregator_acct,
-    {
-      authority: user.address(),
-      queueAddress: SWITCHBOARD_QUEUE_ADDRESS,
-      batchSize: 1,
-      minJobResults: 1,
-      minOracleResults: 1,
-      minUpdateDelaySeconds: 5,
-      startAfter: 0,
-      varianceThreshold: 0,
-      varianceThresholdScale: 0,
-      forceReportPeriod: 0,
-      expiration: 0,
-      coinType: "0x1::aptos_coin::AptosCoin",
-    },
-    SWITCHBOARD_DEVNET_ADDRESS
-  );
-
-  console.log(`Aggregator: ${aggregator.address}, tx: ${aggregatorTxSig}`);
 
   // Make Job data for btc price
   const serializedJob = Buffer.from(
@@ -115,70 +92,53 @@ const onAggregatorUpdate = (
       })
     ).finish()
   );
-  console.log("The job is:", serializedJob.toString("hex"));
 
-  const [job, jobTxSig] = await Job.init(
+  const [aggregator, createFeedTx] = await createFeed(
     client,
-    job_acct,
+    user,
+    SWITCHBOARD_DEVNET_ADDRESS,
     {
-      name: "BTC/USD",
-      metadata: "binance",
-      authority: user.address().hex(),
-      data: serializedJob.toString(),
-    },
-    SWITCHBOARD_DEVNET_ADDRESS
-  );
-
-  console.log(`Job created ${job.address}, hash: ${jobTxSig}`);
-
-  // add btc usd to our aggregator
-  const addJobTxSig = await aggregator.addJob(user, {
-    job: job.address,
-  });
-
-  console.log(`Aggregator add job tx: ${addJobTxSig}`);
-
-  const [lease, leaseTxSig] = await Lease.init(
-    client,
-    aggregator_acct,
-    {
+      authority: user.address(),
       queueAddress: SWITCHBOARD_QUEUE_ADDRESS,
-      withdrawAuthority: user.address().hex(),
-      initialAmount: 1000,
+      batchSize: 1,
+      minJobResults: 1,
+      minOracleResults: 1,
+      minUpdateDelaySeconds: 5,
+      startAfter: 0,
+      varianceThreshold: 0,
+      varianceThresholdScale: 0,
+      forceReportPeriod: 0,
+      expiration: 0,
       coinType: "0x1::aptos_coin::AptosCoin",
     },
-    SWITCHBOARD_DEVNET_ADDRESS
+    [
+      {
+        name: "BTC/USD",
+        metadata: "binance",
+        authority: user.address().hex(),
+        data: serializedJob.toString(),
+      },
+    ],
+    1000, // initial load amount
+    SWITCHBOARD_CRANK_ADDRESS
   );
 
-  console.log(lease, leaseTxSig);
-
-  /**
-   * Listen to Aggregator Update Calls
-   */
-  const updatePoller = onAggregatorUpdate(client, async (e) => {
-    if (aggregator.address == e.data.aggregator_address) {
-      console.log(`NEW RESULT:`, e.data);
-    }
-  });
-
-  const crank = new Crank(
-    client,
-    SWITCHBOARD_CRANK_ADDRESS,
-    SWITCHBOARD_DEVNET_ADDRESS,
-    SWITCHBOARD_STATE_ADDRESS
+  console.log(
+    `Created Aggregator and Lease resources at account address ${aggregator.address}. Tx hash ${createFeedTx}`
   );
-
-  console.log(await crank.loadData());
-
-  await crank.push(user, {
-    aggregatorAddress: aggregator_acct.address().hex(),
-  });
 
   /**
    * Log Data Objects
    */
   console.log("logging all data objects");
   console.log("Aggregator:", await aggregator.loadData());
-  console.log("Job:", await job.loadData());
+  console.log(
+    "Lease:",
+    await new Lease(
+      client,
+      aggregator.address,
+      SWITCHBOARD_DEVNET_ADDRESS
+    ).loadData()
+  );
   console.log("Load aggregator jobs data", await aggregator.loadJobs());
 })();
