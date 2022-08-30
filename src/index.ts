@@ -221,8 +221,8 @@ export interface PermissionInitParams {
 
 export interface PermissionSetParams {
   authority: MaybeHexString;
-  granter: string;
-  grantee: string;
+  granter: MaybeHexString;
+  grantee: MaybeHexString;
   permission: SwitchboardPermission;
   enable: boolean;
 }
@@ -273,15 +273,72 @@ export async function sendAptosTx(
   }
   if (simulation.success === false) {
     console.log(simulation);
-    // console.log(`TxGas: ${simulation.gas_used}`);
-    // console.log(`TxGas: ${simulation.hash}`);
     throw new Error(`TxFailure: ${simulation.vm_status}`);
-  } else {
-    // console.log(`TxGas: ${simulation.gas_used}`);
   }
 
   const signedTxn = await client.signTransaction(signer, txnRequest);
   const transactionRes = await client.submitTransaction(signedTxn);
+  await client.waitForTransaction(transactionRes.hash);
+  return transactionRes.hash;
+}
+
+export async function sendRawAptosTx(
+  client: AptosClient,
+  signer: AptosAccount,
+  method: EntryFunctionId,
+  raw_args: Array<any>,
+  raw_type_args: BCS.Seq<TxnBuilderTypes.TypeTag> = [],
+  retryCount = 2
+): Promise<string> {
+  // We need to pass a token type to the `transfer` function.
+
+  const methodInfo = method.split("::");
+  const entryFunctionPayload =
+    new TxnBuilderTypes.TransactionPayloadEntryFunction(
+      TxnBuilderTypes.EntryFunction.natural(
+        // Fully qualified module name, `AccountAddress::ModuleName`
+        `${methodInfo[0]}::${methodInfo[1]}`,
+        // Module function
+        methodInfo[2],
+        // The coin type to transfer
+        raw_type_args,
+        // Arguments for function `transfer`: receiver account address and amount to transfer
+        raw_args
+      )
+    );
+
+  const rawTxn = await client.generateRawTransaction(
+    signer.address(),
+    entryFunctionPayload,
+    { maxGasAmount: BigInt(5000) }
+  );
+
+  const bcsTxn = AptosClient.generateBCSTransaction(signer, rawTxn);
+
+  const simulation = (await client.simulateTransaction(signer, rawTxn))[0];
+  if (simulation.vm_status === "Out of gas") {
+    if (retryCount > 0) {
+      const faucetClient = new FaucetClient(
+        "https://fullnode.devnet.aptoslabs.com/v1",
+        "https://faucet.devnet.aptoslabs.com"
+      );
+      await faucetClient.fundAccount(signer.address(), 5000);
+      return sendRawAptosTx(
+        client,
+        signer,
+        method,
+        raw_args,
+        raw_type_args,
+        --retryCount
+      );
+    }
+  }
+  if (simulation.success === false) {
+    console.log(simulation);
+    throw new Error(`TxFailure: ${simulation.vm_status}`);
+  }
+
+  const transactionRes = await client.submitSignedBCSTransaction(bcsTxn);
   await client.waitForTransaction(transactionRes.hash);
   return transactionRes.hash;
 }
@@ -1033,14 +1090,16 @@ export class Permission {
     params: PermissionInitParams,
     devnetAddress: MaybeHexString
   ): Promise<[Permission, string]> {
-    const tx = await sendAptosTx(
+    const tx = await sendRawAptosTx(
       client,
       account,
       `${devnetAddress}::permission_init_action::run`,
       [
-        HexString.ensure(params.authority).hex(),
-        HexString.ensure(params.granter).hex(),
-        HexString.ensure(params.grantee).hex(),
+        BCS.bcsToBytes(
+          TxnBuilderTypes.AccountAddress.fromHex(params.authority)
+        ),
+        BCS.bcsSerializeBytes(HexString.ensure(params.granter).toUint8Array()),
+        BCS.bcsSerializeBytes(HexString.ensure(params.granter).toUint8Array()),
       ]
     );
 
@@ -1054,18 +1113,21 @@ export class Permission {
     account: AptosAccount,
     params: PermissionSetParams
   ): Promise<string> {
-    return await sendAptosTx(
+    const tx = await sendRawAptosTx(
       this.client,
       account,
       `${this.devnetAddress}::permission_set_action::run`,
       [
-        HexString.ensure(params.authority).hex(),
-        HexString.ensure(params.granter).hex(),
-        HexString.ensure(params.grantee).hex(),
-        params.permission,
-        params.enable,
+        BCS.bcsToBytes(
+          TxnBuilderTypes.AccountAddress.fromHex(params.authority)
+        ),
+        BCS.bcsSerializeBytes(HexString.ensure(params.granter).toUint8Array()),
+        BCS.bcsSerializeBytes(HexString.ensure(params.granter).toUint8Array()),
+        BCS.bcsSerializeUint64(params.permission),
+        BCS.bcsSerializeBool(params.enable),
       ]
     );
+    return tx;
   }
 
   async loadData(): Promise<any> {
