@@ -60,6 +60,7 @@ export interface JobInitParams {
     metadata: string;
     authority: MaybeHexString;
     data: string;
+    weight?: number;
 }
 export interface AggregatorRemoveJobParams {
     aggregatorAddress: string;
@@ -350,5 +351,12 @@ export declare class Permission {
     set(account: AptosAccount, params: PermissionSetParams): Promise<string>;
     loadData(): Promise<any>;
 }
-export declare function createFeed(client: AptosClient, account: AptosAccount, devnetAddress: MaybeHexString, aggregatorParams: AggregatorInitParams, jobInitParams: JobInitParams[], initialLoadAmount: number, crank: MaybeHexString): Promise<[Aggregator, string]>;
+interface CreateFeedParams extends AggregatorInitParams {
+    jobs: JobInitParams[];
+    initialLoadAmount: number;
+    crank: MaybeHexString;
+}
+export declare function createFeed(client: AptosClient, account: AptosAccount, params: CreateFeedParams, devnetAddress: MaybeHexString): Promise<[Aggregator, string]>;
+export declare function bcsAddressToBytes(hexStr: HexString): Uint8Array;
+export declare function generateResourceAccountAddress(origin: AptosAccount, seed: Uint8Array): MaybeHexString;
 //# sourceMappingURL=index.d.ts.map
