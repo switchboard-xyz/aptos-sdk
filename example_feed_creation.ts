@@ -11,7 +11,13 @@
  */
 import { Buffer } from "buffer";
 import { AptosClient, AptosAccount, FaucetClient, HexString } from "aptos";
-import { Lease, AptosEvent, EventCallback, OracleJob, createFeed } from "./src";
+import {
+  LeaseAccount,
+  AptosEvent,
+  EventCallback,
+  OracleJob,
+  createFeed,
+} from "./src";
 
 const NODE_URL = "https://fullnode.devnet.aptoslabs.com/v1";
 const FAUCET_URL = "https://faucet.devnet.aptoslabs.com";
@@ -118,7 +124,7 @@ const onAggregatorUpdate = (
   console.log("Aggregator:", await aggregator.loadData());
   console.log(
     "Lease:",
-    await new Lease(
+    await new LeaseAccount(
       client,
       aggregator.address,
       SWITCHBOARD_DEVNET_ADDRESS

@@ -1,9 +1,9 @@
 import { AptosClient, AptosAccount, FaucetClient, HexString } from "aptos";
 import {
-  Oracle,
-  OracleQueue,
+  OracleAccount,
+  OracleQueueAccount,
   Permission,
-  Crank,
+  CrankAccount,
   SwitchboardPermission,
 } from "../src";
 import YAML from "yaml";
@@ -48,7 +48,34 @@ const SWITCHBOARD_STATE_ADDRESS =
   // user will be authority
   await faucetClient.fundAccount(user.address(), 500000);
 
-  const [queue, queueTxSig] = await OracleQueue.init(
+  try {
+    // create permission for oracle
+    const [oraclePermission] = await Permission.init(
+      client,
+      user,
+      {
+        authority: user.address().hex(),
+        granter: SWITCHBOARD_DEVNET_ADDRESS,
+        grantee: SWITCHBOARD_DEVNET_ADDRESS,
+      },
+      SWITCHBOARD_DEVNET_ADDRESS
+    );
+
+    // enable heartbeat on oracle
+    await oraclePermission.set(user, {
+      authority: user.address().hex(),
+      granter: SWITCHBOARD_DEVNET_ADDRESS,
+      grantee: SWITCHBOARD_DEVNET_ADDRESS,
+      permission: SwitchboardPermission.PERMIT_ORACLE_HEARTBEAT,
+      enable: true,
+    });
+
+    console.log("Permissions created");
+  } catch (e) {
+    console.log(e);
+  }
+
+  const [queue, queueTxSig] = await OracleQueueAccount.init(
     client,
     user,
     {
@@ -77,7 +104,7 @@ const SWITCHBOARD_STATE_ADDRESS =
 
   console.log(`Queue: ${queue.address}, tx: ${queueTxSig}`);
 
-  const [oracle, oracleTxSig] = await Oracle.init(
+  const [oracle, oracleTxSig] = await OracleAccount.init(
     client,
     user,
     {
@@ -119,11 +146,11 @@ const SWITCHBOARD_STATE_ADDRESS =
   console.log("Heartbeat Tx Hash:", heartbeatTxSig);
 
   try {
-    const [crank, txhash] = await Crank.init(
+    const [crank, txhash] = await CrankAccount.init(
       client,
       user,
       {
-        address: SWITCHBOARD_STATE_ADDRESS,
+        address: SWITCHBOARD_DEVNET_ADDRESS,
         queueAddress: queue.address,
         coinType: "0x1::aptos_coin::AptosCoin",
       },

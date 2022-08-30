@@ -415,7 +415,7 @@ export class AptosEvent {
   }
 }
 
-export class State {
+export class StateAccount {
   constructor(
     readonly client: AptosClient,
     readonly address: MaybeHexString,
@@ -427,7 +427,7 @@ export class State {
     client: AptosClient,
     account: AptosAccount,
     devnetAddress: MaybeHexString
-  ): Promise<[State, string]> {
+  ): Promise<[StateAccount, string]> {
     const tx = await sendAptosTx(
       client,
       account,
@@ -435,7 +435,10 @@ export class State {
       []
     );
 
-    return [new State(client, account.address(), account, devnetAddress), tx];
+    return [
+      new StateAccount(client, account.address(), account, devnetAddress),
+      tx,
+    ];
   }
 
   async loadData(): Promise<any> {
@@ -448,7 +451,7 @@ export class State {
   }
 }
 
-export class Aggregator {
+export class AggregatorAccount {
   constructor(
     readonly client: AptosClient,
     readonly address: MaybeHexString,
@@ -469,7 +472,7 @@ export class Aggregator {
     const data = await this.loadData();
     const jobs = data.job_keys.map(
       (key: string) =>
-        new Job(
+        new JobAccount(
           this.client,
           HexString.ensure(key).hex(),
           HexString.ensure(this.devnetAddress).hex()
@@ -493,7 +496,7 @@ export class Aggregator {
     account: AptosAccount,
     params: AggregatorInitParams,
     devnetAddress: MaybeHexString
-  ): Promise<[Aggregator, string]> {
+  ): Promise<[AggregatorAccount, string]> {
     const tx = await sendAptosTx(
       client,
       account,
@@ -517,7 +520,7 @@ export class Aggregator {
     );
 
     return [
-      new Aggregator(
+      new AggregatorAccount(
         client,
         account.address(),
         devnetAddress,
@@ -547,27 +550,37 @@ export class Aggregator {
     account: AptosAccount,
     params: AggregatorSaveResultParams
   ): Promise<string> {
-    return await sendAptosTx(
+    return sendRawAptosTx(
       this.client,
       account,
       `${this.devnetAddress}::aggregator_save_result_action::run`,
       [
-        HexString.ensure(params.oracleAddress).hex(),
-        HexString.ensure(this.address).hex(),
-        params.oracleIdx,
-        params.error,
-        params.valueNum,
-        params.valueScaleFactor,
-        params.valueNeg,
-        params.jobsChecksum,
-        params.minResponseNum,
-        params.minResponseScaleFactor,
-        params.minResponseNeg,
-        params.maxResponseNum,
-        params.maxResponseScaleFactor,
-        params.maxResponseNeg,
+        BCS.bcsToBytes(
+          TxnBuilderTypes.AccountAddress.fromHex(params.oracleAddress)
+        ),
+        BCS.bcsToBytes(TxnBuilderTypes.AccountAddress.fromHex(this.address)),
+        BCS.bcsSerializeUint64(params.oracleIdx),
+        BCS.bcsSerializeBool(params.error),
+        BCS.bcsSerializeU128(params.valueNum),
+        BCS.bcsSerializeU8(params.valueScaleFactor),
+        BCS.bcsSerializeBool(params.valueNeg),
+        BCS.bcsSerializeBytes(
+          HexString.ensure(params.jobsChecksum).toUint8Array()
+        ),
+        BCS.bcsSerializeU128(params.minResponseNum),
+        BCS.bcsSerializeU8(params.minResponseScaleFactor),
+        BCS.bcsSerializeBool(params.minResponseNeg),
+        BCS.bcsSerializeU128(params.maxResponseNum),
+        BCS.bcsSerializeU8(params.maxResponseScaleFactor),
+        BCS.bcsSerializeBool(params.maxResponseNeg),
       ],
-      [this.coinType]
+      [
+        new TxnBuilderTypes.TypeTagStruct(
+          TxnBuilderTypes.StructTag.fromString(
+            this.coinType ?? "0x1::aptos_coin::AptosCoin"
+          )
+        ),
+      ]
     );
   }
 
@@ -637,7 +650,7 @@ export class Aggregator {
   }
 }
 
-export class Job {
+export class JobAccount {
   constructor(
     readonly client: AptosClient,
     readonly address: MaybeHexString,
@@ -662,7 +675,7 @@ export class Job {
   }
 
   /**
-   * Initialize a Job
+   * Initialize a JobAccount
    * @param client
    * @param account
    * @param params JobInitParams initialization params
@@ -672,7 +685,7 @@ export class Job {
     account: AptosAccount,
     params: JobInitParams,
     devnetAddress: MaybeHexString
-  ): Promise<[Job, string]> {
+  ): Promise<[JobAccount, string]> {
     const tx = await sendAptosTx(
       client,
       account,
@@ -685,11 +698,11 @@ export class Job {
       ]
     );
 
-    return [new Job(client, account.address(), devnetAddress), tx];
+    return [new JobAccount(client, account.address(), devnetAddress), tx];
   }
 }
 
-export class Crank {
+export class CrankAccount {
   constructor(
     readonly client: AptosClient,
     readonly address: MaybeHexString,
@@ -708,7 +721,7 @@ export class Crank {
     account: AptosAccount,
     params: CrankInitParams,
     devnetAddress: MaybeHexString
-  ): Promise<[Crank, string]> {
+  ): Promise<[CrankAccount, string]> {
     const tx = await sendAptosTx(
       client,
       account,
@@ -718,7 +731,7 @@ export class Crank {
     );
 
     return [
-      new Crank(
+      new CrankAccount(
         client,
         account.address(),
         devnetAddress,
@@ -768,7 +781,7 @@ export class Crank {
   }
 }
 
-export class Oracle {
+export class OracleAccount {
   constructor(
     readonly client: AptosClient,
     readonly address: MaybeHexString,
@@ -787,7 +800,7 @@ export class Oracle {
     account: AptosAccount,
     params: OracleInitParams,
     devnetAddress: MaybeHexString
-  ): Promise<[Oracle, string]> {
+  ): Promise<[OracleAccount, string]> {
     const tx = await sendAptosTx(
       client,
       account,
@@ -802,7 +815,7 @@ export class Oracle {
     );
 
     return [
-      new Oracle(
+      new OracleAccount(
         client,
         account.address(),
         devnetAddress,
@@ -835,7 +848,7 @@ export class Oracle {
   }
 }
 
-export class OracleQueue {
+export class OracleQueueAccount {
   constructor(
     readonly client: AptosClient,
     readonly address: MaybeHexString,
@@ -844,17 +857,17 @@ export class OracleQueue {
   ) {}
 
   /**
-   * Initialize an OracleQueue
+   * Initialize an OracleQueueAccount
    * @param client
    * @param account
-   * @param params OracleQueue initialization params
+   * @param params OracleQueueAccount initialization params
    */
   static async init(
     client: AptosClient,
     account: AptosAccount,
     params: OracleQueueInitParams,
     devnetAddress: MaybeHexString
-  ): Promise<[OracleQueue, string]> {
+  ): Promise<[OracleQueueAccount, string]> {
     const tx = await sendAptosTx(
       client,
       account,
@@ -883,7 +896,7 @@ export class OracleQueue {
     );
 
     return [
-      new OracleQueue(
+      new OracleQueueAccount(
         client,
         account.address(),
         devnetAddress,
@@ -897,13 +910,13 @@ export class OracleQueue {
     return (
       await this.client.getAccountResource(
         HexString.ensure(this.address).hex(),
-        `${this.devnetAddress}::oracle_queue::OracleQueue<${this.coinType}>`
+        `${this.devnetAddress}::oracle_queue::OracleQueueAccount<${this.coinType}>`
       )
     ).data;
   }
 }
 
-export class Lease {
+export class LeaseAccount {
   constructor(
     readonly client: AptosClient,
     readonly address: MaybeHexString,
@@ -912,9 +925,9 @@ export class Lease {
   ) {}
 
   /**
-   * Initialize a Lease
+   * Initialize a LeaseAccount
    * @param client
-   * @param account account that will be the authority of the Lease
+   * @param account account that will be the authority of the LeaseAccount
    * @param params LeaseInitParams initialization params
    */
   static async init(
@@ -922,7 +935,7 @@ export class Lease {
     account: AptosAccount,
     params: LeaseInitParams,
     devnetAddress: MaybeHexString
-  ): Promise<[Lease, string]> {
+  ): Promise<[LeaseAccount, string]> {
     const tx = await sendAptosTx(
       client,
       account,
@@ -936,7 +949,7 @@ export class Lease {
     );
 
     return [
-      new Lease(
+      new LeaseAccount(
         client,
         account.address(),
         devnetAddress,
@@ -1074,7 +1087,6 @@ export class OracleWallet {
 export class Permission {
   constructor(
     readonly client: AptosClient,
-    readonly address: MaybeHexString,
     readonly devnetAddress: MaybeHexString
   ) {}
 
@@ -1103,7 +1115,7 @@ export class Permission {
       ]
     );
 
-    return [new Permission(client, account.address(), devnetAddress), tx];
+    return [new Permission(client, devnetAddress), tx];
   }
 
   /**
@@ -1129,15 +1141,6 @@ export class Permission {
     );
     return tx;
   }
-
-  async loadData(): Promise<any> {
-    return (
-      await this.client.getAccountResource(
-        HexString.ensure(this.address).hex(),
-        `${this.devnetAddress}::permission::Permission`
-      )
-    ).data;
-  }
 }
 
 function safeDiv(number_: Big, denominator: Big, decimals = 20): Big {
@@ -1159,7 +1162,7 @@ export async function createFeed(
   account: AptosAccount,
   params: CreateFeedParams,
   devnetAddress: MaybeHexString
-): Promise<[Aggregator, string]> {
+): Promise<[AggregatorAccount, string]> {
   const seed = new AptosAccount().address();
   const resource_address = generateResourceAccountAddress(
     account,
@@ -1226,7 +1229,7 @@ export async function createFeed(
   );
 
   return [
-    new Aggregator(
+    new AggregatorAccount(
       client,
       resource_address,
       devnetAddress,

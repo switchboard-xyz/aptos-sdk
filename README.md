@@ -16,7 +16,7 @@ npm i --save https://www.npmjs.com/package/@switchboard-xyz/aptos.js
 ```ts
 import { Buffer } from "buffer";
 import { AptosClient, AptosAccount, FaucetClient, HexString } from "aptos";
-import { Lease, AptosEvent, EventCallback, OracleJob, createFeed } from "./src";
+import { AptosEvent, EventCallback, OracleJob, createFeed } from "./src";
 
 const NODE_URL = "https://fullnode.devnet.aptoslabs.com";
 const FAUCET_URL = "https://faucet.devnet.aptoslabs.com";

@@ -10,27 +10,21 @@
  * Push Aggregator to Crank
  */
 import { Buffer } from "buffer";
+import { AptosClient, AptosAccount, FaucetClient, HexString } from "aptos";
 import {
-  AptosClient,
-  AptosAccount,
-  FaucetClient,
-  HexString,
-  MaybeHexString,
-} from "aptos";
-import {
-  Lease,
+  LeaseAccount,
   AptosEvent,
   EventCallback,
-  Job,
+  JobAccount,
   OracleJob,
-  Oracle,
-  OracleQueue,
-  Crank,
+  OracleAccount,
+  OracleQueueAccount,
+  CrankAccount,
   Permission,
   SwitchboardPermission,
   createFeed,
   AptosDecimal,
-  Aggregator,
+  AggregatorAccount,
 } from "./src";
 import Big from "big.js";
 
@@ -89,7 +83,7 @@ const onAggregatorOpenRound = (
   await faucetClient.fundAccount(user.address(), 50000);
   console.log(`User account ${user.address().hex()} created + funded.`);
 
-  const [queue, queueTxHash] = await OracleQueue.init(
+  const [queue, queueTxHash] = await OracleQueueAccount.init(
     client,
     user,
     {
@@ -117,12 +111,12 @@ const onAggregatorOpenRound = (
   );
   console.log(`Oracle Queue ${queue.address} created. tx hash: ${queueTxHash}`);
 
-  const [oracle, oracleTxHash] = await Oracle.init(
+  const [oracle, oracleTxHash] = await OracleAccount.init(
     client,
     user,
     {
       address: user.address(),
-      name: "Switchboard Oracle",
+      name: "Switchboard OracleAccount",
       metadata: "metadata",
       authority: user.address(),
       queue: queue.address,
@@ -131,7 +125,7 @@ const onAggregatorOpenRound = (
     SWITCHBOARD_DEVNET_ADDRESS
   );
 
-  console.log(`Oracle: ${oracle.address}, tx hash: ${oracleTxHash}`);
+  console.log(`OracleAccount: ${oracle.address}, tx hash: ${oracleTxHash}`);
 
   // create permission for oracle
   const [oraclePermission] = await Permission.init(
@@ -173,7 +167,7 @@ const onAggregatorOpenRound = (
   }, 30000);
 
   // create crank to catch aggregator push
-  const [crank, txhash] = await Crank.init(
+  const [crank, txhash] = await CrankAccount.init(
     client,
     user,
     {
@@ -185,7 +179,7 @@ const onAggregatorOpenRound = (
   );
   console.log(`Created crank at ${crank.address}, tx hash ${txhash}`);
 
-  // Make Job data for btc price
+  // Make JobAccount data for btc price
   const serializedJob = Buffer.from(
     OracleJob.encodeDelimited(
       OracleJob.create({
@@ -237,7 +231,7 @@ const onAggregatorOpenRound = (
   );
 
   console.log(
-    `Created Aggregator and Lease resources at account address ${aggregator.address}. Tx hash ${createFeedTx}`
+    `Created AggregatorAccount and LeaseAccount resources at account address ${aggregator.address}. Tx hash ${createFeedTx}`
   );
 
   const updatePoller = onAggregatorUpdate(client, async (e) => {
@@ -251,7 +245,7 @@ const onAggregatorOpenRound = (
         return;
       }
 
-      const agg = new Aggregator(
+      const agg = new AggregatorAccount(
         client,
         e.data.aggregator_address,
         SWITCHBOARD_DEVNET_ADDRESS
@@ -259,10 +253,14 @@ const onAggregatorOpenRound = (
 
       const aggregatorData = await agg.loadData();
 
-      // The event data includes Job Pubkeys, so grab the Job Data
+      // The event data includes JobAccount Pubkeys, so grab the JobAccount Data
       const jobs: OracleJob[] = await Promise.all(
         e.data.job_keys.map(async (jobKey: string) => {
-          const job = new Job(client, jobKey, SWITCHBOARD_DEVNET_ADDRESS);
+          const job = new JobAccount(
+            client,
+            jobKey,
+            SWITCHBOARD_DEVNET_ADDRESS
+          );
           const jobData = await job.loadJob().catch((e) => {
             console.log(e);
           });
@@ -310,10 +308,10 @@ const onAggregatorOpenRound = (
    * Log Data Objects
    */
   console.log("logging all data objects");
-  console.log("Aggregator:", await aggregator.loadData());
+  console.log("AggregatorAccount:", await aggregator.loadData());
   console.log(
-    "Lease:",
-    await new Lease(
+    "LeaseAccount:",
+    await new LeaseAccount(
       client,
       aggregator.address,
       SWITCHBOARD_DEVNET_ADDRESS

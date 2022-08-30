@@ -1,5 +1,5 @@
 /// <reference types="node" />
-import { AptosClient, AptosAccount, HexString, MaybeHexString } from "aptos";
+import { AptosClient, AptosAccount, HexString, MaybeHexString, BCS, TxnBuilderTypes } from "aptos";
 import { MoveStructTag, EntryFunctionId } from "aptos/src/generated";
 import Big from "big.js";
 import { OracleJob } from "@switchboard-xyz/common";
@@ -152,8 +152,8 @@ export interface PermissionInitParams {
 }
 export interface PermissionSetParams {
     authority: MaybeHexString;
-    granter: string;
-    grantee: string;
+    granter: MaybeHexString;
+    grantee: MaybeHexString;
     permission: SwitchboardPermission;
     enable: boolean;
 }
@@ -167,6 +167,7 @@ export declare type EventCallback = (e: any) => Promise<void> /** | (() => Promi
  * @returns
  */
 export declare function sendAptosTx(client: AptosClient, signer: AptosAccount, method: EntryFunctionId, args: Array<any>, type_args?: Array<string>, retryCount?: number): Promise<string>;
+export declare function sendRawAptosTx(client: AptosClient, signer: AptosAccount, method: EntryFunctionId, raw_args: Array<any>, raw_type_args?: BCS.Seq<TxnBuilderTypes.TypeTag>, retryCount?: number): Promise<string>;
 /**
  * Poll Events on Aptos
  * @Note uncleared setTimeout calls will keep processes from ending organically (SIGTERM is needed)
@@ -182,16 +183,16 @@ export declare class AptosEvent {
     onTrigger(callback: EventCallback, errorHandler?: (error: unknown) => void): Promise<NodeJS.Timer>;
     stop(): void;
 }
-export declare class State {
+export declare class StateAccount {
     readonly client: AptosClient;
     readonly address: MaybeHexString;
     readonly payer: AptosAccount;
     readonly devnetAddress: MaybeHexString;
     constructor(client: AptosClient, address: MaybeHexString, payer: AptosAccount, devnetAddress: MaybeHexString);
-    static init(client: AptosClient, account: AptosAccount, devnetAddress: MaybeHexString): Promise<[State, string]>;
+    static init(client: AptosClient, account: AptosAccount, devnetAddress: MaybeHexString): Promise<[StateAccount, string]>;
     loadData(): Promise<any>;
 }
-export declare class Aggregator {
+export declare class AggregatorAccount {
     readonly client: AptosClient;
     readonly address: MaybeHexString;
     readonly devnetAddress: MaybeHexString;
@@ -205,14 +206,14 @@ export declare class Aggregator {
      * @param account
      * @param params AggregatorInitParams initialization params
      */
-    static init(client: AptosClient, account: AptosAccount, params: AggregatorInitParams, devnetAddress: MaybeHexString): Promise<[Aggregator, string]>;
+    static init(client: AptosClient, account: AptosAccount, params: AggregatorInitParams, devnetAddress: MaybeHexString): Promise<[AggregatorAccount, string]>;
     addJob(account: AptosAccount, params: AggregatorAddJobParams): Promise<string>;
     saveResult(account: AptosAccount, params: AggregatorSaveResultParams): Promise<string>;
     openRound(account: AptosAccount): Promise<string>;
     watch(callback: EventCallback): Promise<AptosEvent>;
     static shouldReportValue(value: Big, aggregator: any): Promise<boolean>;
 }
-export declare class Job {
+export declare class JobAccount {
     readonly client: AptosClient;
     readonly address: MaybeHexString;
     readonly devnetAddress: MaybeHexString;
@@ -220,14 +221,14 @@ export declare class Job {
     loadData(): Promise<any>;
     loadJob(): Promise<OracleJob>;
     /**
-     * Initialize a Job
+     * Initialize a JobAccount
      * @param client
      * @param account
      * @param params JobInitParams initialization params
      */
-    static init(client: AptosClient, account: AptosAccount, params: JobInitParams, devnetAddress: MaybeHexString): Promise<[Job, string]>;
+    static init(client: AptosClient, account: AptosAccount, params: JobInitParams, devnetAddress: MaybeHexString): Promise<[JobAccount, string]>;
 }
-export declare class Crank {
+export declare class CrankAccount {
     readonly client: AptosClient;
     readonly address: MaybeHexString;
     readonly devnetAddress: MaybeHexString;
@@ -239,7 +240,7 @@ export declare class Crank {
      * @param account account that will be the authority of the Crank
      * @param params CrankInitParams initialization params
      */
-    static init(client: AptosClient, account: AptosAccount, params: CrankInitParams, devnetAddress: MaybeHexString): Promise<[Crank, string]>;
+    static init(client: AptosClient, account: AptosAccount, params: CrankInitParams, devnetAddress: MaybeHexString): Promise<[CrankAccount, string]>;
     /**
      * Push an aggregator to a Crank
      * @param params CrankPushParams
@@ -251,7 +252,7 @@ export declare class Crank {
     pop(account: AptosAccount): Promise<string>;
     loadData(): Promise<any>;
 }
-export declare class Oracle {
+export declare class OracleAccount {
     readonly client: AptosClient;
     readonly address: MaybeHexString;
     readonly devnetAddress: MaybeHexString;
@@ -263,41 +264,41 @@ export declare class Oracle {
      * @param account
      * @param params Oracle initialization params
      */
-    static init(client: AptosClient, account: AptosAccount, params: OracleInitParams, devnetAddress: MaybeHexString): Promise<[Oracle, string]>;
+    static init(client: AptosClient, account: AptosAccount, params: OracleInitParams, devnetAddress: MaybeHexString): Promise<[OracleAccount, string]>;
     loadData(): Promise<any>;
     /**
      * Oracle Heartbeat Action
      */
     heartbeat(account: AptosAccount): Promise<string>;
 }
-export declare class OracleQueue {
+export declare class OracleQueueAccount {
     readonly client: AptosClient;
     readonly address: MaybeHexString;
     readonly devnetAddress: MaybeHexString;
     readonly coinType: MoveStructTag;
     constructor(client: AptosClient, address: MaybeHexString, devnetAddress: MaybeHexString, coinType?: MoveStructTag);
     /**
-     * Initialize an OracleQueue
+     * Initialize an OracleQueueAccount
      * @param client
      * @param account
-     * @param params OracleQueue initialization params
+     * @param params OracleQueueAccount initialization params
      */
-    static init(client: AptosClient, account: AptosAccount, params: OracleQueueInitParams, devnetAddress: MaybeHexString): Promise<[OracleQueue, string]>;
+    static init(client: AptosClient, account: AptosAccount, params: OracleQueueInitParams, devnetAddress: MaybeHexString): Promise<[OracleQueueAccount, string]>;
     loadData(): Promise<any>;
 }
-export declare class Lease {
+export declare class LeaseAccount {
     readonly client: AptosClient;
     readonly address: MaybeHexString;
     readonly devnetAddress: MaybeHexString;
     readonly coinType: MoveStructTag;
     constructor(client: AptosClient, address: MaybeHexString, devnetAddress: MaybeHexString, coinType?: MoveStructTag);
     /**
-     * Initialize a Lease
+     * Initialize a LeaseAccount
      * @param client
-     * @param account account that will be the authority of the Lease
+     * @param account account that will be the authority of the LeaseAccount
      * @param params LeaseInitParams initialization params
      */
-    static init(client: AptosClient, account: AptosAccount, params: LeaseInitParams, devnetAddress: MaybeHexString): Promise<[Lease, string]>;
+    static init(client: AptosClient, account: AptosAccount, params: LeaseInitParams, devnetAddress: MaybeHexString): Promise<[LeaseAccount, string]>;
     /**
      * Extend a lease
      * @param params CrankPushParams
@@ -335,9 +336,8 @@ export declare class OracleWallet {
 }
 export declare class Permission {
     readonly client: AptosClient;
-    readonly address: MaybeHexString;
     readonly devnetAddress: MaybeHexString;
-    constructor(client: AptosClient, address: MaybeHexString, devnetAddress: MaybeHexString);
+    constructor(client: AptosClient, devnetAddress: MaybeHexString);
     /**
      * Initialize a Permission
      * @param client
@@ -349,14 +349,13 @@ export declare class Permission {
      * Set a Permission
      */
     set(account: AptosAccount, params: PermissionSetParams): Promise<string>;
-    loadData(): Promise<any>;
 }
 interface CreateFeedParams extends AggregatorInitParams {
     jobs: JobInitParams[];
     initialLoadAmount: number;
     crank: MaybeHexString;
 }
-export declare function createFeed(client: AptosClient, account: AptosAccount, params: CreateFeedParams, devnetAddress: MaybeHexString): Promise<[Aggregator, string]>;
+export declare function createFeed(client: AptosClient, account: AptosAccount, params: CreateFeedParams, devnetAddress: MaybeHexString): Promise<[AggregatorAccount, string]>;
 export declare function bcsAddressToBytes(hexStr: HexString): Uint8Array;
 export declare function generateResourceAccountAddress(origin: AptosAccount, seed: Uint8Array): MaybeHexString;
 //# sourceMappingURL=index.d.ts.map
