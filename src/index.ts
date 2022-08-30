@@ -4,11 +4,14 @@ import {
   HexString,
   MaybeHexString,
   FaucetClient,
+  BCS,
+  TxnBuilderTypes,
 } from "aptos";
 import { MoveStructTag, EntryFunctionId } from "aptos/src/generated";
 import Big from "big.js";
 import { OracleJob } from "@switchboard-xyz/common";
 import BN from "bn.js";
+import * as SHA3 from "js-sha3";
 
 export { OracleJob, IOracleJob } from "@switchboard-xyz/common";
 
@@ -109,6 +112,7 @@ export interface JobInitParams {
   metadata: string;
   authority: MaybeHexString;
   data: string;
+  weight?: number;
 }
 
 export interface AggregatorRemoveJobParams {
@@ -1096,6 +1100,12 @@ export async function createFeed(
   initialLoadAmount: number,
   crank: MaybeHexString
 ): Promise<[Aggregator, string]> {
+  const seed = new AptosAccount().address();
+  const resource_address = generateResourceAccountAddress(
+    account,
+    bcsAddressToBytes(seed)
+  );
+
   if (jobInitParams.length > 8) {
     throw new Error(
       "Max Job limit exceeded. The create_feed_action can only create up to 8 jobs at a time."
@@ -1112,6 +1122,7 @@ export async function createFeed(
             metadata: "",
             authority: "",
             data: "",
+            weight: 1,
           }),
         ]
       : jobInitParams;
@@ -1119,7 +1130,7 @@ export async function createFeed(
   const tx = await sendAptosTx(
     client,
     account,
-    `${devnetAddress}::create_feed_action::run`,
+    `${devnetAddress}::create_new_feed_action::run`,
     [
       // authority will own everything
       HexString.ensure(aggregatorParams.authority).hex(),
@@ -1142,11 +1153,19 @@ export async function createFeed(
 
       // jobs
       ...jobs.flatMap((jip) => {
-        return [stringToHex(jip.name), stringToHex(jip.metadata), jip.data];
+        return [
+          stringToHex(jip.name),
+          stringToHex(jip.metadata),
+          jip.data,
+          jip.weight || 1,
+        ];
       }),
 
       // crank
       HexString.ensure(crank).hex(),
+
+      // seed
+      seed.hex(),
     ],
     [aggregatorParams.coinType ?? "0x1::aptos_coin::AptosCoin"]
   );
@@ -1154,10 +1173,25 @@ export async function createFeed(
   return [
     new Aggregator(
       client,
-      account.address(),
+      resource_address,
       devnetAddress,
       aggregatorParams.coinType ?? "0x1::aptos_coin::AptosCoin"
     ),
     tx,
   ];
+}
+
+export function bcsAddressToBytes(hexStr: HexString): Uint8Array {
+  return BCS.bcsToBytes(TxnBuilderTypes.AccountAddress.fromHex(hexStr));
+}
+
+export function generateResourceAccountAddress(
+  origin: AptosAccount,
+  seed: Uint8Array
+): MaybeHexString {
+  const hash = SHA3.sha3_256.create();
+  const userAddressBCS = bcsAddressToBytes(origin.address());
+  hash.update(userAddressBCS);
+  hash.update(seed);
+  return `0x${hash.hex()}`;
 }

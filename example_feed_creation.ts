@@ -100,6 +100,7 @@ const onAggregatorUpdate = (
         metadata: "binance",
         authority: user.address().hex(),
         data: serializedJob.toString(),
+        weight: 1,
       },
     ],
     1000, // initial load amount
