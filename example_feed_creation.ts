@@ -79,7 +79,6 @@ const onAggregatorUpdate = (
   const [aggregator, createFeedTx] = await createFeed(
     client,
     user,
-    SWITCHBOARD_DEVNET_ADDRESS,
     {
       authority: user.address(),
       queueAddress: SWITCHBOARD_QUEUE_ADDRESS,
@@ -93,18 +92,19 @@ const onAggregatorUpdate = (
       forceReportPeriod: 0,
       expiration: 0,
       coinType: "0x1::aptos_coin::AptosCoin",
+      crank: SWITCHBOARD_CRANK_ADDRESS,
+      initialLoadAmount: 1000,
+      jobs: [
+        {
+          name: "BTC/USD",
+          metadata: "binance",
+          authority: user.address().hex(),
+          data: serializedJob.toString(),
+          weight: 1,
+        },
+      ],
     },
-    [
-      {
-        name: "BTC/USD",
-        metadata: "binance",
-        authority: user.address().hex(),
-        data: serializedJob.toString(),
-        weight: 1,
-      },
-    ],
-    1000, // initial load amount
-    SWITCHBOARD_CRANK_ADDRESS
+    SWITCHBOARD_DEVNET_ADDRESS
   );
 
   console.log(

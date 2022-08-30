@@ -1091,14 +1091,17 @@ function safeDiv(number_: Big, denominator: Big, decimals = 20): Big {
   return result;
 }
 
+interface CreateFeedParams extends AggregatorInitParams {
+  jobs: JobInitParams[];
+  initialLoadAmount: number;
+  crank: MaybeHexString;
+}
+
 export async function createFeed(
   client: AptosClient,
   account: AptosAccount,
-  devnetAddress: MaybeHexString,
-  aggregatorParams: AggregatorInitParams,
-  jobInitParams: JobInitParams[],
-  initialLoadAmount: number,
-  crank: MaybeHexString
+  params: CreateFeedParams,
+  devnetAddress: MaybeHexString
 ): Promise<[Aggregator, string]> {
   const seed = new AptosAccount().address();
   const resource_address = generateResourceAccountAddress(
@@ -1106,7 +1109,7 @@ export async function createFeed(
     bcsAddressToBytes(seed)
   );
 
-  if (jobInitParams.length > 8) {
+  if (params.jobs.length > 8) {
     throw new Error(
       "Max Job limit exceeded. The create_feed_action can only create up to 8 jobs at a time."
     );
@@ -1114,10 +1117,10 @@ export async function createFeed(
 
   // enforce size 8 jobs array
   let jobs =
-    jobInitParams.length < 8
+    params.jobs.length < 8
       ? [
-          ...jobInitParams,
-          ...new Array<JobInitParams>(8 - jobInitParams.length).fill({
+          ...params.jobs,
+          ...new Array<JobInitParams>(8 - params.jobs.length).fill({
             name: "",
             metadata: "",
             authority: "",
@@ -1125,7 +1128,7 @@ export async function createFeed(
             weight: 1,
           }),
         ]
-      : jobInitParams;
+      : params.jobs;
 
   const tx = await sendAptosTx(
     client,
@@ -1133,23 +1136,23 @@ export async function createFeed(
     `${devnetAddress}::create_new_feed_action::run`,
     [
       // authority will own everything
-      HexString.ensure(aggregatorParams.authority).hex(),
+      HexString.ensure(params.authority).hex(),
 
       // aggregator
-      Buffer.from(aggregatorParams.name ?? "").toString("hex"),
-      Buffer.from(aggregatorParams.metadata ?? "").toString("hex"),
-      HexString.ensure(aggregatorParams.queueAddress).hex(),
-      aggregatorParams.batchSize,
-      aggregatorParams.minOracleResults,
-      aggregatorParams.minJobResults,
-      aggregatorParams.minUpdateDelaySeconds,
-      aggregatorParams.startAfter ?? 0,
-      aggregatorParams.varianceThreshold ?? 0,
-      aggregatorParams.varianceThresholdScale ?? 0,
-      aggregatorParams.forceReportPeriod ?? 0,
-      aggregatorParams.expiration ?? 0,
+      Buffer.from(params.name ?? "").toString("hex"),
+      Buffer.from(params.metadata ?? "").toString("hex"),
+      HexString.ensure(params.queueAddress).hex(),
+      params.batchSize,
+      params.minOracleResults,
+      params.minJobResults,
+      params.minUpdateDelaySeconds,
+      params.startAfter ?? 0,
+      params.varianceThreshold ?? 0,
+      params.varianceThresholdScale ?? 0,
+      params.forceReportPeriod ?? 0,
+      params.expiration ?? 0,
       // lease
-      initialLoadAmount,
+      params.initialLoadAmount,
 
       // jobs
       ...jobs.flatMap((jip) => {
@@ -1162,12 +1165,12 @@ export async function createFeed(
       }),
 
       // crank
-      HexString.ensure(crank).hex(),
+      HexString.ensure(params.crank).hex(),
 
       // seed
       seed.hex(),
     ],
-    [aggregatorParams.coinType ?? "0x1::aptos_coin::AptosCoin"]
+    [params.coinType ?? "0x1::aptos_coin::AptosCoin"]
   );
 
   return [
@@ -1175,7 +1178,7 @@ export async function createFeed(
       client,
       resource_address,
       devnetAddress,
-      aggregatorParams.coinType ?? "0x1::aptos_coin::AptosCoin"
+      params.coinType ?? "0x1::aptos_coin::AptosCoin"
     ),
     tx,
   ];
