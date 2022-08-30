@@ -231,11 +231,6 @@ export type EventCallback = (
   e: any
 ) => Promise<void> /** | (() => Promise<void>) */;
 
-/** Convert string to hex-encoded utf-8 bytes. */
-function stringToHex(text: string) {
-  return Buffer.from(text, "utf-8").toString("hex");
-}
-
 /**
  * Sends and waits for an aptos tx to be confirmed
  * @param client
@@ -507,7 +502,7 @@ export class Aggregator {
         params.valueNum,
         params.valueScaleFactor,
         params.valueNeg,
-        stringToHex(params.jobsChecksum),
+        params.jobsChecksum,
         params.minResponseNum,
         params.minResponseScaleFactor,
         params.minResponseNeg,
@@ -626,8 +621,8 @@ export class Job {
       account,
       `${devnetAddress}::job_init_action::run`,
       [
-        stringToHex(params.name),
-        stringToHex(params.metadata),
+        params.name,
+        params.metadata,
         HexString.ensure(params.authority).hex(),
         params.data,
       ]
@@ -741,8 +736,8 @@ export class Oracle {
       account,
       `${devnetAddress}::oracle_init_action::run`,
       [
-        stringToHex(params.name),
-        stringToHex(params.metadata),
+        params.name,
+        params.metadata,
         HexString.ensure(params.authority).hex(),
         HexString.ensure(params.queue).hex(),
       ],
@@ -808,8 +803,8 @@ export class OracleQueue {
       account,
       `${devnetAddress}::oracle_queue_init_action::run`,
       [
-        stringToHex(params.name),
-        stringToHex(params.metadata),
+        params.name,
+        params.metadata,
         HexString.ensure(params.authority).hex(),
         params.oracleTimeout,
         params.reward,
@@ -1139,8 +1134,8 @@ export async function createFeed(
       HexString.ensure(params.authority).hex(),
 
       // aggregator
-      Buffer.from(params.name ?? "").toString("hex"),
-      Buffer.from(params.metadata ?? "").toString("hex"),
+      params.name ?? "",
+      params.metadata ?? "",
       HexString.ensure(params.queueAddress).hex(),
       params.batchSize,
       params.minOracleResults,
@@ -1156,12 +1151,7 @@ export async function createFeed(
 
       // jobs
       ...jobs.flatMap((jip) => {
-        return [
-          stringToHex(jip.name),
-          stringToHex(jip.metadata),
-          jip.data,
-          jip.weight || 1,
-        ];
+        return [jip.name, jip.metadata, jip.data, jip.weight || 1];
       }),
 
       // crank
