@@ -25,6 +25,7 @@ import {
   createFeed,
   AptosDecimal,
   AggregatorAccount,
+  fetchAggregators,
 } from "./src";
 import Big from "big.js";
 
@@ -32,13 +33,7 @@ const NODE_URL = "https://fullnode.devnet.aptoslabs.com/v1";
 const FAUCET_URL = "https://faucet.devnet.aptoslabs.com";
 
 const SWITCHBOARD_DEVNET_ADDRESS =
-  "0x348ecb66a5d9edab8d175f647d5e99d6962803da7f5d3d2eb839387aeb118300";
-
-const SWITCHBOARD_QUEUE_ADDRESS =
-  "0x348ecb66a5d9edab8d175f647d5e99d6962803da7f5d3d2eb839387aeb118300";
-
-const SWITCHBOARD_CRANK_ADDRESS =
-  "0x348ecb66a5d9edab8d175f647d5e99d6962803da7f5d3d2eb839387aeb118300";
+  "0x14611263909398572be034debb2e61b6751cafbeaddd994b9a1250cb76b99d38";
 
 const onAggregatorUpdate = (
   client: AptosClient,
@@ -180,13 +175,51 @@ const onAggregatorOpenRound = (
   console.log(`Created crank at ${crank.address}, tx hash ${txhash}`);
 
   // Make JobAccount data for btc price
-  const serializedJob = Buffer.from(
+  const serializedJob1 = Buffer.from(
     OracleJob.encodeDelimited(
       OracleJob.create({
         tasks: [
           {
             httpTask: {
               url: "https://www.binance.us/api/v3/ticker/price?symbol=BTCUSD",
+            },
+          },
+          {
+            jsonParseTask: {
+              path: "$.price",
+            },
+          },
+        ],
+      })
+    ).finish()
+  );
+
+  const serializedJob2 = Buffer.from(
+    OracleJob.encodeDelimited(
+      OracleJob.create({
+        tasks: [
+          {
+            httpTask: {
+              url: "https://www.binance.us/api/v3/ticker/price?symbol=ETHUSD",
+            },
+          },
+          {
+            jsonParseTask: {
+              path: "$.price",
+            },
+          },
+        ],
+      })
+    ).finish()
+  );
+
+  const serializedJob3 = Buffer.from(
+    OracleJob.encodeDelimited(
+      OracleJob.create({
+        tasks: [
+          {
+            httpTask: {
+              url: "https://www.binance.us/api/v3/ticker/price?symbol=SOLUSD",
             },
           },
           {
@@ -210,8 +243,7 @@ const onAggregatorOpenRound = (
       minOracleResults: 1,
       minUpdateDelaySeconds: 5,
       startAfter: 0,
-      varianceThreshold: 0,
-      varianceThresholdScale: 0,
+      varianceThreshold: new Big(0),
       forceReportPeriod: 0,
       expiration: 0,
       coinType: "0x1::aptos_coin::AptosCoin",
@@ -222,7 +254,67 @@ const onAggregatorOpenRound = (
           name: "BTC/USD",
           metadata: "binance",
           authority: user.address().hex(),
-          data: serializedJob.toString(),
+          data: serializedJob1.toString(),
+          weight: 1,
+        },
+      ],
+    },
+    SWITCHBOARD_DEVNET_ADDRESS
+  );
+
+  await createFeed(
+    client,
+    user,
+    {
+      authority: user.address(),
+      queueAddress: queue.address,
+      batchSize: 1,
+      minJobResults: 1,
+      minOracleResults: 1,
+      minUpdateDelaySeconds: 5,
+      startAfter: 0,
+      varianceThreshold: new Big(0),
+      forceReportPeriod: 0,
+      expiration: 0,
+      coinType: "0x1::aptos_coin::AptosCoin",
+      crank: user.address().hex(),
+      initialLoadAmount: 1000,
+      jobs: [
+        {
+          name: "ETH/USD",
+          metadata: "binance",
+          authority: user.address().hex(),
+          data: serializedJob2.toString(),
+          weight: 1,
+        },
+      ],
+    },
+    SWITCHBOARD_DEVNET_ADDRESS
+  );
+
+  await createFeed(
+    client,
+    user,
+    {
+      authority: user.address(),
+      queueAddress: queue.address,
+      batchSize: 1,
+      minJobResults: 1,
+      minOracleResults: 1,
+      minUpdateDelaySeconds: 5,
+      startAfter: 0,
+      varianceThreshold: new Big(0),
+      forceReportPeriod: 0,
+      expiration: 0,
+      coinType: "0x1::aptos_coin::AptosCoin",
+      crank: user.address().hex(),
+      initialLoadAmount: 1000,
+      jobs: [
+        {
+          name: "SOL/USD",
+          metadata: "binance",
+          authority: user.address().hex(),
+          data: serializedJob3.toString(),
           weight: 1,
         },
       ],
@@ -278,24 +370,16 @@ const onAggregatorOpenRound = (
       if (!response.ok) console.error(`[Task runner] Error testing jobs json.`);
       try {
         const json = await response.json();
-        const value = new Big(json.result); // emulate our task runner with test api
-        const resultDecimal = AptosDecimal.fromBig(value);
 
         // try save result
         const tx = await aggregator.saveResult(user, {
           oracleAddress: oracle.address,
           oracleIdx: 0,
           error: false,
-          valueNum: Number(resultDecimal.mantissa),
-          valueScaleFactor: resultDecimal.scale,
-          valueNeg: resultDecimal.neg,
+          value: new Big(json.result),
           jobsChecksum: aggregatorData.jobs_checksum,
-          minResponseNum: Number(resultDecimal.mantissa),
-          minResponseScaleFactor: resultDecimal.scale,
-          minResponseNeg: resultDecimal.neg,
-          maxResponseNum: Number(resultDecimal.mantissa),
-          maxResponseScaleFactor: resultDecimal.scale,
-          maxResponseNeg: resultDecimal.neg,
+          minResponse: new Big(json.result),
+          maxResponse: new Big(json.result),
         });
         console.log("save result tx:", tx);
       } catch (e) {} // errors will happen when task runner returns them
@@ -318,6 +402,14 @@ const onAggregatorOpenRound = (
     ).loadData()
   );
   console.log("Load aggregator jobs data", await aggregator.loadJobs());
+
+  console.log(
+    await fetchAggregators(
+      client,
+      user.address().hex(),
+      SWITCHBOARD_DEVNET_ADDRESS
+    )
+  );
 
   setInterval(() => {
     try {

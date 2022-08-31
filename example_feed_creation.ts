@@ -18,18 +18,19 @@ import {
   OracleJob,
   createFeed,
 } from "./src";
+import Big from "big.js";
 
 const NODE_URL = "https://fullnode.devnet.aptoslabs.com/v1";
 const FAUCET_URL = "https://faucet.devnet.aptoslabs.com";
 
 const SWITCHBOARD_DEVNET_ADDRESS =
-  "0x348ecb66a5d9edab8d175f647d5e99d6962803da7f5d3d2eb839387aeb118300";
+  "0x14611263909398572be034debb2e61b6751cafbeaddd994b9a1250cb76b99d38";
 
 const SWITCHBOARD_QUEUE_ADDRESS =
-  "0x348ecb66a5d9edab8d175f647d5e99d6962803da7f5d3d2eb839387aeb118300";
+  "0x14611263909398572be034debb2e61b6751cafbeaddd994b9a1250cb76b99d38";
 
 const SWITCHBOARD_CRANK_ADDRESS =
-  "0x348ecb66a5d9edab8d175f647d5e99d6962803da7f5d3d2eb839387aeb118300";
+  "0x14611263909398572be034debb2e61b6751cafbeaddd994b9a1250cb76b99d38";
 
 const onAggregatorUpdate = (
   client: AptosClient,
@@ -93,8 +94,7 @@ const onAggregatorUpdate = (
       minOracleResults: 1,
       minUpdateDelaySeconds: 5,
       startAfter: 0,
-      varianceThreshold: 0,
-      varianceThresholdScale: 0,
+      varianceThreshold: new Big(0),
       forceReportPeriod: 0,
       expiration: 0,
       coinType: "0x1::aptos_coin::AptosCoin",

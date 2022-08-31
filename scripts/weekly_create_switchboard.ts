@@ -13,9 +13,7 @@ const NODE_URL = "https://fullnode.devnet.aptoslabs.com";
 const FAUCET_URL = "https://faucet.devnet.aptoslabs.com";
 
 const SWITCHBOARD_DEVNET_ADDRESS =
-  "0x348ecb66a5d9edab8d175f647d5e99d6962803da7f5d3d2eb839387aeb118300";
-const SWITCHBOARD_STATE_ADDRESS =
-  "0x348ecb66a5d9edab8d175f647d5e99d6962803da7f5d3d2eb839387aeb118300";
+  "0x14611263909398572be034debb2e61b6751cafbeaddd994b9a1250cb76b99d38";
 
 // run it all at once
 (async () => {
@@ -33,11 +31,11 @@ const SWITCHBOARD_STATE_ADDRESS =
     );
     if (
       "profiles" in parsedYaml &&
-      "default" in parsedYaml.profiles &&
-      "private_key" in parsedYaml.profiles.default
+      "localuser" in parsedYaml.profiles &&
+      "private_key" in parsedYaml.profiles.localuser
     ) {
       user = new AptosAccount(
-        HexString.ensure(parsedYaml.profiles.default.private_key).toBuffer()
+        HexString.ensure(parsedYaml.profiles.localuser.private_key).toBuffer()
       );
     }
   } catch {}
@@ -71,9 +69,7 @@ const SWITCHBOARD_STATE_ADDRESS =
     });
 
     console.log("Permissions created");
-  } catch (e) {
-    console.log(e);
-  }
+  } catch (e) {}
 
   const [queue, queueTxSig] = await OracleQueueAccount.init(
     client,
@@ -119,27 +115,6 @@ const SWITCHBOARD_STATE_ADDRESS =
   );
 
   console.log(`Oracle: ${oracle.address}, tx: ${oracleTxSig}`);
-
-  // create permission for oracle
-  const [oraclePermission] = await Permission.init(
-    client,
-    user,
-    {
-      authority: user.address().hex(),
-      granter: queue.address,
-      grantee: oracle.address,
-    },
-    SWITCHBOARD_DEVNET_ADDRESS
-  );
-
-  // enable heartbeat on oracle
-  await oraclePermission.set(user, {
-    authority: user.address().hex(),
-    granter: queue.address.toString(),
-    grantee: oracle.address.toString(),
-    permission: SwitchboardPermission.PERMIT_ORACLE_HEARTBEAT,
-    enable: true,
-  });
 
   // trigger the oracle heartbeat
   const heartbeatTxSig = await oracle.heartbeat(user);
