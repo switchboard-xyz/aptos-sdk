@@ -1253,3 +1253,26 @@ export function generateResourceAccountAddress(
   hash.update(seed);
   return `0x${hash.hex()}`;
 }
+
+export async function fetchAggregators(
+  client: AptosClient,
+  authority: MaybeHexString,
+  devnetAddress: MaybeHexString
+): Promise<any[]> {
+  const handle = (
+    (await client.getAccountResource(
+      devnetAddress,
+      `${devnetAddress}::switchboard::State`
+    )) as any
+  ).data.aggregator_authorities.handle;
+  const tableItems = await client.getTableItem(handle, {
+    key_type: `address`,
+    value_type: `vector<address>`,
+    key: authority,
+  });
+  return await Promise.all(
+    tableItems.map((aggregatorAddress: MaybeHexString) =>
+      new AggregatorAccount(client, aggregatorAddress, devnetAddress).loadData()
+    )
+  );
+}
