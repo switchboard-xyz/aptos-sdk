@@ -349,6 +349,7 @@ module switchboard::aggregator {
         true
     }
 
+    #[test_only]
     public entry fun new_test(account: &signer, value: u128, dec: u8, sign: bool) {
         let aggregator = Aggregator {
             name: vector::empty(),
@@ -412,7 +413,8 @@ module switchboard::aggregator {
 
         move_to<Aggregator>(account, aggregator);
     }
-
+    
+    #[test_only]
     public entry fun update_value(account: &signer, value: u128, dec: u8, neg: bool) acquires Aggregator {
         let ref = borrow_global_mut<Aggregator>(signer::address_of(account));
         ref.latest_confirmed_round.result = math::new(value, dec, neg);
