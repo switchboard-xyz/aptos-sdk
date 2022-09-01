@@ -1484,15 +1484,20 @@ export async function fetchAggregators(
   const tableItems = await client.getTableItem(handle, {
     key_type: `address`,
     value_type: `vector<address>`,
-    key: authority,
+    key: HexString.ensure(authority).hex(),
   });
-  return await Promise.all(
-    tableItems.map((aggregatorAddress: MaybeHexString) =>
-      new AggregatorAccount(
-        client,
-        aggregatorAddress,
-        switchboardAddress
-      ).loadData()
+  return (
+    await Promise.all(
+      tableItems.map((aggregatorAddress: MaybeHexString) =>
+        new AggregatorAccount(
+          client,
+          aggregatorAddress,
+          switchboardAddress
+        ).loadData()
+      )
     )
-  );
+  ).map((aggregator: any, i) => {
+    aggregator.address = tableItems[i];
+    return aggregator; // map addresses back to the aggregator object
+  });
 }
