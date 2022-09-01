@@ -34,7 +34,7 @@ module demo::demo_app {
         move_to(account, AggregatorInfo {
             aggregator_addr: aggregator_addr,
             latest_result: value,
-            latest_result_scale: scaling_factor
+            latest_result_scaling_factor: scaling_factor
         });
     }
 
