@@ -1,5 +1,5 @@
 /// <reference types="node" />
-import { AptosClient, AptosAccount, HexString, MaybeHexString, BCS, TxnBuilderTypes } from "aptos";
+import { AptosClient, AptosAccount, HexString, MaybeHexString, BCS, TxnBuilderTypes, Types } from "aptos";
 import { MoveStructTag, EntryFunctionId } from "aptos/src/generated";
 import Big from "big.js";
 import { OracleJob } from "@switchboard-xyz/common";
@@ -171,14 +171,13 @@ export declare type EventCallback = (e: any) => Promise<void> /** | (() => Promi
 export declare function sendAptosTx(client: AptosClient, signer: AptosAccount, method: EntryFunctionId, args: Array<any>, type_args?: Array<string>, retryCount?: number): Promise<string>;
 /**
  * Generates an aptos tx for client
- * @param client
  * @param method Aptos module method (ex: 0xSwitchboard::aggregator_add_job_action)
  * @param args Arguments for method (converts numbers to strings)
  * @param type_args Arguments for type_args
  * @returns
  */
-export declare function getAptosTx(client: AptosClient, user: MaybeHexString, method: EntryFunctionId, args: Array<any>, type_args?: Array<string>): Promise<TxnBuilderTypes.RawTransaction>;
-export declare function simulateAndRun(client: AptosClient, user: AptosAccount, txn: TxnBuilderTypes.RawTransaction): Promise<string>;
+export declare function getAptosTx(method: EntryFunctionId, args: Array<any>, type_args?: Array<string>): Types.TransactionPayload;
+export declare function simulateAndRun(client: AptosClient, user: AptosAccount, txn: Types.TransactionPayload): Promise<string>;
 export declare function sendRawAptosTx(client: AptosClient, signer: AptosAccount, method: EntryFunctionId, raw_args: Array<any>, raw_type_args?: BCS.Seq<TxnBuilderTypes.TypeTag>, retryCount?: number): Promise<string>;
 /**
  * Poll Events on Aptos
@@ -220,11 +219,11 @@ export declare class AggregatorAccount {
      */
     static init(client: AptosClient, account: AptosAccount, params: AggregatorInitParams, switchboardAddress: MaybeHexString): Promise<[AggregatorAccount, string]>;
     addJob(account: AptosAccount, params: AggregatorAddJobParams): Promise<string>;
-    addJobTx(authority: MaybeHexString, params: AggregatorAddJobParams): Promise<TxnBuilderTypes.RawTransaction>;
+    addJobTx(params: AggregatorAddJobParams): Types.TransactionPayload;
     saveResult(account: AptosAccount, params: AggregatorSaveResultParams): Promise<string>;
     openRound(account: AptosAccount): Promise<string>;
-    openRoundTx(accountAddress: MaybeHexString): Promise<TxnBuilderTypes.RawTransaction>;
-    setConfigTx(accountAddress: MaybeHexString, params: AggregatorSetConfigParams): Promise<void>;
+    openRoundTx(): Types.TransactionPayload;
+    setConfigTx(accountAddress: MaybeHexString, params: AggregatorSetConfigParams): Types.TransactionPayload;
     watch(callback: EventCallback): Promise<AptosEvent>;
     static shouldReportValue(value: Big, aggregator: any): Promise<boolean>;
 }
@@ -248,7 +247,7 @@ export declare class JobAccount {
      * @param account
      * @param params JobInitParams initialization params
      */
-    static initTx(client: AptosClient, account: MaybeHexString, params: JobInitParams, switchboardAddress: MaybeHexString): Promise<[JobAccount, TxnBuilderTypes.RawTransaction]>;
+    static initTx(client: AptosClient, account: MaybeHexString, params: JobInitParams, switchboardAddress: MaybeHexString): [JobAccount, Types.TransactionPayload];
 }
 export declare class CrankAccount {
     readonly client: AptosClient;
@@ -268,7 +267,7 @@ export declare class CrankAccount {
      * @param params CrankPushParams
      */
     push(account: AptosAccount, params: CrankPushParams): Promise<string>;
-    pushTx(account: MaybeHexString, params: CrankPushParams): Promise<TxnBuilderTypes.RawTransaction>;
+    pushTx(account: MaybeHexString, params: CrankPushParams): Types.TransactionPayload;
     /**
      * Pop an aggregator off the Crank
      */
@@ -331,7 +330,7 @@ export declare class LeaseAccount {
      * Extend a lease
      * @param params CrankPushParams
      */
-    extendTx(account: MaybeHexString, params: LeaseExtendParams): Promise<TxnBuilderTypes.RawTransaction>;
+    extendTx(account: MaybeHexString, params: LeaseExtendParams): Types.TransactionPayload;
     /**
      * Pop an aggregator off the Crank
      */
@@ -339,7 +338,7 @@ export declare class LeaseAccount {
     /**
      * Pop an aggregator off the Crank
      */
-    withdrawTx(account: MaybeHexString, params: LeaseWithdrawParams): Promise<TxnBuilderTypes.RawTransaction>;
+    withdrawTx(account: MaybeHexString, params: LeaseWithdrawParams): Types.TransactionPayload;
     loadData(): Promise<any>;
 }
 export declare class OracleWallet {
@@ -387,7 +386,7 @@ interface CreateFeedParams extends AggregatorInitParams {
     initialLoadAmount: number;
     crank: MaybeHexString;
 }
-export declare function createFeedTx(client: AptosClient, authority: MaybeHexString, params: CreateFeedParams, switchboardAddress: MaybeHexString): Promise<[AggregatorAccount, TxnBuilderTypes.RawTransaction]>;
+export declare function createFeedTx(client: AptosClient, authority: MaybeHexString, params: CreateFeedParams, switchboardAddress: MaybeHexString): Promise<[AggregatorAccount, Types.TransactionPayload]>;
 export declare function createFeed(client: AptosClient, account: AptosAccount, params: CreateFeedParams, switchboardAddress: MaybeHexString): Promise<[AggregatorAccount, string]>;
 export declare function bcsAddressToBytes(hexStr: HexString): Uint8Array;
 export declare function generateResourceAccountAddress(origin: HexString, seed: Uint8Array): MaybeHexString;

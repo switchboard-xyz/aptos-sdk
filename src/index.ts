@@ -6,6 +6,7 @@ import {
   FaucetClient,
   BCS,
   TxnBuilderTypes,
+  Types,
 } from "aptos";
 import { MoveStructTag, EntryFunctionId } from "aptos/src/generated";
 import Big from "big.js";
@@ -286,42 +287,42 @@ export async function sendAptosTx(
 
 /**
  * Generates an aptos tx for client
- * @param client
  * @param method Aptos module method (ex: 0xSwitchboard::aggregator_add_job_action)
  * @param args Arguments for method (converts numbers to strings)
  * @param type_args Arguments for type_args
  * @returns
  */
-export async function getAptosTx(
-  client: AptosClient,
-  user: MaybeHexString,
+export function getAptosTx(
   method: EntryFunctionId,
   args: Array<any>,
   type_args: Array<string> = []
-): Promise<TxnBuilderTypes.RawTransaction> {
-  const payload = {
+): Types.TransactionPayload {
+  const payload: Types.TransactionPayload = {
     type: "entry_function_payload",
     function: method,
     type_arguments: type_args,
     arguments: args,
   };
-
-  return await client.generateTransaction(user, payload, {
-    max_gas_amount: "5000",
-  });
+  return payload;
 }
 
 export async function simulateAndRun(
   client: AptosClient,
   user: AptosAccount,
-  txn: TxnBuilderTypes.RawTransaction
+  txn: Types.TransactionPayload
 ) {
-  const simulation = (await client.simulateTransaction(user, txn))[0];
+  const txnRequest = await client.generateTransaction(
+    user.address(),
+    txn as Types.EntryFunctionPayload,
+    { max_gas_amount: "5000" }
+  );
+
+  const simulation = (await client.simulateTransaction(user, txnRequest))[0];
   if (simulation.success === false) {
     console.log(simulation);
     throw new Error(`TxFailure: ${simulation.vm_status}`);
   }
-  const signedTxn = await client.signTransaction(user, txn);
+  const signedTxn = await client.signTransaction(user, txnRequest);
   const transactionRes = await client.submitTransaction(signedTxn);
   await client.waitForTransaction(transactionRes.hash);
   return transactionRes.hash;
@@ -601,13 +602,8 @@ export class AggregatorAccount {
     );
   }
 
-  async addJobTx(
-    authority: MaybeHexString,
-    params: AggregatorAddJobParams
-  ): Promise<TxnBuilderTypes.RawTransaction> {
-    return await getAptosTx(
-      this.client,
-      authority,
+  addJobTx(params: AggregatorAddJobParams): Types.TransactionPayload {
+    return getAptosTx(
       `${this.switchboardAddress}::aggregator_add_job_action::run`,
       [
         HexString.ensure(this.address).hex(),
@@ -681,29 +677,22 @@ export class AggregatorAccount {
     );
   }
 
-  async openRoundTx(
-    accountAddress: MaybeHexString
-  ): Promise<TxnBuilderTypes.RawTransaction> {
-    return await getAptosTx(
-      this.client,
-      accountAddress,
+  openRoundTx(): Types.TransactionPayload {
+    return getAptosTx(
       `${this.switchboardAddress}::aggregator_open_round_action::run`,
       [HexString.ensure(this.address).hex()],
       [this.coinType ?? "0x1::aptos_coin::AptosCoin"]
     );
   }
 
-  async setConfigTx(
+  setConfigTx(
     accountAddress: MaybeHexString,
     params: AggregatorSetConfigParams
-  ) {
+  ): Types.TransactionPayload {
     const { mantissa: vtMantissa, scale: vtScale } = AptosDecimal.fromBig(
       params.varianceThreshold
     );
-
-    const tx = await getAptosTx(
-      this.client,
-      accountAddress,
+    const tx = getAptosTx(
       `${this.switchboardAddress}::aggregator_init_action::run`,
       [
         HexString.ensure(this.address).hex(),
@@ -719,10 +708,17 @@ export class AggregatorAccount {
         vtScale,
         params.forceReportPeriod ?? 0,
         params.expiration ?? 0,
+        params.disableCrank ?? false,
+        params.historySize ?? 0,
+        params.readCharge ?? 0,
+        params.rewardEscrow
+          ? HexString.ensure(params.rewardEscrow).hex()
+          : HexString.ensure(params.authority).hex(),
         HexString.ensure(params.authority).hex(),
       ],
       [params.coinType ?? "0x1::aptos_coin::AptosCoin"]
     );
+    return tx;
   }
 
   async watch(callback: EventCallback): Promise<AptosEvent> {
@@ -838,23 +834,18 @@ export class JobAccount {
    * @param account
    * @param params JobInitParams initialization params
    */
-  static async initTx(
+  static initTx(
     client: AptosClient,
     account: MaybeHexString,
     params: JobInitParams,
     switchboardAddress: MaybeHexString
-  ): Promise<[JobAccount, TxnBuilderTypes.RawTransaction]> {
-    const tx = await getAptosTx(
-      client,
-      account,
-      `${switchboardAddress}::job_init_action::run`,
-      [
-        params.name,
-        params.metadata,
-        HexString.ensure(params.authority).hex(),
-        params.data,
-      ]
-    );
+  ): [JobAccount, Types.TransactionPayload] {
+    const tx = getAptosTx(`${switchboardAddress}::job_init_action::run`, [
+      params.name,
+      params.metadata,
+      HexString.ensure(params.authority).hex(),
+      params.data,
+    ]);
 
     return [new JobAccount(client, account, switchboardAddress), tx];
   }
@@ -916,13 +907,11 @@ export class CrankAccount {
     );
   }
 
-  async pushTx(
+  pushTx(
     account: MaybeHexString,
     params: CrankPushParams
-  ): Promise<TxnBuilderTypes.RawTransaction> {
-    return await getAptosTx(
-      this.client,
-      account,
+  ): Types.TransactionPayload {
+    return getAptosTx(
       `${this.switchboardAddress}::crank_push_action::run`,
       [
         HexString.ensure(this.address).hex(),
@@ -1154,13 +1143,11 @@ export class LeaseAccount {
    * Extend a lease
    * @param params CrankPushParams
    */
-  async extendTx(
+  extendTx(
     account: MaybeHexString,
     params: LeaseExtendParams
-  ): Promise<TxnBuilderTypes.RawTransaction> {
-    return await getAptosTx(
-      this.client,
-      account,
+  ): Types.TransactionPayload {
+    return getAptosTx(
       `${this.switchboardAddress}::lease_extend_action::run`,
       [HexString.ensure(this.address).hex(), params.loadAmount],
       [this.coinType]
@@ -1186,13 +1173,11 @@ export class LeaseAccount {
   /**
    * Pop an aggregator off the Crank
    */
-  async withdrawTx(
+  withdrawTx(
     account: MaybeHexString,
     params: LeaseWithdrawParams
-  ): Promise<TxnBuilderTypes.RawTransaction> {
-    return await getAptosTx(
-      this.client,
-      account,
+  ): Types.TransactionPayload {
+    return getAptosTx(
       `${this.switchboardAddress}::lease_withdraw_action::run`,
       [[HexString.ensure(this.address).hex(), params.amount]],
       [this.coinType]
@@ -1369,7 +1354,7 @@ export async function createFeedTx(
   authority: MaybeHexString,
   params: CreateFeedParams,
   switchboardAddress: MaybeHexString
-): Promise<[AggregatorAccount, TxnBuilderTypes.RawTransaction]> {
+): Promise<[AggregatorAccount, Types.TransactionPayload]> {
   const seed = new AptosAccount().address();
   const resource_address = generateResourceAccountAddress(
     HexString.ensure(authority),
@@ -1408,9 +1393,7 @@ export async function createFeedTx(
       switchboardAddress,
       params.coinType ?? "0x1::aptos_coin::AptosCoin"
     ),
-    await getAptosTx(
-      client,
-      authority,
+    getAptosTx(
       `${switchboardAddress}::create_feed_action::run`,
       [
         // authority will own everything
@@ -1467,6 +1450,7 @@ export async function createFeed(
     params,
     switchboardAddress
   );
+
   const tx = await simulateAndRun(client, account, txn);
   return [aggregator, tx];
 }
