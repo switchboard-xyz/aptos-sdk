@@ -9,9 +9,9 @@ switchboard = "0x14611263909398572be034debb2e61b6751cafbeaddd994b9a1250cb76b99d3
 demo = "_"
 
 [dependencies]
-MoveStdlib = { git = "https://github.com/aptos-labs/aptos-core.git", subdir = "aptos-move/framework/move-stdlib/", rev = "f8bf8fdeec33c8c6ff3d1cbaf4990b9e54c2176a" }
-AptosFramework = { git = "https://github.com/aptos-labs/aptos-core.git", subdir = "aptos-move/framework/aptos-framework/", rev = "f8bf8fdeec33c8c6ff3d1cbaf4990b9e54c2176a" }
-AptosStdlib = { git = "https://github.com/aptos-labs/aptos-core.git", subdir = "aptos-move/framework/aptos-stdlib/", rev = "f8bf8fdeec33c8c6ff3d1cbaf4990b9e54c2176a" }
+MoveStdlib = { git = "https://github.com/aptos-labs/aptos-core.git", subdir = "aptos-move/framework/move-stdlib/", rev = "devnet" }
+AptosFramework = { git = "https://github.com/aptos-labs/aptos-core.git", subdir = "aptos-move/framework/aptos-framework/", rev = "devnet" }
+AptosStdlib = { git = "https://github.com/aptos-labs/aptos-core.git", subdir = "aptos-move/framework/aptos-stdlib/", rev = "devnet" }
 
 [dependencies.Switchboard]
 git = "https://github.com/switchboard-xyz/aptos-sdk.git"
