@@ -349,7 +349,7 @@ module switchboard::aggregator {
         true
     }
 
-        public entry fun new_test(account: &signer, value: u128, dec: u8, sign: bool) {
+    public entry fun new_test(account: &signer, value: u128, dec: u8, sign: bool) {
         let aggregator = Aggregator {
             name: vector::empty(),
             metadata: vector::empty(),
