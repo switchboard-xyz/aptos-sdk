@@ -407,7 +407,7 @@ module switchboard::aggregator {
             _ebuf: vector::empty(),
             history_size: 0,
             read_charge: 0,
-            reward_escrow: @0x0,
+            reward_escrow: @0x1,
         };
 
         move_to<Aggregator>(account, aggregator);
