@@ -35,7 +35,7 @@ export interface AggregatorInitParams {
     minJobResults: number;
     minUpdateDelaySeconds: number;
     startAfter?: number;
-    varianceThreshold: Big;
+    varianceThreshold?: Big;
     forceReportPeriod?: number;
     expiration?: number;
     disableCrank?: boolean;
