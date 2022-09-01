@@ -1,20 +1,16 @@
 [package]
-name = "Switchboard_Demo"
-version = "0.0.0"
+name = "Switchboard"
+version = "0.0.1"
 
 [addresses]
-std = "0x1"
-aptos_framework = "0x1"
-switchboard = "0x14611263909398572be034debb2e61b6751cafbeaddd994b9a1250cb76b99d38"# Will change as we iterate on devnet
-demo = "_"
+std = '0x1'
+aptos_framework = '0x1'
+switchboard = '_'
+
+[dev-addresses]
+switchboard = '0x3'
 
 [dependencies]
 MoveStdlib = { git = "https://github.com/aptos-labs/aptos-core.git", subdir = "aptos-move/framework/move-stdlib/", rev = "main" }
 AptosFramework = { git = "https://github.com/aptos-labs/aptos-core.git", subdir = "aptos-move/framework/aptos-framework/", rev = "main" }
 AptosStdlib = { git = "https://github.com/aptos-labs/aptos-core.git", subdir = "aptos-move/framework/aptos-stdlib/", rev = "main" }
-
-[dependencies.Switchboard]
-git = "https://github.com/switchboard-xyz/aptos-sdk.git"
-subdir = "switchboard-move/switchboard/"
-rev = "main"
-

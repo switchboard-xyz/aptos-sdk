@@ -85,7 +85,7 @@ export interface AggregatorInitParams {
   minJobResults: number;
   minUpdateDelaySeconds: number;
   startAfter?: number;
-  varianceThreshold: Big;
+  varianceThreshold?: Big;
   forceReportPeriod?: number;
   expiration?: number;
   disableCrank?: boolean;
@@ -544,7 +544,7 @@ export class AggregatorAccount {
     switchboardAddress: MaybeHexString
   ): Promise<[AggregatorAccount, string]> {
     const { mantissa: vtMantissa, scale: vtScale } = AptosDecimal.fromBig(
-      params.varianceThreshold
+      params.varianceThreshold ?? new Big(0)
     );
 
     const tx = await sendAptosTx(
@@ -690,7 +690,7 @@ export class AggregatorAccount {
     params: AggregatorSetConfigParams
   ): Types.TransactionPayload {
     const { mantissa: vtMantissa, scale: vtScale } = AptosDecimal.fromBig(
-      params.varianceThreshold
+      params.varianceThreshold ?? new Big(0)
     );
     const tx = getAptosTx(
       `${this.switchboardAddress}::aggregator_init_action::run`,
@@ -1368,7 +1368,7 @@ export async function createFeedTx(
   }
 
   const { mantissa: vtMantissa, scale: vtScale } = AptosDecimal.fromBig(
-    params.varianceThreshold
+    params.varianceThreshold ?? new Big(0)
   );
 
   // enforce size 8 jobs array

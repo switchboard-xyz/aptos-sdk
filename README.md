@@ -16,19 +16,25 @@ npm i --save https://www.npmjs.com/package/@switchboard-xyz/aptos.js
 ```ts
 import { Buffer } from "buffer";
 import { AptosClient, AptosAccount, FaucetClient, HexString } from "aptos";
-import { AptosEvent, EventCallback, OracleJob, createFeed } from "./src";
+import {
+  AptosEvent,
+  EventCallback,
+  OracleJob,
+  createFeed,
+} from "@switchboard-xyz/aptos.js";
+import Big from "big.js";
 
-const NODE_URL = "https://fullnode.devnet.aptoslabs.com";
+const NODE_URL = "https://fullnode.devnet.aptoslabs.com/v1";
 const FAUCET_URL = "https://faucet.devnet.aptoslabs.com";
 
 const SWITCHBOARD_DEVNET_ADDRESS =
-  "0x348ecb66a5d9edab8d175f647d5e99d6962803da7f5d3d2eb839387aeb118300";
+  "0x14611263909398572be034debb2e61b6751cafbeaddd994b9a1250cb76b99d38";
 
 const SWITCHBOARD_QUEUE_ADDRESS =
-  "0x348ecb66a5d9edab8d175f647d5e99d6962803da7f5d3d2eb839387aeb118300";
+  "0x14611263909398572be034debb2e61b6751cafbeaddd994b9a1250cb76b99d38";
 
 const SWITCHBOARD_CRANK_ADDRESS =
-  "0x348ecb66a5d9edab8d175f647d5e99d6962803da7f5d3d2eb839387aeb118300";
+  "0x14611263909398572be034debb2e61b6751cafbeaddd994b9a1250cb76b99d38";
 
 const client = new AptosClient(NODE_URL);
 const faucetClient = new FaucetClient(NODE_URL, FAUCET_URL);
@@ -38,9 +44,6 @@ let user = new AptosAccount();
 
 await faucetClient.fundAccount(user.address(), 50000);
 console.log(`User account ${user.address().hex()} created + funded.`);
-
-const aggregator_acct = new AptosAccount();
-await faucetClient.fundAccount(aggregator_acct.address(), 50000);
 
 // Make Job data for btc price
 const serializedJob = Buffer.from(
@@ -72,11 +75,6 @@ const [aggregator, createFeedTx] = await createFeed(
     minJobResults: 1,
     minOracleResults: 1,
     minUpdateDelaySeconds: 5,
-    startAfter: 0,
-    varianceThreshold: 0,
-    varianceThresholdScale: 0,
-    forceReportPeriod: 0,
-    expiration: 0,
     coinType: "0x1::aptos_coin::AptosCoin",
     crank: SWITCHBOARD_CRANK_ADDRESS,
     initialLoadAmount: 1000,
@@ -153,13 +151,13 @@ console.log(await aggregatorAccount.loadData());
 
 ```toml
 [addresses]
-switchboard = "0x348ecb66a5d9edab8d175f647d5e99d6962803da7f5d3d2eb839387aeb118300"
+switchboard = "0x14611263909398572be034debb2e61b6751cafbeaddd994b9a1250cb76b99d38"
 
 [dependencies]
 MoveStdlib = { git = "https://github.com/aptos-labs/aptos-core.git", subdir = "aptos-move/framework/move-stdlib/", rev = "main" }
 AptosFramework = { git = "https://github.com/aptos-labs/aptos-core.git", subdir = "aptos-move/framework/aptos-framework/", rev = "main" }
 AptosStdlib = { git = "https://github.com/aptos-labs/aptos-core.git", subdir = "aptos-move/framework/aptos-stdlib/", rev = "main" }
-Switchboard = { git = "https://github.com/switchboard-xyz/switchboard-aptos-public.git", subdir = "switchboard/", rev = "main" }
+Switchboard = { git = "https://github.com/switchboard-xyz/aptos-sdk.git", subdir = "switchboard-move/", rev = "main" }
 ```
 
 ### Reading Feeds
