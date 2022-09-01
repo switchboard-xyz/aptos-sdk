@@ -8,9 +8,9 @@ aptos_framework = '0x1'
 switchboard = '_'
 
 [dev-addresses]
-switchboard = '0x3'
+switchboard = '0x55'
 
 [dependencies]
-MoveStdlib = { git = "https://github.com/aptos-labs/aptos-core.git", subdir = "aptos-move/framework/move-stdlib/", rev = "main" }
-AptosFramework = { git = "https://github.com/aptos-labs/aptos-core.git", subdir = "aptos-move/framework/aptos-framework/", rev = "main" }
-AptosStdlib = { git = "https://github.com/aptos-labs/aptos-core.git", subdir = "aptos-move/framework/aptos-stdlib/", rev = "main" }
+MoveStdlib = { git = "https://github.com/aptos-labs/aptos-core.git", subdir = "aptos-move/framework/move-stdlib/", rev = "f8bf8fdeec33c8c6ff3d1cbaf4990b9e54c2176a" }
+AptosFramework = { git = "https://github.com/aptos-labs/aptos-core.git", subdir = "aptos-move/framework/aptos-framework/", rev = "f8bf8fdeec33c8c6ff3d1cbaf4990b9e54c2176a" }
+AptosStdlib = { git = "https://github.com/aptos-labs/aptos-core.git", subdir = "aptos-move/framework/aptos-stdlib/", rev = "f8bf8fdeec33c8c6ff3d1cbaf4990b9e54c2176a" }

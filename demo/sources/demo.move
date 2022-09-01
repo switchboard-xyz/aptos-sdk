@@ -52,6 +52,6 @@ module demo::demo_app {
         aggregator::new_test(account, 100, 0, false);
 
         // print out value
-        //std::debug::print(&aggregator::latest_value(signer::address_of(account)));
+        std::debug::print(&aggregator::latest_value(signer::address_of(account)));
     }
 }
