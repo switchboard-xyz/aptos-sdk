@@ -102,7 +102,7 @@ const onAggregatorUpdate = (
           name: "BTC/USD",
           metadata: "binance",
           authority: user.address().hex(),
-          data: serializedJob.toString(),
+          data: serializedJob.toString("base64"),
           weight: 1,
         },
       ],

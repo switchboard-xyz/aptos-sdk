@@ -44,7 +44,7 @@ const SWITCHBOARD_DEVNET_ADDRESS =
   console.log(`User account ${user.address().hex()} funded.`);
 
   // user will be authority
-  await faucetClient.fundAccount(user.address(), 500000);
+  await faucetClient.fundAccount(user.address(), 5000000000);
 
   try {
     // create permission for oracle

@@ -795,8 +795,10 @@ export class JobAccount {
 
   async loadJob(): Promise<OracleJob> {
     const data = await this.loadData();
+
+    // on-chain hex encoded base64 -> base64 -> Uint8Array -> OracleJob
     const job = OracleJob.decodeDelimited(
-      Buffer.from(data.data.slice(2), "hex")
+      Buffer.from(Buffer.from(data.data.slice(2), "hex").toString(), "base64")
     );
     return job;
   }
