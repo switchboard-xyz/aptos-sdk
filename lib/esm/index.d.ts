@@ -118,7 +118,6 @@ export interface OracleQueueInitParams {
     unpermissionedFeedsEnabled: boolean;
     unpermissionedVrfEnabled: boolean;
     lockLeaseFunding: boolean;
-    mint: MaybeHexString;
     enableBufferRelayers: boolean;
     maxSize: number;
     coinType: MoveStructTag;
@@ -221,7 +220,7 @@ export declare class AggregatorAccount {
     addJob(account: AptosAccount, params: AggregatorAddJobParams): Promise<string>;
     addJobTx(params: AggregatorAddJobParams): Types.TransactionPayload;
     saveResult(account: AptosAccount, params: AggregatorSaveResultParams): Promise<string>;
-    openRound(account: AptosAccount): Promise<string>;
+    openRound(account: AptosAccount, jitter?: number): Promise<string>;
     openRoundTx(): Types.TransactionPayload;
     setConfigTx(accountAddress: MaybeHexString, params: AggregatorSetConfigParams): Types.TransactionPayload;
     watch(callback: EventCallback): Promise<AptosEvent>;
