@@ -8,7 +8,7 @@ A library of utility functions to interact with Switchboard Modules on Aptos
 ## Install
 
 ```
-npm i --save https://www.npmjs.com/package/@switchboard-xyz/aptos.js
+npm i --save @switchboard-xyz/aptos.js
 ```
 
 ## Creating Feeds
