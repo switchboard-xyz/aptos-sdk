@@ -33,7 +33,7 @@ const NODE_URL = "https://fullnode.devnet.aptoslabs.com/v1";
 const FAUCET_URL = "https://faucet.devnet.aptoslabs.com";
 
 const SWITCHBOARD_DEVNET_ADDRESS =
-  "0x14611263909398572be034debb2e61b6751cafbeaddd994b9a1250cb76b99d38";
+  "0xb27f7bbf7caf2368b08032d005e8beab151a885054cdca55c4cc644f0a308d2b";
 
 const onAggregatorUpdate = (
   client: AptosClient,
@@ -97,7 +97,6 @@ const onAggregatorOpenRound = (
       unpermissionedFeedsEnabled: true,
       unpermissionedVrfEnabled: true,
       lockLeaseFunding: false,
-      mint: user.address(),
       enableBufferRelayers: false,
       maxSize: 1000,
       coinType: "0x1::aptos_coin::AptosCoin",
@@ -254,7 +253,7 @@ const onAggregatorOpenRound = (
           name: "BTC/USD",
           metadata: "binance",
           authority: user.address().hex(),
-          data: serializedJob1.toString(),
+          data: serializedJob1.toString("base64"),
           weight: 1,
         },
       ],
@@ -284,7 +283,7 @@ const onAggregatorOpenRound = (
           name: "ETH/USD",
           metadata: "binance",
           authority: user.address().hex(),
-          data: serializedJob2.toString(),
+          data: serializedJob2.toString("base64"),
           weight: 1,
         },
       ],
@@ -314,7 +313,7 @@ const onAggregatorOpenRound = (
           name: "SOL/USD",
           metadata: "binance",
           authority: user.address().hex(),
-          data: serializedJob3.toString(),
+          data: serializedJob3.toString("base64"),
           weight: 1,
         },
       ],
@@ -417,5 +416,5 @@ const onAggregatorOpenRound = (
     } catch (e) {
       console.log("failed open round");
     }
-  }, 7000);
+  }, 10000);
 })();

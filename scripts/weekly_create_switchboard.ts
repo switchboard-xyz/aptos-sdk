@@ -5,6 +5,7 @@ import {
   Permission,
   CrankAccount,
   SwitchboardPermission,
+  generateResourceAccountAddress,
 } from "../src";
 import YAML from "yaml";
 import fs from "fs";
@@ -13,7 +14,13 @@ const NODE_URL = "https://fullnode.devnet.aptoslabs.com";
 const FAUCET_URL = "https://faucet.devnet.aptoslabs.com";
 
 const SWITCHBOARD_DEVNET_ADDRESS =
-  "0x14611263909398572be034debb2e61b6751cafbeaddd994b9a1250cb76b99d38";
+  "0xb27f7bbf7caf2368b08032d005e8beab151a885054cdca55c4cc644f0a308d2b";
+
+const SWITCHBOARD_QUEUE_ADDRESS = generateResourceAccountAddress(
+  HexString.ensure(SWITCHBOARD_DEVNET_ADDRESS),
+  Buffer.from("OracleQueue")
+);
+console.log(SWITCHBOARD_QUEUE_ADDRESS);
 
 // run it all at once
 (async () => {
@@ -31,11 +38,11 @@ const SWITCHBOARD_DEVNET_ADDRESS =
     );
     if (
       "profiles" in parsedYaml &&
-      "localuser" in parsedYaml.profiles &&
-      "private_key" in parsedYaml.profiles.localuser
+      "newdeployer" in parsedYaml.profiles &&
+      "private_key" in parsedYaml.profiles.newdeployer
     ) {
       user = new AptosAccount(
-        HexString.ensure(parsedYaml.profiles.localuser.private_key).toBuffer()
+        HexString.ensure(parsedYaml.profiles.newdeployer.private_key).toBuffer()
       );
     }
   } catch {}
@@ -46,82 +53,110 @@ const SWITCHBOARD_DEVNET_ADDRESS =
   // user will be authority
   await faucetClient.fundAccount(user.address(), 5000000000);
 
+  let oraclePermission: any;
   try {
     // create permission for oracle
-    const [oraclePermission] = await Permission.init(
+    const [o] = await Permission.init(
       client,
       user,
       {
-        authority: user.address().hex(),
-        granter: SWITCHBOARD_DEVNET_ADDRESS,
+        authority: SWITCHBOARD_DEVNET_ADDRESS,
+        granter: SWITCHBOARD_QUEUE_ADDRESS,
         grantee: SWITCHBOARD_DEVNET_ADDRESS,
       },
       SWITCHBOARD_DEVNET_ADDRESS
     );
+    oraclePermission = o;
+    console.log("Permissions created");
+  } catch (e) {}
 
+  try {
     // enable heartbeat on oracle
     await oraclePermission.set(user, {
-      authority: user.address().hex(),
-      granter: SWITCHBOARD_DEVNET_ADDRESS,
+      authority: SWITCHBOARD_DEVNET_ADDRESS,
+      granter: SWITCHBOARD_QUEUE_ADDRESS,
       grantee: SWITCHBOARD_DEVNET_ADDRESS,
       permission: SwitchboardPermission.PERMIT_ORACLE_HEARTBEAT,
       enable: true,
     });
-
-    console.log("Permissions created");
+    console.log("Permissions set");
   } catch (e) {}
 
-  const [queue, queueTxSig] = await OracleQueueAccount.init(
-    client,
-    user,
-    {
-      name: "Switch Queue",
-      metadata: "Nothing to see here",
-      authority: user.address(),
-      oracleTimeout: 3000,
-      reward: 1,
-      minStake: 0,
-      slashingEnabled: false,
-      varianceToleranceMultiplierValue: 0,
-      varianceToleranceMultiplierScale: 0,
-      feedProbationPeriod: 0,
-      consecutiveFeedFailureLimit: 0,
-      consecutiveOracleFailureLimit: 0,
-      unpermissionedFeedsEnabled: true,
-      unpermissionedVrfEnabled: true,
-      lockLeaseFunding: false,
-      mint: user.address(),
-      enableBufferRelayers: false,
-      maxSize: 1000,
-      coinType: "0x1::aptos_coin::AptosCoin",
-    },
-    SWITCHBOARD_DEVNET_ADDRESS
-  );
+  let queue: any;
+  try {
+    const [q, queueTxSig] = await OracleQueueAccount.init(
+      client,
+      user,
+      {
+        name: "Switch Queue",
+        metadata: "Nothing to see here",
+        authority: user.address(),
+        oracleTimeout: 3000,
+        reward: 1,
+        minStake: 0,
+        slashingEnabled: false,
+        varianceToleranceMultiplierValue: 0,
+        varianceToleranceMultiplierScale: 0,
+        feedProbationPeriod: 0,
+        consecutiveFeedFailureLimit: 0,
+        consecutiveOracleFailureLimit: 0,
+        unpermissionedFeedsEnabled: true,
+        unpermissionedVrfEnabled: true,
+        lockLeaseFunding: false,
+        enableBufferRelayers: false,
+        maxSize: 1000,
+        coinType: "0x1::aptos_coin::AptosCoin",
+      },
+      SWITCHBOARD_DEVNET_ADDRESS
+    );
+    console.log(`Queue: ${queue.address}, tx: ${queueTxSig}`);
+    queue = q;
+  } catch (e) {
+    let address = generateResourceAccountAddress(
+      HexString.ensure(SWITCHBOARD_DEVNET_ADDRESS),
+      Buffer.from("OracleQueue")
+    );
+    queue = new OracleQueueAccount(client, address, SWITCHBOARD_DEVNET_ADDRESS);
+  }
 
-  console.log(`Queue: ${queue.address}, tx: ${queueTxSig}`);
+  let oracle: any;
+  try {
+    const [o, oracleTxSig] = await OracleAccount.init(
+      client,
+      user,
+      {
+        address: user.address(),
+        name: "Switchboard Oracle",
+        metadata: "metadata",
+        authority: user.address(),
+        queue: queue.address,
+        coinType: "0x1::aptos_coin::AptosCoin",
+      },
+      SWITCHBOARD_DEVNET_ADDRESS
+    );
 
-  const [oracle, oracleTxSig] = await OracleAccount.init(
-    client,
-    user,
-    {
-      address: user.address(),
-      name: "Switchboard Oracle",
-      metadata: "metadata",
-      authority: user.address(),
-      queue: queue.address,
-      coinType: "0x1::aptos_coin::AptosCoin",
-    },
-    SWITCHBOARD_DEVNET_ADDRESS
-  );
-
-  console.log(`Oracle: ${oracle.address}, tx: ${oracleTxSig}`);
-
-  // trigger the oracle heartbeat
-  const heartbeatTxSig = await oracle.heartbeat(user);
-  console.log("Heartbeat Tx Hash:", heartbeatTxSig);
+    console.log(`Oracle: ${oracle.address}, tx: ${oracleTxSig}`);
+    oracle = o;
+  } catch (e) {
+    oracle = new OracleAccount(
+      client,
+      SWITCHBOARD_DEVNET_ADDRESS,
+      SWITCHBOARD_DEVNET_ADDRESS
+    );
+  }
 
   try {
-    const [crank, txhash] = await CrankAccount.init(
+    // trigger the oracle heartbeat
+    const heartbeatTxSig = await oracle.heartbeat(user);
+    console.log("Heartbeat Tx Hash:", heartbeatTxSig);
+  } catch (e) {
+    console.log("could not heartbeat");
+  }
+
+  let crank: any;
+
+  try {
+    const [c, txhash] = await CrankAccount.init(
       client,
       user,
       {
@@ -133,9 +168,17 @@ const SWITCHBOARD_DEVNET_ADDRESS =
     );
     console.log(`Created crank at ${crank.address}, tx hash ${txhash}`);
     console.log("Crank", await crank.loadData());
+    crank = c;
   } catch (e) {
     console.log("Crank already created.");
+    crank = new CrankAccount(
+      client,
+      SWITCHBOARD_DEVNET_ADDRESS,
+      SWITCHBOARD_DEVNET_ADDRESS
+    );
   }
 
+  console.log("Oracle", await oracle.loadData());
+  console.log("Crank", await crank.loadData());
   console.log("OracleQueue", await queue.loadData());
 })();

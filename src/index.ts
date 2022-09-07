@@ -180,7 +180,6 @@ export interface OracleQueueInitParams {
   lockLeaseFunding: boolean;
 
   // this needs to be swapped with Coin or something later
-  mint: MaybeHexString;
   enableBufferRelayers: boolean;
   maxSize: number;
   coinType: MoveStructTag;
@@ -667,12 +666,12 @@ export class AggregatorAccount {
     );
   }
 
-  async openRound(account: AptosAccount): Promise<string> {
+  async openRound(account: AptosAccount, jitter?: number): Promise<string> {
     return await sendAptosTx(
       this.client,
       account,
       `${this.switchboardAddress}::aggregator_open_round_action::run`,
-      [HexString.ensure(this.address).hex()],
+      [HexString.ensure(this.address).hex(), jitter ?? 1],
       [this.coinType]
     );
   }
@@ -1053,17 +1052,21 @@ export class OracleQueueAccount {
         params.unpermissionedFeedsEnabled,
         params.unpermissionedVrfEnabled,
         params.lockLeaseFunding,
-        HexString.ensure(params.mint).hex(),
         params.enableBufferRelayers,
         params.maxSize,
       ],
       [params.coinType ?? "0x1::aptos_coin::AptosCoin"]
     );
 
+    let address = generateResourceAccountAddress(
+      account.address(),
+      Buffer.from("OracleQueue")
+    );
+
     return [
       new OracleQueueAccount(
         client,
-        account.address(),
+        address,
         switchboardAddress,
         params.coinType ?? "0x1::aptos_coin::AptosCoin"
       ),
@@ -1305,7 +1308,7 @@ export class Permission {
           TxnBuilderTypes.AccountAddress.fromHex(params.authority)
         ),
         BCS.bcsSerializeBytes(HexString.ensure(params.granter).toUint8Array()),
-        BCS.bcsSerializeBytes(HexString.ensure(params.granter).toUint8Array()),
+        BCS.bcsSerializeBytes(HexString.ensure(params.grantee).toUint8Array()),
       ]
     );
 
@@ -1328,7 +1331,7 @@ export class Permission {
           TxnBuilderTypes.AccountAddress.fromHex(params.authority)
         ),
         BCS.bcsSerializeBytes(HexString.ensure(params.granter).toUint8Array()),
-        BCS.bcsSerializeBytes(HexString.ensure(params.granter).toUint8Array()),
+        BCS.bcsSerializeBytes(HexString.ensure(params.grantee).toUint8Array()),
         BCS.bcsSerializeUint64(params.permission),
         BCS.bcsSerializeBool(params.enable),
       ]
