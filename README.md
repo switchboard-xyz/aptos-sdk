@@ -28,13 +28,13 @@ const NODE_URL = "https://fullnode.devnet.aptoslabs.com/v1";
 const FAUCET_URL = "https://faucet.devnet.aptoslabs.com";
 
 const SWITCHBOARD_DEVNET_ADDRESS =
-  "0x14611263909398572be034debb2e61b6751cafbeaddd994b9a1250cb76b99d38";
+  "0xb27f7bbf7caf2368b08032d005e8beab151a885054cdca55c4cc644f0a308d2b";
 
 const SWITCHBOARD_QUEUE_ADDRESS =
-  "0x14611263909398572be034debb2e61b6751cafbeaddd994b9a1250cb76b99d38";
+  "0xbdb92db64cc9b3072381c5f98c57ef77c9ceb12163187b1e691b8a677a015f61";
 
 const SWITCHBOARD_CRANK_ADDRESS =
-  "0x14611263909398572be034debb2e61b6751cafbeaddd994b9a1250cb76b99d38";
+  "0xb27f7bbf7caf2368b08032d005e8beab151a885054cdca55c4cc644f0a308d2b";
 
 const client = new AptosClient(NODE_URL);
 const faucetClient = new FaucetClient(NODE_URL, FAUCET_URL);
@@ -70,20 +70,20 @@ const [aggregator, createFeedTx] = await createFeed(
   user,
   {
     authority: user.address(),
-    queueAddress: SWITCHBOARD_QUEUE_ADDRESS,
-    batchSize: 1,
-    minJobResults: 1,
-    minOracleResults: 1,
-    minUpdateDelaySeconds: 5,
-    coinType: "0x1::aptos_coin::AptosCoin",
-    crank: SWITCHBOARD_CRANK_ADDRESS,
-    initialLoadAmount: 1000,
+    queueAddress: SWITCHBOARD_QUEUE_ADDRESS, // account with OracleQueue resource
+    batchSize: 1, // number of oracles to respond to each round
+    minJobResults: 1, // minimum # of jobs that need to return a result
+    minOracleResults: 1, // minumum # of oracles that need to respond for a result
+    minUpdateDelaySeconds: 5, // minimum delay between rounds
+    coinType: "0x1::aptos_coin::AptosCoin", // CoinType of the queue (now only AptosCoin)
+    crank: SWITCHBOARD_CRANK_ADDRESS, // account with Crank resource
+    initialLoadAmount: 1000, // load of the lease
     jobs: [
       {
         name: "BTC/USD",
         metadata: "binance",
         authority: user.address().hex(),
-        data: serializedJob.toString(),
+        data: serializedJob.toString("base64"), // jobs need to be base64 encoded strings
         weight: 1,
       },
     ],
@@ -134,9 +134,9 @@ const updatePoller = onAggregatorUpdate(client, async (e) => {
 ### Reading Feeds
 
 ```ts
-import { Aggregator } from "sbv2-aptos";
+import { AggregatorAccount } from "sbv2-aptos";
 
-const aggregatorAccount: Aggregator = new Aggregator(
+const aggregatorAccount: AggregatorAccount = new AggregatorAccount(
   client,
   aggregator_address,
   SWITCHBOARD_DEVNET_ADDRESS
@@ -151,7 +151,7 @@ console.log(await aggregatorAccount.loadData());
 
 ```toml
 [addresses]
-switchboard = "0x14611263909398572be034debb2e61b6751cafbeaddd994b9a1250cb76b99d38"
+switchboard = "0xb27f7bbf7caf2368b08032d005e8beab151a885054cdca55c4cc644f0a308d2b"
 
 [dependencies]
 MoveStdlib = { git = "https://github.com/aptos-labs/aptos-core.git", subdir = "aptos-move/framework/move-stdlib/", rev = "devnet" }
