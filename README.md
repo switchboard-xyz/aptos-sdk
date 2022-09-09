@@ -134,7 +134,7 @@ const updatePoller = onAggregatorUpdate(client, async (e) => {
 ### Reading Feeds
 
 ```ts
-import { AggregatorAccount } from "sbv2-aptos";
+import { AggregatorAccount } from "@switchboard-xyz/aptos.js";
 
 const aggregatorAccount: AggregatorAccount = new AggregatorAccount(
   client,
