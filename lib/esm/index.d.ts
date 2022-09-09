@@ -42,6 +42,8 @@ export interface AggregatorInitParams {
     historySize?: number;
     readCharge?: number;
     rewardEscrow?: string;
+    gasPrice?: number;
+    gasPriceFeed?: string;
 }
 export interface AggregatorSaveResultParams {
     oracleAddress: MaybeHexString;
@@ -81,10 +83,11 @@ export interface AggregatorSetConfigParams {
     historySize: number;
     readCharge: number;
     rewardEscrow: string;
+    gasPrice?: number;
+    gasPriceFeed?: string;
     coinType?: string;
 }
 export interface CrankInitParams {
-    address: string;
     queueAddress: MaybeHexString;
     coinType: MoveStructTag;
 }
@@ -95,7 +98,6 @@ export interface CrankPushParams {
     aggregatorAddress: string;
 }
 export interface OracleInitParams {
-    address: MaybeHexString;
     name: string;
     metadata: string;
     authority: MaybeHexString;
@@ -118,6 +120,28 @@ export interface OracleQueueInitParams {
     unpermissionedFeedsEnabled: boolean;
     unpermissionedVrfEnabled: boolean;
     lockLeaseFunding: boolean;
+    gasPrice?: number;
+    enableBufferRelayers: boolean;
+    maxSize: number;
+    coinType: MoveStructTag;
+}
+export interface OracleQueueSetConfigsParams {
+    name: string;
+    metadata: string;
+    authority: MaybeHexString;
+    oracleTimeout: number;
+    reward: number;
+    minStake: number;
+    slashingEnabled: boolean;
+    varianceToleranceMultiplierValue: number;
+    varianceToleranceMultiplierScale: number;
+    feedProbationPeriod: number;
+    consecutiveFeedFailureLimit: number;
+    consecutiveOracleFailureLimit: number;
+    unpermissionedFeedsEnabled: boolean;
+    unpermissionedVrfEnabled: boolean;
+    lockLeaseFunding: boolean;
+    gasPrice?: number;
     enableBufferRelayers: boolean;
     maxSize: number;
     coinType: MoveStructTag;
@@ -135,7 +159,6 @@ export interface LeaseWithdrawParams {
     amount: number;
 }
 export interface OracleWalletInitParams {
-    oracleAddress: MaybeHexString;
     coinType: string;
 }
 export interface OracleWalletContributeParams {
@@ -222,7 +245,7 @@ export declare class AggregatorAccount {
     saveResult(account: AptosAccount, params: AggregatorSaveResultParams): Promise<string>;
     openRound(account: AptosAccount, jitter?: number): Promise<string>;
     openRoundTx(): Types.TransactionPayload;
-    setConfigTx(accountAddress: MaybeHexString, params: AggregatorSetConfigParams): Types.TransactionPayload;
+    setConfigTx(params: AggregatorSetConfigParams): Types.TransactionPayload;
     watch(callback: EventCallback): Promise<AptosEvent>;
     static shouldReportValue(value: Big, aggregator: any): Promise<boolean>;
 }
@@ -385,8 +408,11 @@ interface CreateFeedParams extends AggregatorInitParams {
     initialLoadAmount: number;
     crank: MaybeHexString;
 }
+interface CreateOracleParams extends OracleInitParams {
+}
 export declare function createFeedTx(client: AptosClient, authority: MaybeHexString, params: CreateFeedParams, switchboardAddress: MaybeHexString): Promise<[AggregatorAccount, Types.TransactionPayload]>;
 export declare function createFeed(client: AptosClient, account: AptosAccount, params: CreateFeedParams, switchboardAddress: MaybeHexString): Promise<[AggregatorAccount, string]>;
+export declare function createOracle(client: AptosClient, account: AptosAccount, params: CreateOracleParams, switchboardAddress: MaybeHexString): Promise<[OracleAccount, string]>;
 export declare function bcsAddressToBytes(hexStr: HexString): Uint8Array;
 export declare function generateResourceAccountAddress(origin: HexString, seed: Uint8Array): MaybeHexString;
 export declare function fetchAggregators(client: AptosClient, authority: MaybeHexString, switchboardAddress: MaybeHexString): Promise<any[]>;
