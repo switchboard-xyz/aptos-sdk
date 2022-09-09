@@ -92,6 +92,8 @@ export interface AggregatorInitParams {
   historySize?: number;
   readCharge?: number;
   rewardEscrow?: string;
+  gasPrice?: number;
+  gasPriceFeed?: string;
 }
 
 export interface AggregatorSaveResultParams {
@@ -136,11 +138,12 @@ export interface AggregatorSetConfigParams {
   historySize: number;
   readCharge: number;
   rewardEscrow: string;
+  gasPrice?: number;
+  gasPriceFeed?: string;
   coinType?: string;
 }
 
 export interface CrankInitParams {
-  address: string;
   queueAddress: MaybeHexString;
   coinType: MoveStructTag;
 }
@@ -154,7 +157,6 @@ export interface CrankPushParams {
 }
 
 export interface OracleInitParams {
-  address: MaybeHexString;
   name: string;
   metadata: string;
   authority: MaybeHexString;
@@ -178,6 +180,31 @@ export interface OracleQueueInitParams {
   unpermissionedFeedsEnabled: boolean;
   unpermissionedVrfEnabled: boolean;
   lockLeaseFunding: boolean;
+  gasPrice?: number;
+
+  // this needs to be swapped with Coin or something later
+  enableBufferRelayers: boolean;
+  maxSize: number;
+  coinType: MoveStructTag;
+}
+
+export interface OracleQueueSetConfigsParams {
+  name: string;
+  metadata: string;
+  authority: MaybeHexString;
+  oracleTimeout: number;
+  reward: number;
+  minStake: number;
+  slashingEnabled: boolean;
+  varianceToleranceMultiplierValue: number;
+  varianceToleranceMultiplierScale: number;
+  feedProbationPeriod: number;
+  consecutiveFeedFailureLimit: number;
+  consecutiveOracleFailureLimit: number;
+  unpermissionedFeedsEnabled: boolean;
+  unpermissionedVrfEnabled: boolean;
+  lockLeaseFunding: boolean;
+  gasPrice?: number;
 
   // this needs to be swapped with Coin or something later
   enableBufferRelayers: boolean;
@@ -201,7 +228,6 @@ export interface LeaseWithdrawParams {
 }
 
 export interface OracleWalletInitParams {
-  oracleAddress: MaybeHexString;
   coinType: string;
 }
 
@@ -321,6 +347,7 @@ export async function simulateAndRun(
     console.log(simulation);
     throw new Error(`TxFailure: ${simulation.vm_status}`);
   }
+
   const signedTxn = await client.signTransaction(user, txnRequest);
   const transactionRes = await client.submitTransaction(signedTxn);
   await client.waitForTransaction(transactionRes.hash);
@@ -569,6 +596,10 @@ export class AggregatorAccount {
         params.rewardEscrow
           ? HexString.ensure(params.rewardEscrow).hex()
           : account.address().hex(),
+        params.gasPrice ?? 0,
+        params.gasPriceFeed
+          ? HexString.ensure(params.gasPriceFeed).hex()
+          : "0x0",
         HexString.ensure(params.authority).hex(),
       ],
       [params.coinType ?? "0x1::aptos_coin::AptosCoin"]
@@ -684,10 +715,7 @@ export class AggregatorAccount {
     );
   }
 
-  setConfigTx(
-    accountAddress: MaybeHexString,
-    params: AggregatorSetConfigParams
-  ): Types.TransactionPayload {
+  setConfigTx(params: AggregatorSetConfigParams): Types.TransactionPayload {
     const { mantissa: vtMantissa, scale: vtScale } = AptosDecimal.fromBig(
       params.varianceThreshold ?? new Big(0)
     );
@@ -713,7 +741,11 @@ export class AggregatorAccount {
         params.rewardEscrow
           ? HexString.ensure(params.rewardEscrow).hex()
           : HexString.ensure(params.authority).hex(),
-        HexString.ensure(params.authority).hex(),
+        params.gasPrice ?? 0,
+        params.gasPriceFeed
+          ? HexString.ensure(params.gasPriceFeed).hex()
+          : "0x0",
+        params.authority,
       ],
       [params.coinType ?? "0x1::aptos_coin::AptosCoin"]
     );
@@ -1054,6 +1086,7 @@ export class OracleQueueAccount {
         params.lockLeaseFunding,
         params.enableBufferRelayers,
         params.maxSize,
+        params.gasPrice ?? 0,
       ],
       [params.coinType ?? "0x1::aptos_coin::AptosCoin"]
     );
@@ -1223,7 +1256,7 @@ export class OracleWallet {
       client,
       account,
       `${switchboardAddress}::oracle_wallet_init_action::run`,
-      [HexString.ensure(params.oracleAddress).hex()],
+      [],
       [params.coinType ?? "0x1::aptos_coin::AptosCoin"]
     );
 
@@ -1354,6 +1387,8 @@ interface CreateFeedParams extends AggregatorInitParams {
   crank: MaybeHexString;
 }
 
+interface CreateOracleParams extends OracleInitParams {}
+
 export async function createFeedTx(
   client: AptosClient,
   authority: MaybeHexString,
@@ -1423,6 +1458,10 @@ export async function createFeedTx(
         params.rewardEscrow
           ? HexString.ensure(params.rewardEscrow).hex()
           : HexString.ensure(params.authority).hex(),
+        params.gasPrice ?? 0,
+        params.gasPriceFeed
+          ? HexString.ensure(params.gasPriceFeed).hex()
+          : "0x0",
 
         // lease
         params.initialLoadAmount,
@@ -1443,6 +1482,7 @@ export async function createFeedTx(
   ];
 }
 
+// Create a feed with jobs, a lease, then optionally push the lease to the specified crank
 export async function createFeed(
   client: AptosClient,
   account: AptosAccount,
@@ -1458,6 +1498,44 @@ export async function createFeed(
 
   const tx = await simulateAndRun(client, account, txn);
   return [aggregator, tx];
+}
+
+// Create an oracle, oracle wallet, permisison, and set the heartbeat permission if user is the queue authority
+export async function createOracle(
+  client: AptosClient,
+  account: AptosAccount,
+  params: CreateOracleParams,
+  switchboardAddress: MaybeHexString
+): Promise<[OracleAccount, string]> {
+  const seed = new AptosAccount().address();
+  const resource_address = generateResourceAccountAddress(
+    HexString.ensure(account.address()),
+    bcsAddressToBytes(HexString.ensure(seed))
+  );
+
+  const tx = await sendAptosTx(
+    client,
+    account,
+    `${switchboardAddress}::create_oracle_action::run`,
+    [
+      HexString.ensure(params.authority).hex(),
+      params.name,
+      params.metadata,
+      HexString.ensure(params.queue).hex(),
+      seed.hex(),
+    ],
+    [params.coinType ?? "0x1::aptos_coin::AptosCoin"]
+  );
+
+  return [
+    new OracleAccount(
+      client,
+      resource_address,
+      switchboardAddress,
+      params.coinType ?? "0x1::aptos_coin::AptosCoin"
+    ),
+    tx,
+  ];
 }
 
 export function bcsAddressToBytes(hexStr: HexString): Uint8Array {

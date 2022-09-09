@@ -51,7 +51,10 @@ console.log(SWITCHBOARD_QUEUE_ADDRESS);
   console.log(`User account ${user.address().hex()} funded.`);
 
   // user will be authority
-  await faucetClient.fundAccount(user.address(), 5000000000);
+  await faucetClient.fundAccount(
+    HexString.ensure(SWITCHBOARD_DEVNET_ADDRESS),
+    5000000000
+  );
 
   let oraclePermission: any;
   try {
@@ -125,7 +128,6 @@ console.log(SWITCHBOARD_QUEUE_ADDRESS);
       client,
       user,
       {
-        address: user.address(),
         name: "Switchboard Oracle",
         metadata: "metadata",
         authority: user.address(),
@@ -160,7 +162,6 @@ console.log(SWITCHBOARD_QUEUE_ADDRESS);
       client,
       user,
       {
-        address: SWITCHBOARD_DEVNET_ADDRESS,
         queueAddress: queue.address,
         coinType: "0x1::aptos_coin::AptosCoin",
       },

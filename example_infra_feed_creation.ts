@@ -26,6 +26,8 @@ import {
   AptosDecimal,
   AggregatorAccount,
   fetchAggregators,
+  OracleWallet,
+  createOracle,
 } from "./src";
 import Big from "big.js";
 
@@ -105,46 +107,20 @@ const onAggregatorOpenRound = (
   );
   console.log(`Oracle Queue ${queue.address} created. tx hash: ${queueTxHash}`);
 
-  const [oracle, oracleTxHash] = await OracleAccount.init(
+  const [oracle, oracleTxHash] = await createOracle(
     client,
     user,
     {
-      address: user.address(),
       name: "Switchboard OracleAccount",
-      metadata: "metadata",
       authority: user.address(),
+      metadata: "metadata",
       queue: queue.address,
       coinType: "0x1::aptos_coin::AptosCoin",
     },
     SWITCHBOARD_DEVNET_ADDRESS
   );
 
-  console.log(`OracleAccount: ${oracle.address}, tx hash: ${oracleTxHash}`);
-
-  // create permission for oracle
-  const [oraclePermission] = await Permission.init(
-    client,
-    user,
-    {
-      authority: user.address().hex(),
-      granter: queue.address,
-      grantee: oracle.address,
-    },
-    SWITCHBOARD_DEVNET_ADDRESS
-  );
-
-  // enable heartbeat on oracle
-  try {
-    await oraclePermission.set(user, {
-      authority: user.address().hex(),
-      granter: queue.address,
-      grantee: oracle.address,
-      permission: SwitchboardPermission.PERMIT_ORACLE_HEARTBEAT,
-      enable: true,
-    });
-  } catch (e) {
-    console.log("permission created already");
-  }
+  console.log(`Oracle ${oracle.address} created. tx hash: ${oracleTxHash}`);
 
   // first heartbeat
   const heartbeatTxHash = await oracle.heartbeat(user);
@@ -165,7 +141,6 @@ const onAggregatorOpenRound = (
     client,
     user,
     {
-      address: user.address().hex(),
       queueAddress: queue.address,
       coinType: "0x1::aptos_coin::AptosCoin",
     },
@@ -181,44 +156,6 @@ const onAggregatorOpenRound = (
           {
             httpTask: {
               url: "https://www.binance.us/api/v3/ticker/price?symbol=BTCUSD",
-            },
-          },
-          {
-            jsonParseTask: {
-              path: "$.price",
-            },
-          },
-        ],
-      })
-    ).finish()
-  );
-
-  const serializedJob2 = Buffer.from(
-    OracleJob.encodeDelimited(
-      OracleJob.create({
-        tasks: [
-          {
-            httpTask: {
-              url: "https://www.binance.us/api/v3/ticker/price?symbol=ETHUSD",
-            },
-          },
-          {
-            jsonParseTask: {
-              path: "$.price",
-            },
-          },
-        ],
-      })
-    ).finish()
-  );
-
-  const serializedJob3 = Buffer.from(
-    OracleJob.encodeDelimited(
-      OracleJob.create({
-        tasks: [
-          {
-            httpTask: {
-              url: "https://www.binance.us/api/v3/ticker/price?symbol=SOLUSD",
             },
           },
           {
@@ -261,66 +198,6 @@ const onAggregatorOpenRound = (
     SWITCHBOARD_DEVNET_ADDRESS
   );
 
-  await createFeed(
-    client,
-    user,
-    {
-      authority: user.address(),
-      queueAddress: queue.address,
-      batchSize: 1,
-      minJobResults: 1,
-      minOracleResults: 1,
-      minUpdateDelaySeconds: 5,
-      startAfter: 0,
-      varianceThreshold: new Big(0),
-      forceReportPeriod: 0,
-      expiration: 0,
-      coinType: "0x1::aptos_coin::AptosCoin",
-      crank: user.address().hex(),
-      initialLoadAmount: 1000,
-      jobs: [
-        {
-          name: "ETH/USD",
-          metadata: "binance",
-          authority: user.address().hex(),
-          data: serializedJob2.toString("base64"),
-          weight: 1,
-        },
-      ],
-    },
-    SWITCHBOARD_DEVNET_ADDRESS
-  );
-
-  await createFeed(
-    client,
-    user,
-    {
-      authority: user.address(),
-      queueAddress: queue.address,
-      batchSize: 1,
-      minJobResults: 1,
-      minOracleResults: 1,
-      minUpdateDelaySeconds: 5,
-      startAfter: 0,
-      varianceThreshold: new Big(0),
-      forceReportPeriod: 0,
-      expiration: 0,
-      coinType: "0x1::aptos_coin::AptosCoin",
-      crank: user.address().hex(),
-      initialLoadAmount: 1000,
-      jobs: [
-        {
-          name: "SOL/USD",
-          metadata: "binance",
-          authority: user.address().hex(),
-          data: serializedJob3.toString("base64"),
-          weight: 1,
-        },
-      ],
-    },
-    SWITCHBOARD_DEVNET_ADDRESS
-  );
-
   console.log(
     `Created AggregatorAccount and LeaseAccount resources at account address ${aggregator.address}. Tx hash ${createFeedTx}`
   );
@@ -330,6 +207,7 @@ const onAggregatorOpenRound = (
   });
 
   const onOpenRoundPoller = onAggregatorOpenRound(client, async (e) => {
+    console.log(e);
     try {
       // only handle updates for this aggregator
       if (e.data.aggregator_address !== aggregator.address) {
@@ -413,6 +291,7 @@ const onAggregatorOpenRound = (
   setInterval(() => {
     try {
       aggregator.openRound(user);
+      console.log("opening round");
     } catch (e) {
       console.log("failed open round");
     }

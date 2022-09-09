@@ -17,6 +17,7 @@ import {
   EventCallback,
   OracleJob,
   createFeed,
+  JobAccount,
 } from "./src";
 import Big from "big.js";
 
