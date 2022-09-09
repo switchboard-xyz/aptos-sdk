@@ -98,6 +98,8 @@ module switchboard::aggregator {
         history_write_idx: u64,
         created_at: u64,
         crank_row_count: u64,
+        gas_price: u64,
+        gas_price_feed: address,
         _ebuf: vector<u8>,
     }
 
@@ -130,6 +132,8 @@ module switchboard::aggregator {
         history_limit: u64,
         read_charge: u64,
         reward_escrow: address,
+        gas_price: u64,
+        gas_price_feed: address,
         authority: address,
     }
 
@@ -178,6 +182,8 @@ module switchboard::aggregator {
         history_limit: u64,
         read_charge: u64,
         reward_escrow: address,
+        gas_price: u64,
+        gas_price_feed: address,
         authority: address,
     ): AggregatorConfigParams {
         AggregatorConfigParams {
@@ -197,6 +203,8 @@ module switchboard::aggregator {
             history_limit,
             read_charge,
             reward_escrow,
+            gas_price,
+            gas_price_feed,
             authority,
         }
     }
@@ -212,8 +220,6 @@ module switchboard::aggregator {
 
     public fun unlock_read<CoinType>(account: &signer, addr: address): address acquires Aggregator {
         let aggregator = borrow_global_mut<Aggregator>(addr);
-        
-        // check that transaction is happening with the correct CoinType
         coin::transfer<CoinType>(account, aggregator.reward_escrow, aggregator.read_charge);
         aggregator.latest_confirmed_round.locked = false;
         addr
@@ -271,6 +277,16 @@ module switchboard::aggregator {
     public fun authority(addr: address): address acquires Aggregator {
         let aggregator = borrow_global<Aggregator>(addr);
         aggregator.authority
+    }
+
+    public fun gas_price(addr: address): u64 acquires Aggregator {
+        let aggregator = borrow_global<Aggregator>(addr);
+        aggregator.gas_price
+    }
+
+    public fun gas_price_feed(addr: address): address acquires Aggregator {
+        let aggregator = borrow_global<Aggregator>(addr);
+        aggregator.gas_price_feed
     }
 
     public fun is_locked(addr: address): bool acquires Aggregator {
@@ -435,6 +451,8 @@ module switchboard::aggregator {
             _ebuf: vector::empty(),
             read_charge: 0,
             reward_escrow: @0x55,
+            gas_price: 1,
+            gas_price_feed: @0x0,
         };
 
         move_to<Aggregator>(account, aggregator);

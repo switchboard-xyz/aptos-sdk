@@ -1,8 +1,4 @@
 module switchboard::math {
-
-    use switchboard::vec_utils;
-    use std::vector;
-
     const EINCORRECT_STD_DEV: u64 = 0;
     const ENO_LENGTH_PASSED_IN_STD_DEV: u64 = 1;
     const EMORE_THAN_9_DECIMALS: u64 = 2;
@@ -77,54 +73,6 @@ module switchboard::math {
       }
     }
 
-    // TODO: get weighted median
-    public fun median(v: &vector<SwitchboardDecimal>): SwitchboardDecimal {
-        let v = sort(v);
-        *vector::borrow(&v, vector::length(&v) / 2)
-    }
-
-    public fun median_mut(v: &mut vector<SwitchboardDecimal>): SwitchboardDecimal {
-        let size = vector::length(v);
-        little_floyd_rivest(v, size / 2, 0, size - 1)
-    }
-
-    public fun std_deviation(medians: &vector<SwitchboardDecimal>, median: &SwitchboardDecimal): SwitchboardDecimal {
-        assert!(vector::length(medians) > 0, 0);
-        *median
-    }
-
-    public fun sort(v: &vector<SwitchboardDecimal>): vector<SwitchboardDecimal> {
-        let size = vector::length(v);
-        let alloc = vector::empty();
-        if (size <= 1) {
-            return *v
-        };
-
-        let (left, right) = vec_utils::esplit(v);
-        let left = sort(&left);
-        let right = sort(&right);
-   
-
-        loop {
-            let left_len = vector::length<SwitchboardDecimal>(&left);
-            let right_len = vector::length<SwitchboardDecimal>(&right);
-            if (left_len != 0 && right_len != 0) {
-                // TODO: play with reversing to switch remove with pop_back
-                if (gt(vector::borrow<SwitchboardDecimal>(&right, 0), vector::borrow<SwitchboardDecimal>(&left, 0))) {
-                   vector::push_back<SwitchboardDecimal>(&mut alloc, vector::remove<SwitchboardDecimal>(&mut left, 0));
-                } else {
-                    vector::push_back<SwitchboardDecimal>(&mut alloc, vector::remove<SwitchboardDecimal>(&mut right, 0));
-                }
-            } else if (left_len != 0) {
-                vector::push_back<SwitchboardDecimal>(&mut alloc, vector::remove<SwitchboardDecimal>(&mut left, 0));
-            } else if (right_len != 0) {
-                vector::push_back<SwitchboardDecimal>(&mut alloc, vector::remove<SwitchboardDecimal>(&mut right, 0));
-            } else {
-                return alloc
-            };
-        }
-    }
-
     // By reference 
 
     fun abs_gt(val1: &SwitchboardDecimal, val2: &SwitchboardDecimal): bool {
@@ -135,63 +83,57 @@ module switchboard::math {
         val1.value < val2.value
     }
 
-    public fun add(val1: &SwitchboardDecimal, val2: &SwitchboardDecimal, out: &mut SwitchboardDecimal) {
+    public fun add(val1: &SwitchboardDecimal, val2: &SwitchboardDecimal): SwitchboardDecimal {
         // -x + -y
         if (val1.neg && val2.neg) {
-            add_internal(val1, val2, out);
-            out.neg = true;
-
+            let sum = add_internal(val1, val2);
+            sum.neg = true;
+            sum
         // -x + y
         } else if (val1.neg) {
-            sub_internal(val2, val1, out);
+            sub_internal(val2, val1)
             
         // x + -y
         } else if (val2.neg) {
-            sub_internal(val1, val2, out);
+            sub_internal(val1, val2)
 
         // x + y
         } else {
-            add_internal(val1, val2, out);
-        };
+            add_internal(val1, val2)
+        }
     }
 
-    fun add_internal(val1: &SwitchboardDecimal, val2: &SwitchboardDecimal, out: &mut SwitchboardDecimal) {
-        out.value = val1.value + val2.value;
-        out.dec = MAX_DECIMALS;
-        out.neg = false;
+    fun add_internal(val1: &SwitchboardDecimal, val2: &SwitchboardDecimal): SwitchboardDecimal {
+        new(val1.value + val2.value, MAX_DECIMALS, false)
     }
 
-    public fun sub(val1: &SwitchboardDecimal, val2: &SwitchboardDecimal, out: &mut SwitchboardDecimal) {
+    public fun sub(val1: &SwitchboardDecimal, val2: &SwitchboardDecimal): SwitchboardDecimal {
         // -x - -y
         if (val1.neg && val2.neg) {
-            add_internal(val1, val2, out);
-            out.neg = abs_gt(val1, val2);
-
+            let sum = add_internal(val1, val2);
+            sum.neg = abs_gt(val1, val2);
+            sum
         // -x - y
         } else if (val1.neg) {
-            add_internal(val1, val2, out);
-            out.neg = true;
-
+            let sum = add_internal(val1, val2);
+            sum.neg = true;
+            sum
         // x - -y
         } else if (val2.neg) {
-            add_internal(val1, val2, out);
+            add_internal(val1, val2)
 
          // x - y
         } else {
-            sub_internal(val1, val2, out);
-        };
+            sub_internal(val1, val2)
+        }
     }
 
-    fun sub_internal(val1: &SwitchboardDecimal, val2: &SwitchboardDecimal, out: &mut SwitchboardDecimal) {
+    fun sub_internal(val1: &SwitchboardDecimal, val2: &SwitchboardDecimal): SwitchboardDecimal {
         if (val2.value > val1.value) {
-            out.value = (val2.value - val1.value);
-            out.dec = MAX_DECIMALS;
-            out.neg = true;
+            new(val2.value - val1.value, MAX_DECIMALS, true)
         } else {
-            out.value = (val1.value - val2.value);
-            out.dec = MAX_DECIMALS;
-            out.neg = false;
-        };
+            new(val1.value - val2.value, MAX_DECIMALS, false)
+        }
     }
 
 
@@ -219,33 +161,12 @@ module switchboard::math {
         out.neg = false;
     }
 
-    public fun div(val1: &SwitchboardDecimal, val2: &SwitchboardDecimal, out: &mut SwitchboardDecimal) {
-        one_over(val2, out);
-        let one_over = *out; // copy out
-        mul(val1, &one_over, out);
-    }
-
-    fun one_over(val2: &SwitchboardDecimal, out: &mut SwitchboardDecimal) {
-        let num1_scaled = POW_10_TO_MAX_DECIMALS;
-        out.value = num1_scaled / val2.value;
-        out.dec = MAX_DECIMALS - val2.dec;
-        out.neg = val2.neg;
-    }
-
+    // babylonian
     public fun sqrt(num: &SwitchboardDecimal, out: &mut SwitchboardDecimal) {
         let y = num;
-
-        // z = y
         out.value = y.value;
         out.neg = y.neg;
         out.dec = y.dec;
-    }
-
-    public fun normalize(num: &mut SwitchboardDecimal) {
-        while (num.value % 10 == 0 && num.dec > 0) {
-            num.value = num.value / 10;
-            num.dec = num.dec - 1;
-        };
     }
 
     public fun div_original(val1: &SwitchboardDecimal, val2: &SwitchboardDecimal, out: &mut SwitchboardDecimal) {
@@ -278,6 +199,29 @@ module switchboard::math {
         val1.value < val2.value
     }
 
+    public fun gte(val1: &SwitchboardDecimal, val2: &SwitchboardDecimal): bool {
+        if (val1.neg && val2.neg) {
+            return val1.value <= val2.value
+        } else if (val1.neg) {
+            return false
+        } else if (val2.neg) {
+            return true
+        };
+        val1.value >= val2.value
+    }
+
+    public fun lte(val1: &SwitchboardDecimal, val2: &SwitchboardDecimal): bool {
+       if (val1.neg && val2.neg) {
+            return val1.value >= val2.value
+        } else if (val1.neg) {
+            return true
+        } else if (val2.neg) {
+            return false
+        };
+        val1.value <= val2.value
+    }
+
+
 
     public fun equals(val1: &SwitchboardDecimal, val2: &SwitchboardDecimal): bool {
         let num1 = scale_to_decimals(val1, MAX_DECIMALS);
@@ -291,11 +235,5 @@ module switchboard::math {
         } else {
             return (num.value / pow_10(num.dec - scale_dec))
         }
-    }
-    
-    public fun little_floyd_rivest(vec: &mut vector<SwitchboardDecimal>, k: u64, left: u64, right: u64): SwitchboardDecimal {
-        let size = vector::length<SwitchboardDecimal>(vec);
-        assert!(size < 600 && left + right == 0, EINPUT_TOO_LARGE);
-        *vector::borrow(vec, k)
     }
 }

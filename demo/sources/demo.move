@@ -42,13 +42,6 @@ module demo::demo_app {
     public entry fun test_aggregator(account: &signer) {
 
         // creates test aggregator with data
-        // let num = math::zero();
-        // let two = math::new(2, 0, false);
-        // let out = math::zero();
-        // math::add(&num, &two, &mut out);
-        // //std::debug::print(&out);
-
-        // creates test aggregator with data
         aggregator::new_test(account, 100, 0, false);
 
         // print out value

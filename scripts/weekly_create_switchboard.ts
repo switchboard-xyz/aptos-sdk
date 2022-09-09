@@ -1,11 +1,11 @@
 import { AptosClient, AptosAccount, FaucetClient, HexString } from "aptos";
 import {
-  OracleAccount,
   OracleQueueAccount,
   Permission,
   CrankAccount,
   SwitchboardPermission,
   generateResourceAccountAddress,
+  createOracle,
 } from "../src";
 import YAML from "yaml";
 import fs from "fs";
@@ -20,7 +20,6 @@ const SWITCHBOARD_QUEUE_ADDRESS = generateResourceAccountAddress(
   HexString.ensure(SWITCHBOARD_DEVNET_ADDRESS),
   Buffer.from("OracleQueue")
 );
-console.log(SWITCHBOARD_QUEUE_ADDRESS);
 
 // run it all at once
 (async () => {
@@ -36,16 +35,13 @@ console.log(SWITCHBOARD_QUEUE_ADDRESS);
     const parsedYaml = YAML.parse(
       fs.readFileSync("../.aptos/config.yaml", "utf8")
     );
-    if (
-      "profiles" in parsedYaml &&
-      "newdeployer" in parsedYaml.profiles &&
-      "private_key" in parsedYaml.profiles.newdeployer
-    ) {
-      user = new AptosAccount(
-        HexString.ensure(parsedYaml.profiles.newdeployer.private_key).toBuffer()
-      );
-    }
-  } catch {}
+    user = new AptosAccount(
+      HexString.ensure(parsedYaml.profiles.default.private_key).toBuffer()
+    );
+  } catch (e) {
+    console.log(e);
+  }
+
   await faucetClient.fundAccount(user.address(), 5000);
 
   console.log(`User account ${user.address().hex()} funded.`);
@@ -55,35 +51,6 @@ console.log(SWITCHBOARD_QUEUE_ADDRESS);
     HexString.ensure(SWITCHBOARD_DEVNET_ADDRESS),
     5000000000
   );
-
-  let oraclePermission: any;
-  try {
-    // create permission for oracle
-    const [o] = await Permission.init(
-      client,
-      user,
-      {
-        authority: SWITCHBOARD_DEVNET_ADDRESS,
-        granter: SWITCHBOARD_QUEUE_ADDRESS,
-        grantee: SWITCHBOARD_DEVNET_ADDRESS,
-      },
-      SWITCHBOARD_DEVNET_ADDRESS
-    );
-    oraclePermission = o;
-    console.log("Permissions created");
-  } catch (e) {}
-
-  try {
-    // enable heartbeat on oracle
-    await oraclePermission.set(user, {
-      authority: SWITCHBOARD_DEVNET_ADDRESS,
-      granter: SWITCHBOARD_QUEUE_ADDRESS,
-      grantee: SWITCHBOARD_DEVNET_ADDRESS,
-      permission: SwitchboardPermission.PERMIT_ORACLE_HEARTBEAT,
-      enable: true,
-    });
-    console.log("Permissions set");
-  } catch (e) {}
 
   let queue: any;
   try {
@@ -122,30 +89,20 @@ console.log(SWITCHBOARD_QUEUE_ADDRESS);
     queue = new OracleQueueAccount(client, address, SWITCHBOARD_DEVNET_ADDRESS);
   }
 
-  let oracle: any;
-  try {
-    const [o, oracleTxSig] = await OracleAccount.init(
-      client,
-      user,
-      {
-        name: "Switchboard Oracle",
-        metadata: "metadata",
-        authority: user.address(),
-        queue: queue.address,
-        coinType: "0x1::aptos_coin::AptosCoin",
-      },
-      SWITCHBOARD_DEVNET_ADDRESS
-    );
+  const [oracle, oracleTxHash] = await createOracle(
+    client,
+    user,
+    {
+      name: "Switchboard OracleAccount",
+      authority: user.address(),
+      metadata: "metadata",
+      queue: queue.address,
+      coinType: "0x1::aptos_coin::AptosCoin",
+    },
+    SWITCHBOARD_DEVNET_ADDRESS
+  );
 
-    console.log(`Oracle: ${oracle.address}, tx: ${oracleTxSig}`);
-    oracle = o;
-  } catch (e) {
-    oracle = new OracleAccount(
-      client,
-      SWITCHBOARD_DEVNET_ADDRESS,
-      SWITCHBOARD_DEVNET_ADDRESS
-    );
-  }
+  console.log(`Oracle ${oracle.address} created. tx hash: ${oracleTxHash}`);
 
   try {
     // trigger the oracle heartbeat
