@@ -36,7 +36,7 @@ const SWITCHBOARD_QUEUE_ADDRESS = generateResourceAccountAddress(
       fs.readFileSync("../.aptos/config.yaml", "utf8")
     );
     user = new AptosAccount(
-      HexString.ensure(parsedYaml.profiles.default.private_key).toBuffer()
+      HexString.ensure(parsedYaml.profiles.default.private_key).toUint8Array()
     );
   } catch (e) {
     console.log(e);

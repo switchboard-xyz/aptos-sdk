@@ -616,6 +616,17 @@ export class AggregatorAccount {
     ];
   }
 
+  async latestValue(): Promise<number> {
+    const data = await this.loadData();
+    return new AptosDecimal(
+      data.latest_confirmed_round.result.value,
+      9,
+      Boolean(data.latest_confirmed_round.result.neg)
+    )
+      .toBig()
+      .toNumber();
+  }
+
   async addJob(
     account: AptosAccount,
     params: AggregatorAddJobParams
