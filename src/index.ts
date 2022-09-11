@@ -1102,15 +1102,10 @@ export class OracleQueueAccount {
       [params.coinType ?? "0x1::aptos_coin::AptosCoin"]
     );
 
-    let address = generateResourceAccountAddress(
-      account.address(),
-      Buffer.from("OracleQueue")
-    );
-
     return [
       new OracleQueueAccount(
         client,
-        address,
+        account.address(),
         switchboardAddress,
         params.coinType ?? "0x1::aptos_coin::AptosCoin"
       ),
