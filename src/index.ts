@@ -233,6 +233,8 @@ export interface LeaseSetAuthorityParams {
 }
 
 export interface OracleWalletInitParams {
+  oracleAddress: MaybeHexString;
+  queueAddress: MaybeHexString;
   coinType: string;
 }
 
@@ -1035,6 +1037,12 @@ export class OracleAccount {
     params: OracleInitParams,
     switchboardAddress: MaybeHexString
   ): Promise<[OracleAccount, string]> {
+    const seed = new AptosAccount().address();
+    const resource_address = generateResourceAccountAddress(
+      HexString.ensure(account.address()),
+      bcsAddressToBytes(HexString.ensure(seed))
+    );
+
     const tx = await sendAptosTx(
       client,
       account,
@@ -1044,6 +1052,7 @@ export class OracleAccount {
         params.metadata,
         HexString.ensure(params.authority).hex(),
         HexString.ensure(params.queue).hex(),
+        HexString.ensure(seed).hex(),
       ],
       [params.coinType ?? "0x1::aptos_coin::AptosCoin"]
     );
@@ -1051,7 +1060,7 @@ export class OracleAccount {
     return [
       new OracleAccount(
         client,
-        account.address(),
+        resource_address,
         switchboardAddress,
         params.coinType ?? "0x1::aptos_coin::AptosCoin"
       ),
@@ -1342,18 +1351,26 @@ export class OracleWallet {
     params: OracleWalletInitParams,
     switchboardAddress: MaybeHexString
   ): Promise<[OracleWallet, string]> {
+    const resource_address = generateResourceAccountAddress(
+      HexString.ensure(params.oracleAddress),
+      bcsAddressToBytes(HexString.ensure(params.queueAddress))
+    );
+
     const tx = await sendAptosTx(
       client,
       account,
       `${switchboardAddress}::oracle_wallet_init_action::run`,
-      [],
+      [
+        HexString.ensure(params.oracleAddress),
+        HexString.ensure(params.queueAddress),
+      ],
       [params.coinType ?? "0x1::aptos_coin::AptosCoin"]
     );
 
     return [
       new OracleWallet(
         client,
-        account.address(),
+        resource_address,
         switchboardAddress,
         params.coinType ?? "0x1::aptos_coin::AptosCoin"
       ),
