@@ -202,7 +202,7 @@ export interface OracleQueueSetConfigsParams {
   consecutiveFeedFailureLimit: number;
   consecutiveOracleFailureLimit: number;
   unpermissionedFeedsEnabled: boolean;
-  unpermissionedVrfEnabled: boolean;
+  unpermissionedVrfEnabled?: boolean;
   lockLeaseFunding: boolean;
   gasPrice?: number;
 
@@ -213,6 +213,7 @@ export interface OracleQueueSetConfigsParams {
 }
 
 export interface LeaseInitParams {
+  aggregatorAddress: MaybeHexString;
   queueAddress: MaybeHexString;
   withdrawAuthority: MaybeHexString;
   initialAmount: number;
@@ -225,6 +226,10 @@ export interface LeaseExtendParams {
 
 export interface LeaseWithdrawParams {
   amount: number;
+}
+
+export interface LeaseSetAuthorityParams {
+  authority: MaybeHexString;
 }
 
 export interface OracleWalletInitParams {
@@ -557,6 +562,21 @@ export class AggregatorAccount {
     return await Promise.all(promises);
   }
 
+  static getLeaseAddress(
+    aggregatorAddress: MaybeHexString,
+    queueAddress: MaybeHexString
+  ): MaybeHexString {
+    return generateResourceAccountAddress(
+      HexString.ensure(aggregatorAddress),
+      bcsAddressToBytes(HexString.ensure(queueAddress))
+    );
+  }
+
+  async leaseAddress(): Promise<MaybeHexString> {
+    let data = await this.loadData();
+    return AggregatorAccount.getLeaseAddress(this.address, data.queue_addr);
+  }
+
   /**
    * Initialize an Aggregator
    * @param client
@@ -571,6 +591,12 @@ export class AggregatorAccount {
   ): Promise<[AggregatorAccount, string]> {
     const { mantissa: vtMantissa, scale: vtScale } = AptosDecimal.fromBig(
       params.varianceThreshold ?? new Big(0)
+    );
+
+    const seed = new AptosAccount().address();
+    const resource_address = generateResourceAccountAddress(
+      HexString.ensure(account.address()),
+      bcsAddressToBytes(HexString.ensure(seed))
     );
 
     const tx = await sendAptosTx(
@@ -601,6 +627,7 @@ export class AggregatorAccount {
           ? HexString.ensure(params.gasPriceFeed).hex()
           : "0x0",
         HexString.ensure(params.authority).hex(),
+        HexString.ensure(seed).hex(),
       ],
       [params.coinType ?? "0x1::aptos_coin::AptosCoin"]
     );
@@ -608,7 +635,7 @@ export class AggregatorAccount {
     return [
       new AggregatorAccount(
         client,
-        account.address(),
+        resource_address,
         switchboardAddress,
         params.coinType ?? "0x1::aptos_coin::AptosCoin"
       ),
@@ -731,7 +758,7 @@ export class AggregatorAccount {
       params.varianceThreshold ?? new Big(0)
     );
     const tx = getAptosTx(
-      `${this.switchboardAddress}::aggregator_init_action::run`,
+      `${this.switchboardAddress}::aggregator_set_configs_action::run`,
       [
         HexString.ensure(this.address).hex(),
         params.name ?? "",
@@ -1113,6 +1140,37 @@ export class OracleQueueAccount {
     ];
   }
 
+  async setConfigs(
+    account: AptosAccount,
+    params: OracleQueueSetConfigsParams
+  ): Promise<string> {
+    return await sendAptosTx(
+      this.client,
+      account,
+      `${this.switchboardAddress}::oracle_queue_set_configs_action::run`,
+      [
+        this.address,
+        params.name,
+        params.metadata,
+        HexString.ensure(params.authority).hex(),
+        params.oracleTimeout,
+        params.reward,
+        params.minStake,
+        params.slashingEnabled,
+        params.varianceToleranceMultiplierValue,
+        params.varianceToleranceMultiplierScale,
+        params.feedProbationPeriod,
+        params.consecutiveFeedFailureLimit,
+        params.consecutiveOracleFailureLimit,
+        params.unpermissionedFeedsEnabled,
+        params.lockLeaseFunding,
+        params.maxSize,
+        params.gasPrice ?? 0,
+      ],
+      [params.coinType ?? "0x1::aptos_coin::AptosCoin"]
+    );
+  }
+
   async loadData(): Promise<any> {
     return (
       await this.client.getAccountResource(
@@ -1143,11 +1201,17 @@ export class LeaseAccount {
     params: LeaseInitParams,
     switchboardAddress: MaybeHexString
   ): Promise<[LeaseAccount, string]> {
+    let leaseAddr = generateResourceAccountAddress(
+      HexString.ensure(params.aggregatorAddress),
+      bcsAddressToBytes(HexString.ensure(params.queueAddress))
+    );
+
     const tx = await sendAptosTx(
       client,
       account,
       `${switchboardAddress}::lease_init_action::run`,
       [
+        HexString.ensure(params.aggregatorAddress).hex(),
         HexString.ensure(params.queueAddress).hex(),
         HexString.ensure(params.withdrawAuthority).hex(),
         params.initialAmount,
@@ -1158,7 +1222,7 @@ export class LeaseAccount {
     return [
       new LeaseAccount(
         client,
-        account.address(),
+        leaseAddr,
         switchboardAddress,
         params.coinType ?? "0x1::aptos_coin::AptosCoin"
       ),
@@ -1184,7 +1248,7 @@ export class LeaseAccount {
   }
 
   /**
-   * Extend a lease
+   * Extend a lease tx
    * @param params CrankPushParams
    */
   extendTx(
@@ -1224,6 +1288,26 @@ export class LeaseAccount {
     return getAptosTx(
       `${this.switchboardAddress}::lease_withdraw_action::run`,
       [[HexString.ensure(this.address).hex(), params.amount]],
+      [this.coinType]
+    );
+  }
+
+  /**
+   * Set a lease authority
+   * @param params CrankPushParams
+   */
+  async setAuthority(
+    account: AptosAccount,
+    params: LeaseSetAuthorityParams
+  ): Promise<string> {
+    return await sendAptosTx(
+      this.client,
+      account,
+      `${this.switchboardAddress}::lease_set_authority_action::run`,
+      [
+        HexString.ensure(this.address).hex(),
+        HexString.ensure(params.authority).hex(),
+      ],
       [this.coinType]
     );
   }

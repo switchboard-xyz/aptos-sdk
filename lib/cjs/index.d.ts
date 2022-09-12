@@ -139,7 +139,7 @@ export interface OracleQueueSetConfigsParams {
     consecutiveFeedFailureLimit: number;
     consecutiveOracleFailureLimit: number;
     unpermissionedFeedsEnabled: boolean;
-    unpermissionedVrfEnabled: boolean;
+    unpermissionedVrfEnabled?: boolean;
     lockLeaseFunding: boolean;
     gasPrice?: number;
     enableBufferRelayers: boolean;
@@ -147,6 +147,7 @@ export interface OracleQueueSetConfigsParams {
     coinType: MoveStructTag;
 }
 export interface LeaseInitParams {
+    aggregatorAddress: MaybeHexString;
     queueAddress: MaybeHexString;
     withdrawAuthority: MaybeHexString;
     initialAmount: number;
@@ -157,6 +158,9 @@ export interface LeaseExtendParams {
 }
 export interface LeaseWithdrawParams {
     amount: number;
+}
+export interface LeaseSetAuthorityParams {
+    authority: MaybeHexString;
 }
 export interface OracleWalletInitParams {
     coinType: string;
@@ -233,6 +237,8 @@ export declare class AggregatorAccount {
     constructor(client: AptosClient, address: MaybeHexString, switchboardAddress: MaybeHexString, coinType?: MoveStructTag);
     loadData(): Promise<any>;
     loadJobs(): Promise<Array<OracleJob>>;
+    static getLeaseAddress(aggregatorAddress: MaybeHexString, queueAddress: MaybeHexString): MaybeHexString;
+    leaseAddress(): Promise<MaybeHexString>;
     /**
      * Initialize an Aggregator
      * @param client
@@ -240,6 +246,7 @@ export declare class AggregatorAccount {
      * @param params AggregatorInitParams initialization params
      */
     static init(client: AptosClient, account: AptosAccount, params: AggregatorInitParams, switchboardAddress: MaybeHexString): Promise<[AggregatorAccount, string]>;
+    latestValue(): Promise<number>;
     addJob(account: AptosAccount, params: AggregatorAddJobParams): Promise<string>;
     addJobTx(params: AggregatorAddJobParams): Types.TransactionPayload;
     saveResult(account: AptosAccount, params: AggregatorSaveResultParams): Promise<string>;
@@ -328,6 +335,7 @@ export declare class OracleQueueAccount {
      * @param params OracleQueueAccount initialization params
      */
     static init(client: AptosClient, account: AptosAccount, params: OracleQueueInitParams, switchboardAddress: MaybeHexString): Promise<[OracleQueueAccount, string]>;
+    setConfigs(account: AptosAccount, params: OracleQueueSetConfigsParams): Promise<string>;
     loadData(): Promise<any>;
 }
 export declare class LeaseAccount {
@@ -349,7 +357,7 @@ export declare class LeaseAccount {
      */
     extend(account: AptosAccount, params: LeaseExtendParams): Promise<string>;
     /**
-     * Extend a lease
+     * Extend a lease tx
      * @param params CrankPushParams
      */
     extendTx(account: MaybeHexString, params: LeaseExtendParams): Types.TransactionPayload;
@@ -361,6 +369,11 @@ export declare class LeaseAccount {
      * Pop an aggregator off the Crank
      */
     withdrawTx(account: MaybeHexString, params: LeaseWithdrawParams): Types.TransactionPayload;
+    /**
+     * Set a lease authority
+     * @param params CrankPushParams
+     */
+    setAuthority(account: AptosAccount, params: LeaseSetAuthorityParams): Promise<string>;
     loadData(): Promise<any>;
 }
 export declare class OracleWallet {
