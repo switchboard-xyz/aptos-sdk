@@ -17,22 +17,17 @@ import {
   EventCallback,
   JobAccount,
   OracleJob,
-  OracleAccount,
   OracleQueueAccount,
   CrankAccount,
-  Permission,
-  SwitchboardPermission,
   createFeed,
-  AptosDecimal,
   AggregatorAccount,
   fetchAggregators,
-  OracleWallet,
   createOracle,
 } from "./src";
 import Big from "big.js";
 
-const NODE_URL = "http://0.0.0.0:8080/v1";
-const FAUCET_URL = "http://0.0.0.0:8081";
+const NODE_URL = "https://fullnode.devnet.aptoslabs.com/v1";
+const FAUCET_URL = "https://faucet.devnet.aptoslabs.com";
 
 const SWITCHBOARD_DEVNET_ADDRESS =
   "0x348ecb66a5d9edab8d175f647d5e99d6962803da7f5d3d2eb839387aeb118300";
@@ -183,7 +178,7 @@ const onAggregatorOpenRound = (
       forceReportPeriod: 0,
       expiration: 0,
       coinType: "0x1::aptos_coin::AptosCoin",
-      crank: user.address().hex(),
+      crankAddress: user.address().hex(),
       initialLoadAmount: 1000,
       jobs: [
         {
@@ -274,9 +269,9 @@ const onAggregatorOpenRound = (
     "LeaseAccount:",
     await new LeaseAccount(
       client,
-      AggregatorAccount.getLeaseAddress(aggregator.address, queue.address),
+      aggregator.address,
       SWITCHBOARD_DEVNET_ADDRESS
-    ).loadData()
+    ).loadData(queue.address)
   );
   console.log("Load aggregator jobs data", await aggregator.loadJobs());
 

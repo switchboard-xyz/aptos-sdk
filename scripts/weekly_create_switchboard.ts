@@ -1,9 +1,7 @@
 import { AptosClient, AptosAccount, FaucetClient, HexString } from "aptos";
 import {
   OracleQueueAccount,
-  Permission,
   CrankAccount,
-  SwitchboardPermission,
   generateResourceAccountAddress,
   createOracle,
 } from "../src";
@@ -15,11 +13,6 @@ const FAUCET_URL = "https://faucet.devnet.aptoslabs.com";
 
 const SWITCHBOARD_DEVNET_ADDRESS =
   "0xb27f7bbf7caf2368b08032d005e8beab151a885054cdca55c4cc644f0a308d2b";
-
-const SWITCHBOARD_QUEUE_ADDRESS = generateResourceAccountAddress(
-  HexString.ensure(SWITCHBOARD_DEVNET_ADDRESS),
-  Buffer.from("OracleQueue")
-);
 
 // run it all at once
 (async () => {

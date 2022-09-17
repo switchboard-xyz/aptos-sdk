@@ -17,7 +17,6 @@ import {
   EventCallback,
   OracleJob,
   createFeed,
-  JobAccount,
 } from "./src";
 import Big from "big.js";
 
@@ -28,7 +27,7 @@ const SWITCHBOARD_DEVNET_ADDRESS =
   "0xb27f7bbf7caf2368b08032d005e8beab151a885054cdca55c4cc644f0a308d2b";
 
 const SWITCHBOARD_QUEUE_ADDRESS =
-  "0xbdb92db64cc9b3072381c5f98c57ef77c9ceb12163187b1e691b8a677a015f61";
+  "0xb27f7bbf7caf2368b08032d005e8beab151a885054cdca55c4cc644f0a308d2b";
 
 const SWITCHBOARD_CRANK_ADDRESS =
   "0xb27f7bbf7caf2368b08032d005e8beab151a885054cdca55c4cc644f0a308d2b";
@@ -96,7 +95,7 @@ const onAggregatorUpdate = (
       minUpdateDelaySeconds: 5,
       varianceThreshold: new Big(0),
       coinType: "0x1::aptos_coin::AptosCoin",
-      crank: SWITCHBOARD_CRANK_ADDRESS,
+      crankAddress: SWITCHBOARD_CRANK_ADDRESS,
       initialLoadAmount: 1000,
       jobs: [
         {
@@ -126,7 +125,7 @@ const onAggregatorUpdate = (
       client,
       aggregator.address,
       SWITCHBOARD_DEVNET_ADDRESS
-    ).loadData()
+    ).loadData(SWITCHBOARD_QUEUE_ADDRESS)
   );
   console.log("Load aggregator jobs data", await aggregator.loadJobs());
 })();

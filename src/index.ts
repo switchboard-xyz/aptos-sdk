@@ -79,6 +79,7 @@ export interface AggregatorInitParams {
   name?: string;
   metadata?: string;
   queueAddress: MaybeHexString;
+  crankAddress: MaybeHexString;
   coinType: MoveStructTag;
   batchSize: number;
   minOracleResults: number;
@@ -125,7 +126,8 @@ export interface AggregatorSetConfigParams {
   authority: string;
   name?: string;
   metadata?: string;
-  queueAddress?: string;
+  queueAddress?: MaybeHexString;
+  crankAddress?: MaybeHexString;
   batchSize: number;
   minOracleResults: number;
   minJobResults: number;
@@ -137,9 +139,9 @@ export interface AggregatorSetConfigParams {
   disableCrank: boolean;
   historySize: number;
   readCharge: number;
-  rewardEscrow: string;
+  rewardEscrow: MaybeHexString;
   gasPrice?: number;
-  gasPriceFeed?: string;
+  gasPriceFeed?: MaybeHexString;
   coinType?: string;
 }
 
@@ -221,14 +223,17 @@ export interface LeaseInitParams {
 }
 
 export interface LeaseExtendParams {
+  queueAddress: MaybeHexString;
   loadAmount: number;
 }
 
 export interface LeaseWithdrawParams {
+  queueAddress: MaybeHexString;
   amount: number;
 }
 
 export interface LeaseSetAuthorityParams {
+  queueAddress: MaybeHexString;
   authority: MaybeHexString;
 }
 
@@ -239,12 +244,14 @@ export interface OracleWalletInitParams {
 }
 
 export interface OracleWalletContributeParams {
-  oracleWalletAddr: MaybeHexString;
+  oracleAddress: MaybeHexString;
+  queueAddress: MaybeHexString;
   loadAmount: number;
 }
 
 export interface OracleWalletWithdrawParams {
-  oracleWalletAddr: MaybeHexString;
+  oracleAddress: MaybeHexString;
+  queueAddress: MaybeHexString;
   amount: number;
 }
 
@@ -564,21 +571,6 @@ export class AggregatorAccount {
     return await Promise.all(promises);
   }
 
-  static getLeaseAddress(
-    aggregatorAddress: MaybeHexString,
-    queueAddress: MaybeHexString
-  ): MaybeHexString {
-    return generateResourceAccountAddress(
-      HexString.ensure(aggregatorAddress),
-      bcsAddressToBytes(HexString.ensure(queueAddress))
-    );
-  }
-
-  async leaseAddress(): Promise<MaybeHexString> {
-    let data = await this.loadData();
-    return AggregatorAccount.getLeaseAddress(this.address, data.queue_addr);
-  }
-
   /**
    * Initialize an Aggregator
    * @param client
@@ -609,6 +601,7 @@ export class AggregatorAccount {
         params.name ?? "",
         params.metadata ?? "",
         HexString.ensure(params.queueAddress).hex(),
+        HexString.ensure(params.crankAddress).hex(),
         params.batchSize,
         params.minOracleResults,
         params.minJobResults,
@@ -766,6 +759,7 @@ export class AggregatorAccount {
         params.name ?? "",
         params.metadata ?? "",
         HexString.ensure(params.queueAddress).hex(),
+        HexString.ensure(params.crankAddress).hex(),
         params.batchSize,
         params.minOracleResults,
         params.minJobResults,
@@ -1190,10 +1184,14 @@ export class OracleQueueAccount {
   }
 }
 
+/**
+ * Leases are kept in a LeaseManager resource on the same account that an Aggregator
+ * exists on.
+ */
 export class LeaseAccount {
   constructor(
     readonly client: AptosClient,
-    readonly address: MaybeHexString,
+    readonly address: MaybeHexString /* aggregator account address */,
     readonly switchboardAddress: MaybeHexString,
     readonly coinType: MoveStructTag = "0x1::aptos_coin::AptosCoin"
   ) {}
@@ -1210,11 +1208,6 @@ export class LeaseAccount {
     params: LeaseInitParams,
     switchboardAddress: MaybeHexString
   ): Promise<[LeaseAccount, string]> {
-    let leaseAddr = generateResourceAccountAddress(
-      HexString.ensure(params.aggregatorAddress),
-      bcsAddressToBytes(HexString.ensure(params.queueAddress))
-    );
-
     const tx = await sendAptosTx(
       client,
       account,
@@ -1231,7 +1224,7 @@ export class LeaseAccount {
     return [
       new LeaseAccount(
         client,
-        leaseAddr,
+        params.aggregatorAddress,
         switchboardAddress,
         params.coinType ?? "0x1::aptos_coin::AptosCoin"
       ),
@@ -1251,7 +1244,11 @@ export class LeaseAccount {
       this.client,
       account,
       `${this.switchboardAddress}::lease_extend_action::run`,
-      [HexString.ensure(this.address).hex(), params.loadAmount],
+      [
+        HexString.ensure(this.address).hex(),
+        HexString.ensure(params.queueAddress).hex(),
+        params.loadAmount,
+      ],
       [this.coinType]
     );
   }
@@ -1266,7 +1263,11 @@ export class LeaseAccount {
   ): Types.TransactionPayload {
     return getAptosTx(
       `${this.switchboardAddress}::lease_extend_action::run`,
-      [HexString.ensure(this.address).hex(), params.loadAmount],
+      [
+        HexString.ensure(this.address).hex(),
+        HexString.ensure(params.queueAddress).hex(),
+        params.loadAmount,
+      ],
       [this.coinType]
     );
   }
@@ -1282,7 +1283,13 @@ export class LeaseAccount {
       this.client,
       account,
       `${this.switchboardAddress}::lease_withdraw_action::run`,
-      [[HexString.ensure(this.address).hex(), params.amount]],
+      [
+        [
+          HexString.ensure(this.address).hex(),
+          HexString.ensure(params.queueAddress).hex(),
+          params.amount,
+        ],
+      ],
       [this.coinType]
     );
   }
@@ -1296,7 +1303,13 @@ export class LeaseAccount {
   ): Types.TransactionPayload {
     return getAptosTx(
       `${this.switchboardAddress}::lease_withdraw_action::run`,
-      [[HexString.ensure(this.address).hex(), params.amount]],
+      [
+        [
+          HexString.ensure(this.address).hex(),
+          HexString.ensure(params.queueAddress).hex(),
+          params.amount,
+        ],
+      ],
       [this.coinType]
     );
   }
@@ -1315,19 +1328,29 @@ export class LeaseAccount {
       `${this.switchboardAddress}::lease_set_authority_action::run`,
       [
         HexString.ensure(this.address).hex(),
+        HexString.ensure(params.queueAddress).hex(),
         HexString.ensure(params.authority).hex(),
       ],
       [this.coinType]
     );
   }
 
-  async loadData(): Promise<any> {
-    return (
-      await this.client.getAccountResource(
-        HexString.ensure(this.address).hex(),
-        `${this.switchboardAddress}::lease::Lease<${this.coinType}>`
-      )
-    ).data;
+  async loadData(queueAddress: MaybeHexString): Promise<any> {
+    const handle = (
+      (await this.client.getAccountResource(
+        this.address,
+        `${this.switchboardAddress}::escrow::EscrowManager<${
+          this.coinType ?? "0x1::aptos_coin::AptosCoin"
+        }>`
+      )) as any
+    ).data.escrows.handle;
+    return await this.client.getTableItem(handle, {
+      key_type: `address`,
+      value_type: `${this.switchboardAddress}::escrow::Escrow<${
+        this.coinType ?? "0x1::aptos_coin::AptosCoin"
+      }>`,
+      key: HexString.ensure(queueAddress).hex(),
+    });
   }
 }
 
@@ -1351,11 +1374,6 @@ export class OracleWallet {
     params: OracleWalletInitParams,
     switchboardAddress: MaybeHexString
   ): Promise<[OracleWallet, string]> {
-    const resource_address = generateResourceAccountAddress(
-      HexString.ensure(params.oracleAddress),
-      bcsAddressToBytes(HexString.ensure(params.queueAddress))
-    );
-
     const tx = await sendAptosTx(
       client,
       account,
@@ -1370,7 +1388,7 @@ export class OracleWallet {
     return [
       new OracleWallet(
         client,
-        resource_address,
+        account.address(),
         switchboardAddress,
         params.coinType ?? "0x1::aptos_coin::AptosCoin"
       ),
@@ -1390,7 +1408,11 @@ export class OracleWallet {
       this.client,
       account,
       `${this.switchboardAddress}::oracle_wallet_contribute_action::run`,
-      [HexString.ensure(this.address).hex(), params.loadAmount],
+      [
+        HexString.ensure(this.address).hex(),
+        HexString.ensure(params.queueAddress).hex(),
+        params.loadAmount,
+      ],
       [this.coinType]
     );
   }
@@ -1406,18 +1428,33 @@ export class OracleWallet {
       this.client,
       account,
       `${this.switchboardAddress}::oracle_wallet_withdraw_action::run`,
-      [[HexString.ensure(this.address).hex(), params.amount]],
+      [
+        [
+          HexString.ensure(this.address).hex(),
+          HexString.ensure(params.queueAddress).hex(),
+          params.amount,
+        ],
+      ],
       [this.coinType]
     );
   }
 
-  async loadData(): Promise<any> {
-    return (
-      await this.client.getAccountResource(
-        HexString.ensure(this.address).hex(),
-        `${this.switchboardAddress}::oracle_wallet::OracleWallet<${this.coinType}>`
-      )
-    ).data;
+  async loadData(queueAddress: MaybeHexString): Promise<any> {
+    const handle = (
+      (await this.client.getAccountResource(
+        this.address,
+        `${this.switchboardAddress}::escrow::EscrowManager<${
+          this.coinType ?? "0x1::aptos_coin::AptosCoin"
+        }>`
+      )) as any
+    ).data.escrows.handle;
+    return await this.client.getTableItem(handle, {
+      key_type: `address`,
+      value_type: `${this.switchboardAddress}::escrow::Escrow<${
+        this.coinType ?? "0x1::aptos_coin::AptosCoin"
+      }>`,
+      key: HexString.ensure(queueAddress).hex(),
+    });
   }
 }
 
@@ -1447,8 +1484,8 @@ export class Permission {
         BCS.bcsToBytes(
           TxnBuilderTypes.AccountAddress.fromHex(params.authority)
         ),
-        BCS.bcsSerializeBytes(HexString.ensure(params.granter).toUint8Array()),
-        BCS.bcsSerializeBytes(HexString.ensure(params.grantee).toUint8Array()),
+        BCS.bcsToBytes(TxnBuilderTypes.AccountAddress.fromHex(params.granter)),
+        BCS.bcsToBytes(TxnBuilderTypes.AccountAddress.fromHex(params.grantee)),
       ]
     );
 
@@ -1470,8 +1507,8 @@ export class Permission {
         BCS.bcsToBytes(
           TxnBuilderTypes.AccountAddress.fromHex(params.authority)
         ),
-        BCS.bcsSerializeBytes(HexString.ensure(params.granter).toUint8Array()),
-        BCS.bcsSerializeBytes(HexString.ensure(params.grantee).toUint8Array()),
+        BCS.bcsToBytes(TxnBuilderTypes.AccountAddress.fromHex(params.granter)),
+        BCS.bcsToBytes(TxnBuilderTypes.AccountAddress.fromHex(params.grantee)),
         BCS.bcsSerializeUint64(params.permission),
         BCS.bcsSerializeBool(params.enable),
       ]
@@ -1491,7 +1528,6 @@ function safeDiv(number_: Big, denominator: Big, decimals = 20): Big {
 interface CreateFeedParams extends AggregatorInitParams {
   jobs: JobInitParams[];
   initialLoadAmount: number;
-  crank: MaybeHexString;
 }
 
 interface CreateOracleParams extends OracleInitParams {}
@@ -1579,7 +1615,7 @@ export async function createFeedTx(
         }),
 
         // crank
-        HexString.ensure(params.crank).hex(),
+        HexString.ensure(params.crankAddress).hex(),
 
         // seed
         seed.hex(),
