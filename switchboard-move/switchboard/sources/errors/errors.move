@@ -40,12 +40,14 @@ module switchboard::errors {
     public fun LeaseInsufficientCoin(): u64 { error::resource_exhausted(29) }
     public fun OracleWalletInsufficientCoin(): u64 { error::resource_exhausted(30) }
 
-    // Aggregator Configs
     public fun AggregatorInvalidBatchSize(): u64 { error::invalid_argument(31) }
     public fun AggregatorInvalidMinOracleResults(): u64 { error::invalid_argument(32) }
     public fun AggregatorInvalidUpdateDelay(): u64 { error::invalid_argument(33) }
     public fun AggregatorIllegalRoundOpenCall(): u64 { error::invalid_argument(34) }
+    public fun AggregatorQueueNotReady(): u64 { error::invalid_argument(35) }
 
+    public fun ResourceAlreadyExists(): u64 { error::already_exists(36) }
+    public fun PermissionAlreadyExists(): u64 { error::already_exists(37) }
     #[test(account = @0x1)]
     public entry fun test_errors() {
         std::debug::print(&Generic());                           // 720896
@@ -87,5 +89,9 @@ module switchboard::errors {
         std::debug::print(&AggregatorInvalidMinOracleResults()); // 65568
         std::debug::print(&AggregatorInvalidUpdateDelay());      // 65569
         std::debug::print(&AggregatorIllegalRoundOpenCall());    // 65570
+        std::debug::print(&AggregatorQueueNotReady());           // 65571
+
+        std::debug::print(&ResourceAlreadyExists());             // 524324
+        std::debug::print(&PermissionAlreadyExists());           // 524325
     }
 }

@@ -1,13 +1,14 @@
 module switchboard::aggregator {
+    use aptos_framework::account::{Self, SignerCapability};
     use aptos_framework::timestamp;
     use aptos_framework::block;
     use switchboard::math::{Self, SwitchboardDecimal};
     use switchboard::errors;
-    use std::option::{Self, Option};
+    use std::option::{Option};
     use std::signer; 
     use std::vector;
     use std::coin::{Self, Coin};
-
+    
     struct AggregatorRound has store, copy, drop {
         // Maintains the current update count
         id: u128,
@@ -37,8 +38,6 @@ module switchboard::aggregator {
         num_error: u64,
         // Maintains whether or not the round is closed
         is_closed: bool,
-        // Maintains whether a read is available or not
-        locked: bool,
         // Maintains the round close timestamp
         round_confirmed_timestamp: u64,
     }
@@ -58,15 +57,18 @@ module switchboard::aggregator {
             errors_fulfilled: vector::empty(),
             num_error: 0,
             num_success: 0,
-            locked: false,
             is_closed: false,
             round_confirmed_timestamp: 0,
         }
     }
 
     struct Aggregator has key, store, drop {
+        
+        // Aggregator account signer cap
+        signer_cap: SignerCapability,
 
-        // CONFIGS
+        // Configs
+        authority: address,
         name: vector<u8>,
         metadata: vector<u8>,
         queue_addr: address,
@@ -78,35 +80,28 @@ module switchboard::aggregator {
         variance_threshold: SwitchboardDecimal,
         force_report_period: u64,
         expiration: u64,
-        authority: address,
         read_charge: u64,
         reward_escrow: address,
         crank_disabled: bool,
+        history_limit: u64,
+        gas_price: u64,
+        gas_price_feed: address,
+
+        // Aggregator Data
         next_allowed_update_time: u64,
         consecutive_failure_count: u64,
-        is_locked: bool,
         crank_addr: address,
         latest_confirmed_round: AggregatorRound,
-        previous_confirmed_round_result: SwitchboardDecimal,
-        previous_confirmed_round_block_height: u64,
         current_round: AggregatorRound,
         job_keys: vector<address>,
         job_weights: vector<u8>,
         jobs_checksum: vector<u8>,
         history: vector<AggregatorHistoryRow>,
-        history_limit: u64,
         history_write_idx: u64,
         created_at: u64,
+        is_locked: bool,
         crank_row_count: u64,
-        gas_price: u64,
-        gas_price_feed: address,
         _ebuf: vector<u8>,
-    }
-
-
-    struct AggregatorHistory has drop, store {
-        buffer: vector<AggregatorHistoryRow>,
-        current_round_id: u128,
     }
 
     struct AggregatorHistoryRow has drop, copy, store {
@@ -120,6 +115,7 @@ module switchboard::aggregator {
         name: vector<u8>,
         metadata: vector<u8>,
         queue_addr: address,
+        crank_addr: address,
         batch_size: u64,
         min_oracle_results: u64,
         min_job_results: u64,
@@ -170,6 +166,7 @@ module switchboard::aggregator {
         name: vector<u8>,
         metadata: vector<u8>,
         queue_addr: address,
+        crank_addr: address,
         batch_size: u64,
         min_oracle_results: u64,
         min_job_results: u64,
@@ -191,6 +188,7 @@ module switchboard::aggregator {
             name,
             metadata,
             queue_addr,
+            crank_addr,
             batch_size,
             min_oracle_results,
             min_job_results,
@@ -218,27 +216,36 @@ module switchboard::aggregator {
         ref.authority == signer::address_of(account)
     }
 
-    public fun unlock_read<CoinType>(account: &signer, addr: address): address acquires Aggregator {
-        let aggregator = borrow_global_mut<Aggregator>(addr);
-        coin::transfer<CoinType>(account, aggregator.reward_escrow, aggregator.read_charge);
-        aggregator.latest_confirmed_round.locked = false;
-        addr
-    }
-
-    public fun unlock_read_with_coin<CoinType>(addr: address, fee: Coin<CoinType>): address acquires Aggregator {
+    public fun buy_latest_value<CoinType>(addr: address, fee: Coin<CoinType>): SwitchboardDecimal acquires Aggregator {
         let aggregator = borrow_global_mut<Aggregator>(addr);
         assert!(coin::value(&fee) == aggregator.read_charge, errors::InvalidArgument());
         coin::deposit(aggregator.reward_escrow, fee);
-        aggregator.latest_confirmed_round.locked = false;
-        addr
+        aggregator.latest_confirmed_round.result
     }
+
+    public fun buy_latest_round<CoinType>(addr: address, fee: Coin<CoinType>): (
+        SwitchboardDecimal, /* Result */
+        u64,                /* Round Confirmed Timestamp */
+        SwitchboardDecimal, /* Standard Deviation of Oracle Responses */
+        SwitchboardDecimal, /* Min Oracle Response */
+        SwitchboardDecimal, /* Max Oracle Response */
+    ) acquires Aggregator {
+        let aggregator = borrow_global_mut<Aggregator>(addr);
+        assert!(coin::value(&fee) == aggregator.read_charge, errors::InvalidArgument());
+        coin::deposit(aggregator.reward_escrow, fee);
+        (
+            aggregator.latest_confirmed_round.result,
+            aggregator.latest_confirmed_round.round_confirmed_timestamp,
+            aggregator.latest_confirmed_round.std_deviation,
+            aggregator.latest_confirmed_round.min_response,
+            aggregator.latest_confirmed_round.max_response,
+        )
+    }
+
 
     public fun latest_value(addr: address): SwitchboardDecimal acquires Aggregator {
         let aggregator = borrow_global_mut<Aggregator>(addr);
-        assert!(aggregator.latest_confirmed_round.locked == false, errors::PermissionDenied());
-        let has_read_charge = aggregator.read_charge > 0;
-        aggregator.latest_confirmed_round.locked = has_read_charge; // lock the result again
-        // grab a copy of latest result
+        assert!(aggregator.read_charge == 0, errors::PermissionDenied());
         aggregator.latest_confirmed_round.result
     }
 
@@ -250,9 +257,7 @@ module switchboard::aggregator {
         SwitchboardDecimal, /* Max Oracle Response */
     ) acquires Aggregator {
         let aggregator = borrow_global_mut<Aggregator>(addr);
-        assert!(aggregator.latest_confirmed_round.locked == false, errors::PermissionDenied());
-        let has_read_charge = aggregator.read_charge > 0;
-        aggregator.latest_confirmed_round.locked = has_read_charge;
+        assert!(aggregator.read_charge == 0, errors::PermissionDenied());
         (
             aggregator.latest_confirmed_round.result,
             aggregator.latest_confirmed_round.round_confirmed_timestamp,
@@ -277,6 +282,21 @@ module switchboard::aggregator {
     public fun authority(addr: address): address acquires Aggregator {
         let aggregator = borrow_global<Aggregator>(addr);
         aggregator.authority
+    }
+
+    public fun current_gas_price<CoinType>(addr: address): u64 acquires Aggregator {
+        let aggregator_gas_price = gas_price(addr);
+        let aggregator_gas_price_feed = gas_price_feed(addr);
+        let gas_price: u64 = if (aggregator_gas_price != 0) {
+            aggregator_gas_price
+        } else if (exist(aggregator_gas_price_feed)) {
+            let latest_value = latest_value(addr);
+            (math::scale_to_decimals(&latest_value, 0) as u64)
+        } else {
+            0
+        };
+
+        gas_price
     }
 
     public fun gas_price(addr: address): u64 acquires Aggregator {
@@ -320,50 +340,6 @@ module switchboard::aggregator {
         borrow_global<Aggregator>(addr).crank_disabled
     }
 
-    public(friend) fun crank_row_count(self: address): u64 acquires Aggregator {
-        borrow_global<Aggregator>(self).crank_row_count
-    }
-
-    public fun current_round_num_success(addr: address): u64 acquires Aggregator {
-        let aggregator = borrow_global<Aggregator>(addr);
-        aggregator.current_round.num_success
-    }
-
-    public fun current_round_open_timestamp(addr: address): u64 acquires Aggregator {
-        let aggregator = borrow_global<Aggregator>(addr);
-        aggregator.current_round.round_open_timestamp
-    }
-
-    public fun current_round_num_error(addr: address): u64 acquires Aggregator {
-        let aggregator = borrow_global<Aggregator>(addr);
-        aggregator.current_round.num_error
-    }
-
-    public fun curent_round_oracle_key_at_idx(addr: address, idx: u64): address acquires Aggregator {
-        *vector::borrow(&borrow_global<Aggregator>(addr).current_round.oracle_keys, idx)
-    }
-    
-    public fun current_round_std_dev(addr: address): SwitchboardDecimal acquires Aggregator {
-        let aggregator = borrow_global<Aggregator>(addr);
-        aggregator.current_round.std_deviation
-    }
-
-    public fun current_round_result(addr: address): SwitchboardDecimal acquires Aggregator {
-        let aggregator = borrow_global<Aggregator>(addr);
-        aggregator.current_round.result
-    }
-
-    public fun is_median_fulfilled(addr: address, idx: u64): bool acquires Aggregator {
-        let aggregator = borrow_global<Aggregator>(addr);
-        let val = vector::borrow(&aggregator.current_round.medians, idx);
-        option::is_some(val)
-    }
-
-    public fun is_error_fulfilled(addr: address, idx: u64): bool acquires Aggregator {
-        let aggregator = borrow_global<Aggregator>(addr);
-        *vector::borrow(&aggregator.current_round.errors_fulfilled, idx)
-    }
-
     public fun batch_size(self: address): u64 acquires Aggregator {
         borrow_global<Aggregator>(self).batch_size
     }
@@ -382,9 +358,12 @@ module switchboard::aggregator {
         timestamp::now_seconds() >= ref.next_allowed_update_time
     }
 
-     #[test_only]
+
+    #[test_only]
     public entry fun new_test(account: &signer, value: u128, dec: u8, sign: bool) {
+        let cap = account::create_test_signer_cap(signer::address_of(account));
         let aggregator = Aggregator {
+            signer_cap: cap,
             name: vector::empty(),
             metadata: vector::empty(),
             queue_addr: @0x55,
@@ -412,7 +391,6 @@ module switchboard::aggregator {
                 errors_fulfilled: vector::empty(),
                 num_success: 0,
                 num_error: 0,
-                locked: false,
                 id: 0,
                 is_closed: false,
                 round_confirmed_timestamp: 0,
@@ -430,7 +408,6 @@ module switchboard::aggregator {
                 errors_fulfilled: vector::empty(),
                 num_success: 0,
                 num_error: 0,
-                locked: false,
                 id: 0,
                 is_closed: false,
                 round_confirmed_timestamp: 0,
@@ -446,8 +423,6 @@ module switchboard::aggregator {
             history: vector::empty(),
             history_limit: 0,
             history_write_idx: 0,
-            previous_confirmed_round_result: math::zero(),
-            previous_confirmed_round_block_height: 0,
             _ebuf: vector::empty(),
             read_charge: 0,
             reward_escrow: @0x55,
@@ -459,10 +434,8 @@ module switchboard::aggregator {
     }
 
     #[test_only]
-    public entry fun update_value(account: &signer, value: u128, dec: u8, neg: bool, timestamp: u64) acquires Aggregator {
+    public entry fun update_value(account: &signer, value: u128, dec: u8, neg: bool) acquires Aggregator {
         let ref = borrow_global_mut<Aggregator>(signer::address_of(account));
         ref.latest_confirmed_round.result = math::new(value, dec, neg);
-        ref.latest_confirmed_round.round_confirmed_timestamp = timestamp;
     }
-
 }
