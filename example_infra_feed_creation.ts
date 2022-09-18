@@ -26,11 +26,11 @@ import {
 } from "./src";
 import Big from "big.js";
 
-const NODE_URL = "https://fullnode.devnet.aptoslabs.com/v1";
-const FAUCET_URL = "https://faucet.devnet.aptoslabs.com";
+const NODE_URL = "https://fullnode.testnet.aptoslabs.com/v1";
+const FAUCET_URL = "https://faucet.testnet.aptoslabs.com";
 
 const SWITCHBOARD_DEVNET_ADDRESS =
-  "0x348ecb66a5d9edab8d175f647d5e99d6962803da7f5d3d2eb839387aeb118300";
+  "0xb27f7bbf7caf2368b08032d005e8beab151a885054cdca55c4cc644f0a308d2b";
 
 const onAggregatorUpdate = (
   client: AptosClient,

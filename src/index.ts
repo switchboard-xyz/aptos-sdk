@@ -16,11 +16,7 @@ import * as SHA3 from "js-sha3";
 
 export { OracleJob, IOracleJob } from "@switchboard-xyz/common";
 
-// Address that deployed the module
-export const SWITCHBOARD_DEVNET_ADDRESS = ``;
-
-// Address of the account that owns the Switchboard resource
-export const SWITCHBOARD_STATE_ADDRESS = ``;
+export const SWITCHBOARD_TESTNET_ADDRESS = `0xb27f7bbf7caf2368b08032d005e8beab151a885054cdca55c4cc644f0a308d2b`;
 
 export class AptosDecimal {
   constructor(
@@ -306,10 +302,10 @@ export async function sendAptosTx(
   if (simulation.vm_status === "Out of gas") {
     if (retryCount > 0) {
       const faucetClient = new FaucetClient(
-        "https://fullnode.devnet.aptoslabs.com/v1",
-        "https://faucet.devnet.aptoslabs.com"
+        "https://fullnode.testnet.aptoslabs.com/v1",
+        "https://faucet.testnet.aptoslabs.com"
       );
-      await faucetClient.fundAccount(signer.address(), 5000);
+      await faucetClient.fundAccount(signer.address(), 500000);
       return sendAptosTx(client, signer, method, args, type_args, --retryCount);
     }
   }

@@ -8,8 +8,8 @@ import {
 import YAML from "yaml";
 import fs from "fs";
 
-const NODE_URL = "https://fullnode.devnet.aptoslabs.com";
-const FAUCET_URL = "https://faucet.devnet.aptoslabs.com";
+const NODE_URL = "https://fullnode.testnet.aptoslabs.com/v1";
+const FAUCET_URL = "https://faucet.testnet.aptoslabs.com";
 
 const SWITCHBOARD_DEVNET_ADDRESS =
   "0xb27f7bbf7caf2368b08032d005e8beab151a885054cdca55c4cc644f0a308d2b";
@@ -75,27 +75,38 @@ const SWITCHBOARD_DEVNET_ADDRESS =
     console.log(`Queue: ${queue.address}, tx: ${queueTxSig}`);
     queue = q;
   } catch (e) {
-    let address = generateResourceAccountAddress(
-      HexString.ensure(SWITCHBOARD_DEVNET_ADDRESS),
-      Buffer.from("OracleQueue")
+    console.log(e);
+    queue = new OracleQueueAccount(
+      client,
+      user.address().hex(),
+      SWITCHBOARD_DEVNET_ADDRESS
     );
-    queue = new OracleQueueAccount(client, address, SWITCHBOARD_DEVNET_ADDRESS);
   }
 
-  const [oracle, oracleTxHash] = await createOracle(
-    client,
-    user,
-    {
-      name: "Switchboard OracleAccount",
-      authority: user.address(),
-      metadata: "metadata",
-      queue: queue.address,
-      coinType: "0x1::aptos_coin::AptosCoin",
-    },
-    SWITCHBOARD_DEVNET_ADDRESS
-  );
-
-  console.log(`Oracle ${oracle.address} created. tx hash: ${oracleTxHash}`);
+  let oracle;
+  try {
+    const [o, oracleTxHash] = await createOracle(
+      client,
+      user,
+      {
+        name: "Switchboard OracleAccount",
+        authority: user.address(),
+        metadata: "metadata",
+        queue: queue.address,
+        coinType: "0x1::aptos_coin::AptosCoin",
+      },
+      SWITCHBOARD_DEVNET_ADDRESS
+    );
+    oracle = o;
+    console.log(`Oracle ${oracle.address} created. tx hash: ${oracleTxHash}`);
+  } catch (e) {
+    console.log(e);
+    queue = new OracleQueueAccount(
+      client,
+      user.address().hex(),
+      SWITCHBOARD_DEVNET_ADDRESS
+    );
+  }
 
   try {
     // trigger the oracle heartbeat
@@ -128,6 +139,8 @@ const SWITCHBOARD_DEVNET_ADDRESS =
       SWITCHBOARD_DEVNET_ADDRESS
     );
   }
+
+  console.log("\n\n\n\n\n");
 
   console.log("Oracle", await oracle.loadData());
   console.log("Crank", await crank.loadData());
