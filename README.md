@@ -24,14 +24,14 @@ import {
 } from "@switchboard-xyz/aptos.js";
 import Big from "big.js";
 
-const NODE_URL = "https://fullnode.devnet.aptoslabs.com/v1";
-const FAUCET_URL = "https://faucet.devnet.aptoslabs.com";
+const NODE_URL = "https://fullnode.testnet.aptoslabs.com/v1";
+const FAUCET_URL = "https://faucet.testnet.aptoslabs.com";
 
 const SWITCHBOARD_DEVNET_ADDRESS =
   "0xb27f7bbf7caf2368b08032d005e8beab151a885054cdca55c4cc644f0a308d2b";
 
 const SWITCHBOARD_QUEUE_ADDRESS =
-  "0xbdb92db64cc9b3072381c5f98c57ef77c9ceb12163187b1e691b8a677a015f61";
+  "0xb27f7bbf7caf2368b08032d005e8beab151a885054cdca55c4cc644f0a308d2b";
 
 const SWITCHBOARD_CRANK_ADDRESS =
   "0xb27f7bbf7caf2368b08032d005e8beab151a885054cdca55c4cc644f0a308d2b";
@@ -71,12 +71,12 @@ const [aggregator, createFeedTx] = await createFeed(
   {
     authority: user.address(),
     queueAddress: SWITCHBOARD_QUEUE_ADDRESS, // account with OracleQueue resource
+    crankAddress: SWITCHBOARD_CRANK_ADDRESS, // account with Crank resource
     batchSize: 1, // number of oracles to respond to each round
     minJobResults: 1, // minimum # of jobs that need to return a result
     minOracleResults: 1, // minumum # of oracles that need to respond for a result
     minUpdateDelaySeconds: 5, // minimum delay between rounds
     coinType: "0x1::aptos_coin::AptosCoin", // CoinType of the queue (now only AptosCoin)
-    crank: SWITCHBOARD_CRANK_ADDRESS, // account with Crank resource
     initialLoadAmount: 1000, // load of the lease
     jobs: [
       {
@@ -154,9 +154,9 @@ console.log(await aggregatorAccount.loadData());
 switchboard = "0xb27f7bbf7caf2368b08032d005e8beab151a885054cdca55c4cc644f0a308d2b"
 
 [dependencies]
-MoveStdlib = { git = "https://github.com/aptos-labs/aptos-core.git", subdir = "aptos-move/framework/move-stdlib/", rev = "devnet" }
-AptosFramework = { git = "https://github.com/aptos-labs/aptos-core.git", subdir = "aptos-move/framework/aptos-framework/", rev = "devnet" }
-AptosStdlib = { git = "https://github.com/aptos-labs/aptos-core.git", subdir = "aptos-move/framework/aptos-stdlib/", rev = "devnet" }
+MoveStdlib = { git = "https://github.com/aptos-labs/aptos-core.git", subdir = "aptos-move/framework/move-stdlib/", rev = "testnet" }
+AptosFramework = { git = "https://github.com/aptos-labs/aptos-core.git", subdir = "aptos-move/framework/aptos-framework/", rev = "testnet" }
+AptosStdlib = { git = "https://github.com/aptos-labs/aptos-core.git", subdir = "aptos-move/framework/aptos-stdlib/", rev = "testnet" }
 Switchboard = { git = "https://github.com/switchboard-xyz/aptos-sdk.git", subdir = "switchboard-move/switchboard/", rev = "main" }
 ```
 
