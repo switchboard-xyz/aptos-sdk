@@ -5,6 +5,10 @@
 
 A library of utility functions to interact with Switchboard Modules on Aptos
 
+## Live Deployment:
+
+We're currently on Aptos Testnet at address `0xb27f7bbf7caf2368b08032d005e8beab151a885054cdca55c4cc644f0a308d2b`. For the simplest way to create and manage Switchboard feeds on Aptos, check out our [publisher](https://app.switchboard.xyz).
+
 ## Install
 
 ```
