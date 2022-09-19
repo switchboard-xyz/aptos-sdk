@@ -27,7 +27,7 @@ import Big from "big.js";
 const NODE_URL = "https://fullnode.testnet.aptoslabs.com/v1";
 const FAUCET_URL = "https://faucet.testnet.aptoslabs.com";
 
-const SWITCHBOARD_DEVNET_ADDRESS =
+const SWITCHBOARD_TESTNET_ADDRESS =
   "0xb27f7bbf7caf2368b08032d005e8beab151a885054cdca55c4cc644f0a308d2b";
 
 const SWITCHBOARD_QUEUE_ADDRESS =
@@ -88,7 +88,7 @@ const [aggregator, createFeedTx] = await createFeed(
       },
     ],
   },
-  SWITCHBOARD_DEVNET_ADDRESS
+  SWITCHBOARD_TESTNET_ADDRESS
 );
 
 console.log(
@@ -114,8 +114,8 @@ const onAggregatorUpdate = (
 ) => {
   const event = new AptosEvent(
     client,
-    HexString.ensure(SWITCHBOARD_DEVNET_ADDRESS),
-    `${SWITCHBOARD_DEVNET_ADDRESS}::switchboard::State`,
+    HexString.ensure(SWITCHBOARD_TESTNET_ADDRESS),
+    `${SWITCHBOARD_TESTNET_ADDRESS}::switchboard::State`,
     "aggregator_update_events",
     pollIntervalMs
   );
@@ -139,7 +139,7 @@ import { AggregatorAccount } from "@switchboard-xyz/aptos.js";
 const aggregatorAccount: AggregatorAccount = new AggregatorAccount(
   client,
   aggregator_address,
-  SWITCHBOARD_DEVNET_ADDRESS
+  SWITCHBOARD_TESTNET_ADDRESS
 );
 
 console.log(await aggregatorAccount.loadData());
