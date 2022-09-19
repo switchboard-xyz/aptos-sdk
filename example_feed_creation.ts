@@ -20,10 +20,10 @@ import {
 } from "./src";
 import Big from "big.js";
 
-const NODE_URL = "https://fullnode.devnet.aptoslabs.com/v1";
-const FAUCET_URL = "https://faucet.devnet.aptoslabs.com";
+const NODE_URL = "https://fullnode.testnet.aptoslabs.com/v1";
+const FAUCET_URL = "https://faucet.testnet.aptoslabs.com";
 
-const SWITCHBOARD_DEVNET_ADDRESS =
+const SWITCHBOARD_TESTNET_ADDRESS =
   "0xb27f7bbf7caf2368b08032d005e8beab151a885054cdca55c4cc644f0a308d2b";
 
 const SWITCHBOARD_QUEUE_ADDRESS =
@@ -39,8 +39,8 @@ const onAggregatorUpdate = (
 ) => {
   const event = new AptosEvent(
     client,
-    HexString.ensure(SWITCHBOARD_DEVNET_ADDRESS),
-    `${SWITCHBOARD_DEVNET_ADDRESS}::switchboard::State`,
+    HexString.ensure(SWITCHBOARD_TESTNET_ADDRESS),
+    `${SWITCHBOARD_TESTNET_ADDRESS}::switchboard::State`,
     "aggregator_update_events",
     pollIntervalMs
   );
@@ -107,7 +107,7 @@ const onAggregatorUpdate = (
         },
       ],
     },
-    SWITCHBOARD_DEVNET_ADDRESS
+    SWITCHBOARD_TESTNET_ADDRESS
   );
 
   console.log(
@@ -124,7 +124,7 @@ const onAggregatorUpdate = (
     await new LeaseAccount(
       client,
       aggregator.address,
-      SWITCHBOARD_DEVNET_ADDRESS
+      SWITCHBOARD_TESTNET_ADDRESS
     ).loadData(SWITCHBOARD_QUEUE_ADDRESS)
   );
   console.log("Load aggregator jobs data", await aggregator.loadJobs());
