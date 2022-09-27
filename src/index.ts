@@ -295,7 +295,7 @@ export async function sendAptosTx(
   const txnRequest = await client.generateTransaction(
     signer.address(),
     payload,
-    { max_gas_amount: "5000" }
+    { gas_unit_price: "101" }
   );
 
   const simulation = (await client.simulateTransaction(signer, txnRequest))[0];
@@ -349,7 +349,7 @@ export async function simulateAndRun(
   const txnRequest = await client.generateTransaction(
     user.address(),
     txn as Types.EntryFunctionPayload,
-    { max_gas_amount: "5000" }
+    { gas_unit_price: "101" }
   );
 
   const simulation = (await client.simulateTransaction(user, txnRequest))[0];
@@ -392,7 +392,7 @@ export async function sendRawAptosTx(
   const rawTxn = await client.generateRawTransaction(
     signer.address(),
     entryFunctionPayload,
-    { maxGasAmount: BigInt(5000) }
+    { gasUnitPrice: BigInt(100) }
   );
 
   const bcsTxn = AptosClient.generateBCSTransaction(signer, rawTxn);
