@@ -8,13 +8,14 @@ import {
   TxnBuilderTypes,
   Types,
 } from "aptos";
-import { MoveStructTag, EntryFunctionId } from "aptos/src/generated";
+import { MoveStructTag, EntryFunctionId, PendingTransaction } from "aptos/src/generated";
 import Big from "big.js";
 import { OracleJob } from "@switchboard-xyz/common";
 import BN from "bn.js";
 import * as SHA3 from "js-sha3";
 
 export { OracleJob, IOracleJob } from "@switchboard-xyz/common";
+
 
 export const SWITCHBOARD_TESTNET_ADDRESS = `0xb27f7bbf7caf2368b08032d005e8beab151a885054cdca55c4cc644f0a308d2b`;
 
@@ -371,7 +372,7 @@ export async function sendRawAptosTx(
   raw_args: Array<any>,
   raw_type_args: BCS.Seq<TxnBuilderTypes.TypeTag> = [],
   retryCount = 2
-): Promise<string> {
+): Promise<PendingTransaction> {
   // We need to pass a token type to the `transfer` function.
 
   const methodInfo = method.split("::");
@@ -422,7 +423,7 @@ export async function sendRawAptosTx(
 
   const transactionRes = await client.submitSignedBCSTransaction(bcsTxn);
   await client.waitForTransaction(transactionRes.hash);
-  return transactionRes.hash;
+  return transactionRes;
 }
 
 /**
@@ -675,7 +676,7 @@ export class AggregatorAccount {
   async saveResult(
     account: AptosAccount,
     params: AggregatorSaveResultParams
-  ): Promise<string> {
+  ): Promise<PendingTransaction> {
     const {
       mantissa: valueMantissa,
       scale: valueScale,
