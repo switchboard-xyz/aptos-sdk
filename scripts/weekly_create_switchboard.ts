@@ -84,32 +84,27 @@ const SWITCHBOARD_ADDRESS =
   }
 
   try {
-    await queue.setConfigs(
-      client,
-      user,
-      {
-        name: "Switch Queue",
-        metadata: "Nothing to see here",
-        authority: user.address(),
-        oracleTimeout: 3000,
-        reward: 1,
-        minStake: 0,
-        gasPrice: 101,
-        slashingEnabled: false,
-        varianceToleranceMultiplierValue: 0,
-        varianceToleranceMultiplierScale: 0,
-        feedProbationPeriod: 0,
-        consecutiveFeedFailureLimit: 0,
-        consecutiveOracleFailureLimit: 0,
-        unpermissionedFeedsEnabled: true,
-        unpermissionedVrfEnabled: true,
-        lockLeaseFunding: false,
-        enableBufferRelayers: false,
-        maxSize: 1000,
-        coinType: "0x1::aptos_coin::AptosCoin",
-      },
-      SWITCHBOARD_ADDRESS
-    );
+    await queue.setConfigs(user, {
+      name: "Switch Queue",
+      metadata: "Nothing to see here",
+      authority: user.address(),
+      oracleTimeout: 3000,
+      reward: 1,
+      minStake: 0,
+      gasPrice: 101,
+      slashingEnabled: false,
+      varianceToleranceMultiplierValue: 0,
+      varianceToleranceMultiplierScale: 0,
+      feedProbationPeriod: 0,
+      consecutiveFeedFailureLimit: 0,
+      consecutiveOracleFailureLimit: 0,
+      unpermissionedFeedsEnabled: true,
+      unpermissionedVrfEnabled: true,
+      lockLeaseFunding: false,
+      enableBufferRelayers: false,
+      maxSize: 1000,
+      coinType: "0x1::aptos_coin::AptosCoin",
+    });
   } catch (e) {
     console.log(e);
   }
