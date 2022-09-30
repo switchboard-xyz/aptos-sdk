@@ -21,11 +21,11 @@ import {
 } from "../src";
 import Big from "big.js";
 
-const NODE_URL = "https://fullnode.testnet.aptoslabs.com/v1";
-const FAUCET_URL = "https://faucet.testnet.aptoslabs.com";
+const NODE_URL = "https://fullnode.devnet.aptoslabs.com/v1";
+const FAUCET_URL = "https://faucet.devnet.aptoslabs.com";
 
-const SWITCHBOARD_TESTNET_ADDRESS =
-  "0xb27f7bbf7caf2368b08032d005e8beab151a885054cdca55c4cc644f0a308d2b";
+const SWITCHBOARD_ADDRESS =
+  "0x14611263909398572be034debb2e61b6751cafbeaddd994b9a1250cb76b99d38";
 
 // run it all at once
 (async () => {
@@ -33,8 +33,8 @@ const SWITCHBOARD_TESTNET_ADDRESS =
   const faucetClient = new FaucetClient(NODE_URL, FAUCET_URL);
   setInterval(async () => {
     try {
-      await faucetClient.fundAccount(SWITCHBOARD_TESTNET_ADDRESS, 500000000);
-      console.log(`Account ${SWITCHBOARD_TESTNET_ADDRESS} funded.`);
+      await faucetClient.fundAccount(SWITCHBOARD_ADDRESS, 500000000);
+      console.log(`Account ${SWITCHBOARD_ADDRESS} funded.`);
     } catch (e) {
       console.log(e);
     }

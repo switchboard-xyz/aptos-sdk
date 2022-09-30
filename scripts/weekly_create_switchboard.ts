@@ -11,8 +11,8 @@ import fs from "fs";
 const NODE_URL = "https://fullnode.testnet.aptoslabs.com/v1";
 const FAUCET_URL = "https://faucet.testnet.aptoslabs.com";
 
-const SWITCHBOARD_DEVNET_ADDRESS =
-  "0xb27f7bbf7caf2368b08032d005e8beab151a885054cdca55c4cc644f0a308d2b";
+const SWITCHBOARD_ADDRESS =
+  "0x14611263909398572be034debb2e61b6751cafbeaddd994b9a1250cb76b99d38";
 
 // run it all at once
 (async () => {
@@ -20,8 +20,7 @@ const SWITCHBOARD_DEVNET_ADDRESS =
   const client = new AptosClient(NODE_URL);
   const faucetClient = new FaucetClient(NODE_URL, FAUCET_URL);
 
-  // create new user
-  let user = new AptosAccount();
+  let user;
 
   // if file extension ends with yaml
   try {
@@ -41,7 +40,7 @@ const SWITCHBOARD_DEVNET_ADDRESS =
 
   // user will be authority
   await faucetClient.fundAccount(
-    HexString.ensure(SWITCHBOARD_DEVNET_ADDRESS),
+    HexString.ensure(SWITCHBOARD_ADDRESS),
     5000000000
   );
 
@@ -55,7 +54,8 @@ const SWITCHBOARD_DEVNET_ADDRESS =
         metadata: "Nothing to see here",
         authority: user.address(),
         oracleTimeout: 3000,
-        reward: 1,
+        reward: 100,
+        gasPrice: 101,
         minStake: 0,
         slashingEnabled: false,
         varianceToleranceMultiplierValue: 0,
@@ -70,17 +70,48 @@ const SWITCHBOARD_DEVNET_ADDRESS =
         maxSize: 1000,
         coinType: "0x1::aptos_coin::AptosCoin",
       },
-      SWITCHBOARD_DEVNET_ADDRESS
+      SWITCHBOARD_ADDRESS
     );
-    console.log(`Queue: ${queue.address}, tx: ${queueTxSig}`);
+    console.log(`Queue: ${q.address}, tx: ${queueTxSig}`);
     queue = q;
   } catch (e) {
     console.log(e);
     queue = new OracleQueueAccount(
       client,
       user.address().hex(),
-      SWITCHBOARD_DEVNET_ADDRESS
+      SWITCHBOARD_ADDRESS
     );
+  }
+
+  try {
+    await queue.setConfigs(
+      client,
+      user,
+      {
+        name: "Switch Queue",
+        metadata: "Nothing to see here",
+        authority: user.address(),
+        oracleTimeout: 3000,
+        reward: 1,
+        minStake: 0,
+        gasPrice: 101,
+        slashingEnabled: false,
+        varianceToleranceMultiplierValue: 0,
+        varianceToleranceMultiplierScale: 0,
+        feedProbationPeriod: 0,
+        consecutiveFeedFailureLimit: 0,
+        consecutiveOracleFailureLimit: 0,
+        unpermissionedFeedsEnabled: true,
+        unpermissionedVrfEnabled: true,
+        lockLeaseFunding: false,
+        enableBufferRelayers: false,
+        maxSize: 1000,
+        coinType: "0x1::aptos_coin::AptosCoin",
+      },
+      SWITCHBOARD_ADDRESS
+    );
+  } catch (e) {
+    console.log(e);
   }
 
   let oracle;
@@ -95,7 +126,7 @@ const SWITCHBOARD_DEVNET_ADDRESS =
         queue: queue.address,
         coinType: "0x1::aptos_coin::AptosCoin",
       },
-      SWITCHBOARD_DEVNET_ADDRESS
+      SWITCHBOARD_ADDRESS
     );
     oracle = o;
     console.log(`Oracle ${oracle.address} created. tx hash: ${oracleTxHash}`);
@@ -104,7 +135,7 @@ const SWITCHBOARD_DEVNET_ADDRESS =
     queue = new OracleQueueAccount(
       client,
       user.address().hex(),
-      SWITCHBOARD_DEVNET_ADDRESS
+      SWITCHBOARD_ADDRESS
     );
   }
 
@@ -126,18 +157,14 @@ const SWITCHBOARD_DEVNET_ADDRESS =
         queueAddress: queue.address,
         coinType: "0x1::aptos_coin::AptosCoin",
       },
-      SWITCHBOARD_DEVNET_ADDRESS
+      SWITCHBOARD_ADDRESS
     );
     console.log(`Created crank at ${crank.address}, tx hash ${txhash}`);
     console.log("Crank", await crank.loadData());
     crank = c;
   } catch (e) {
     console.log("Crank already created.");
-    crank = new CrankAccount(
-      client,
-      SWITCHBOARD_DEVNET_ADDRESS,
-      SWITCHBOARD_DEVNET_ADDRESS
-    );
+    crank = new CrankAccount(client, SWITCHBOARD_ADDRESS, SWITCHBOARD_ADDRESS);
   }
 
   console.log("\n\n\n\n\n");

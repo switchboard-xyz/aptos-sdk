@@ -15,7 +15,7 @@ import BN from "bn.js";
 import * as SHA3 from "js-sha3";
 
 export { OracleJob, IOracleJob } from "@switchboard-xyz/common";
-
+export const SWITCHBOARD_DEVNET_ADDRESS = `0xb27f7bbf7caf2368b08032d005e8beab151a885054cdca55c4cc644f0a308d2b`;
 export const SWITCHBOARD_TESTNET_ADDRESS = `0xb27f7bbf7caf2368b08032d005e8beab151a885054cdca55c4cc644f0a308d2b`;
 
 export class AptosDecimal {
@@ -89,6 +89,8 @@ export interface AggregatorInitParams {
   historySize?: number;
   readCharge?: number;
   rewardEscrow?: string;
+  readWhitelist?: MaybeHexString[];
+  limitReadsToWhitelist?: boolean;
   gasPrice?: number;
   gasPriceFeed?: string;
 }
@@ -136,6 +138,8 @@ export interface AggregatorSetConfigParams {
   historySize: number;
   readCharge: number;
   rewardEscrow: MaybeHexString;
+  readWhitelist?: MaybeHexString[];
+  limitReadsToWhitelist?: boolean;
   gasPrice?: number;
   gasPriceFeed?: MaybeHexString;
   coinType?: string;
@@ -309,6 +313,7 @@ export async function sendAptosTx(
       return sendAptosTx(client, signer, method, args, type_args, --retryCount);
     }
   }
+
   if (simulation.success === false) {
     console.log(simulation);
     throw new Error(`TxFailure: ${simulation.vm_status}`);
@@ -353,6 +358,7 @@ export async function simulateAndRun(
   );
 
   const simulation = (await client.simulateTransaction(user, txnRequest))[0];
+
   if (simulation.success === false) {
     console.log(simulation);
     throw new Error(`TxFailure: ${simulation.vm_status}`);
@@ -398,6 +404,7 @@ export async function sendRawAptosTx(
   const bcsTxn = AptosClient.generateBCSTransaction(signer, rawTxn);
 
   const simulation = (await client.simulateTransaction(signer, rawTxn))[0];
+
   if (simulation.vm_status === "Out of gas") {
     if (retryCount > 0) {
       const faucetClient = new FaucetClient(
@@ -613,6 +620,9 @@ export class AggregatorAccount {
         params.rewardEscrow
           ? HexString.ensure(params.rewardEscrow).hex()
           : account.address().hex(),
+
+        params.readWhitelist ?? [],
+        params.limitReadsToWhitelist ?? false,
         params.gasPrice ?? 0,
         params.gasPriceFeed
           ? HexString.ensure(params.gasPriceFeed).hex()
@@ -771,6 +781,8 @@ export class AggregatorAccount {
         params.rewardEscrow
           ? HexString.ensure(params.rewardEscrow).hex()
           : HexString.ensure(params.authority).hex(),
+        params.readWhitelist ?? [],
+        params.limitReadsToWhitelist ?? false,
         params.gasPrice ?? 0,
         params.gasPriceFeed
           ? HexString.ensure(params.gasPriceFeed).hex()
@@ -1597,6 +1609,8 @@ export async function createFeedTx(
         params.rewardEscrow
           ? HexString.ensure(params.rewardEscrow).hex()
           : HexString.ensure(params.authority).hex(),
+        params.readWhitelist ?? [],
+        params.limitReadsToWhitelist ?? false,
         params.gasPrice ?? 0,
         params.gasPriceFeed
           ? HexString.ensure(params.gasPriceFeed).hex()

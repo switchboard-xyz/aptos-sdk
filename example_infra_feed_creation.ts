@@ -26,10 +26,10 @@ import {
 } from "./src";
 import Big from "big.js";
 
-const NODE_URL = "https://fullnode.testnet.aptoslabs.com/v1";
-const FAUCET_URL = "https://faucet.testnet.aptoslabs.com";
+const NODE_URL = "https://fullnode.devnet.aptoslabs.com/v1";
+const FAUCET_URL = "https://faucet.devnet.aptoslabs.com";
 
-const SWITCHBOARD_TESTNET_ADDRESS =
+const SWITCHBOARD_ADDRESS =
   "0xb27f7bbf7caf2368b08032d005e8beab151a885054cdca55c4cc644f0a308d2b";
 
 const onAggregatorUpdate = (
@@ -39,8 +39,8 @@ const onAggregatorUpdate = (
 ) => {
   const event = new AptosEvent(
     client,
-    HexString.ensure(SWITCHBOARD_TESTNET_ADDRESS),
-    `${SWITCHBOARD_TESTNET_ADDRESS}::switchboard::State`,
+    HexString.ensure(SWITCHBOARD_ADDRESS),
+    `${SWITCHBOARD_ADDRESS}::switchboard::State`,
     "aggregator_update_events",
     pollIntervalMs
   );
@@ -55,8 +55,8 @@ const onAggregatorOpenRound = (
 ) => {
   const event = new AptosEvent(
     client,
-    HexString.ensure(SWITCHBOARD_TESTNET_ADDRESS),
-    `${SWITCHBOARD_TESTNET_ADDRESS}::switchboard::State`,
+    HexString.ensure(SWITCHBOARD_ADDRESS),
+    `${SWITCHBOARD_ADDRESS}::switchboard::State`,
     "aggregator_open_round_events",
     pollIntervalMs
   );
@@ -72,7 +72,7 @@ const onAggregatorOpenRound = (
 
   // create new user
   let user = new AptosAccount();
-  await faucetClient.fundAccount(user.address(), 50000);
+  await faucetClient.fundAccount(user.address(), 50000000);
   console.log(`User account ${user.address().hex()} created + funded.`);
 
   const [queue, queueTxHash] = await OracleQueueAccount.init(
@@ -98,7 +98,7 @@ const onAggregatorOpenRound = (
       maxSize: 1000,
       coinType: "0x1::aptos_coin::AptosCoin",
     },
-    SWITCHBOARD_TESTNET_ADDRESS
+    SWITCHBOARD_ADDRESS
   );
   console.log(`Oracle Queue ${queue.address} created. tx hash: ${queueTxHash}`);
 
@@ -112,7 +112,7 @@ const onAggregatorOpenRound = (
       queue: queue.address,
       coinType: "0x1::aptos_coin::AptosCoin",
     },
-    SWITCHBOARD_TESTNET_ADDRESS
+    SWITCHBOARD_ADDRESS
   );
 
   console.log(`Oracle ${oracle.address} created. tx hash: ${oracleTxHash}`);
@@ -139,7 +139,7 @@ const onAggregatorOpenRound = (
       queueAddress: queue.address,
       coinType: "0x1::aptos_coin::AptosCoin",
     },
-    SWITCHBOARD_TESTNET_ADDRESS
+    SWITCHBOARD_ADDRESS
   );
   console.log(`Created crank at ${crank.address}, tx hash ${txhash}`);
 
@@ -190,7 +190,7 @@ const onAggregatorOpenRound = (
         },
       ],
     },
-    SWITCHBOARD_TESTNET_ADDRESS
+    SWITCHBOARD_ADDRESS
   );
 
   console.log(
@@ -212,7 +212,7 @@ const onAggregatorOpenRound = (
       const agg = new AggregatorAccount(
         client,
         e.data.aggregator_address,
-        SWITCHBOARD_TESTNET_ADDRESS
+        SWITCHBOARD_ADDRESS
       );
 
       const aggregatorData = await agg.loadData();
@@ -220,11 +220,7 @@ const onAggregatorOpenRound = (
       // The event data includes JobAccount Pubkeys, so grab the JobAccount Data
       const jobs: OracleJob[] = await Promise.all(
         e.data.job_keys.map(async (jobKey: string) => {
-          const job = new JobAccount(
-            client,
-            jobKey,
-            SWITCHBOARD_TESTNET_ADDRESS
-          );
+          const job = new JobAccount(client, jobKey, SWITCHBOARD_ADDRESS);
           const jobData = await job.loadJob().catch((e) => {
             console.log(e);
           });
@@ -270,17 +266,13 @@ const onAggregatorOpenRound = (
     await new LeaseAccount(
       client,
       aggregator.address,
-      SWITCHBOARD_TESTNET_ADDRESS
+      SWITCHBOARD_ADDRESS
     ).loadData(queue.address)
   );
   console.log("Load aggregator jobs data", await aggregator.loadJobs());
 
   console.log(
-    await fetchAggregators(
-      client,
-      user.address().hex(),
-      SWITCHBOARD_TESTNET_ADDRESS
-    )
+    await fetchAggregators(client, user.address().hex(), SWITCHBOARD_ADDRESS)
   );
 
   setInterval(() => {
