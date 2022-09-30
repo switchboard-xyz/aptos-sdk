@@ -7,7 +7,9 @@ A library of utility functions to interact with Switchboard Modules on Aptos
 
 ## Live Deployment:
 
-We're currently on Aptos Testnet at address `0xb27f7bbf7caf2368b08032d005e8beab151a885054cdca55c4cc644f0a308d2b`. For the simplest way to create and manage Switchboard feeds on Aptos, check out our [publisher](https://app.switchboard.xyz).
+We're currently on Aptos Testnet and Devnet at address `0x14611263909398572be034debb2e61b6751cafbeaddd994b9a1250cb76b99d38`. For the simplest way to create and manage Switchboard feeds on Aptos, check out our [publisher](https://app.switchboard.xyz).
+
+Our automated updates will be live again by Monday (Oct 3).
 
 ## Install
 
@@ -28,17 +30,17 @@ import {
 } from "@switchboard-xyz/aptos.js";
 import Big from "big.js";
 
-const NODE_URL = "https://fullnode.testnet.aptoslabs.com/v1";
-const FAUCET_URL = "https://faucet.testnet.aptoslabs.com";
+const NODE_URL = "https://fullnode.devnet.aptoslabs.com/v1";
+const FAUCET_URL = "https://faucet.devnet.aptoslabs.com";
 
-const SWITCHBOARD_TESTNET_ADDRESS =
-  "0xb27f7bbf7caf2368b08032d005e8beab151a885054cdca55c4cc644f0a308d2b";
+const SWITCHBOARD_ADDRESS =
+  "0x14611263909398572be034debb2e61b6751cafbeaddd994b9a1250cb76b99d38";
 
 const SWITCHBOARD_QUEUE_ADDRESS =
-  "0xb27f7bbf7caf2368b08032d005e8beab151a885054cdca55c4cc644f0a308d2b";
+  "0x14611263909398572be034debb2e61b6751cafbeaddd994b9a1250cb76b99d38";
 
 const SWITCHBOARD_CRANK_ADDRESS =
-  "0xb27f7bbf7caf2368b08032d005e8beab151a885054cdca55c4cc644f0a308d2b";
+  "0x14611263909398572be034debb2e61b6751cafbeaddd994b9a1250cb76b99d38";
 
 const client = new AptosClient(NODE_URL);
 const faucetClient = new FaucetClient(NODE_URL, FAUCET_URL);
@@ -92,7 +94,7 @@ const [aggregator, createFeedTx] = await createFeed(
       },
     ],
   },
-  SWITCHBOARD_TESTNET_ADDRESS
+  SWITCHBOARD_ADDRESS
 );
 
 console.log(
@@ -118,8 +120,8 @@ const onAggregatorUpdate = (
 ) => {
   const event = new AptosEvent(
     client,
-    HexString.ensure(SWITCHBOARD_TESTNET_ADDRESS),
-    `${SWITCHBOARD_TESTNET_ADDRESS}::switchboard::State`,
+    HexString.ensure(SWITCHBOARD_ADDRESS),
+    `${SWITCHBOARD_ADDRESS}::switchboard::State`,
     "aggregator_update_events",
     pollIntervalMs
   );
@@ -143,7 +145,7 @@ import { AggregatorAccount } from "@switchboard-xyz/aptos.js";
 const aggregatorAccount: AggregatorAccount = new AggregatorAccount(
   client,
   aggregator_address,
-  SWITCHBOARD_TESTNET_ADDRESS
+  SWITCHBOARD_ADDRESS
 );
 
 console.log(await aggregatorAccount.loadData());
@@ -155,12 +157,12 @@ console.log(await aggregatorAccount.loadData());
 
 ```toml
 [addresses]
-switchboard = "0xb27f7bbf7caf2368b08032d005e8beab151a885054cdca55c4cc644f0a308d2b"
+switchboard = "0x14611263909398572be034debb2e61b6751cafbeaddd994b9a1250cb76b99d38"
 
 [dependencies]
-MoveStdlib = { git = "https://github.com/aptos-labs/aptos-core.git", subdir = "aptos-move/framework/move-stdlib/", rev = "testnet" }
-AptosFramework = { git = "https://github.com/aptos-labs/aptos-core.git", subdir = "aptos-move/framework/aptos-framework/", rev = "testnet" }
-AptosStdlib = { git = "https://github.com/aptos-labs/aptos-core.git", subdir = "aptos-move/framework/aptos-stdlib/", rev = "testnet" }
+MoveStdlib = { git = "https://github.com/aptos-labs/aptos-core.git", subdir = "aptos-move/framework/move-stdlib/", rev = "devnet" }
+AptosFramework = { git = "https://github.com/aptos-labs/aptos-core.git", subdir = "aptos-move/framework/aptos-framework/", rev = "devnet" }
+AptosStdlib = { git = "https://github.com/aptos-labs/aptos-core.git", subdir = "aptos-move/framework/aptos-stdlib/", rev = "devnet" }
 Switchboard = { git = "https://github.com/switchboard-xyz/aptos-sdk.git", subdir = "switchboard-move/switchboard/", rev = "main" }
 ```
 
@@ -168,7 +170,7 @@ Switchboard = { git = "https://github.com/switchboard-xyz/aptos-sdk.git", subdir
 
 ```move
 use switchboard::aggregator;
-use switchboard::math::{Self, SwitchboardDecimal};
+use switchboard::math;
 
 // store latest value
 struct AggregatorInfo has copy, drop, store, key {
