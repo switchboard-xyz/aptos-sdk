@@ -163,7 +163,7 @@ switchboard = "0x14611263909398572be034debb2e61b6751cafbeaddd994b9a1250cb76b99d3
 MoveStdlib = { git = "https://github.com/aptos-labs/aptos-core.git", subdir = "aptos-move/framework/move-stdlib/", rev = "devnet" }
 AptosFramework = { git = "https://github.com/aptos-labs/aptos-core.git", subdir = "aptos-move/framework/aptos-framework/", rev = "devnet" }
 AptosStdlib = { git = "https://github.com/aptos-labs/aptos-core.git", subdir = "aptos-move/framework/aptos-stdlib/", rev = "devnet" }
-Switchboard = { git = "https://github.com/switchboard-xyz/aptos-sdk.git", subdir = "switchboard-move/switchboard/", rev = "main" }
+Switchboard = { git = "https://github.com/switchboard-xyz/sbv2-aptos.git", subdir = "switchboard-move/switchboard/", rev = "main" }
 ```
 
 ### Reading Feeds
