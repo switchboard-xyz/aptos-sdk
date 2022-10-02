@@ -5,7 +5,7 @@ version = "0.0.0"
 [addresses]
 std = "0x1"
 aptos_framework = "0x1"
-switchboard = "0x14611263909398572be034debb2e61b6751cafbeaddd994b9a1250cb76b99d38"# Will change as we iterate on devnet
+switchboard = "0xb68fc782f172f8df315814d25a0d80712e7543c168e596edc72cc3b163677375"# Will change as we iterate on devnet
 demo = "_"
 
 [dependencies]
