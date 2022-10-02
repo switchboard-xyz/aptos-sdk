@@ -25,13 +25,13 @@ const NODE_URL = "https://fullnode.testnet.aptoslabs.com/v1";
 const FAUCET_URL = "https://faucet.testnet.aptoslabs.com";
 
 const SWITCHBOARD_TESTNET_ADDRESS =
-  "0x14611263909398572be034debb2e61b6751cafbeaddd994b9a1250cb76b99d38";
+  "0xb68fc782f172f8df315814d25a0d80712e7543c168e596edc72cc3b163677375";
 
 const SWITCHBOARD_QUEUE_ADDRESS =
-  "0x14611263909398572be034debb2e61b6751cafbeaddd994b9a1250cb76b99d38";
+  "0xb68fc782f172f8df315814d25a0d80712e7543c168e596edc72cc3b163677375";
 
 const SWITCHBOARD_CRANK_ADDRESS =
-  "0x14611263909398572be034debb2e61b6751cafbeaddd994b9a1250cb76b99d38";
+  "0xb68fc782f172f8df315814d25a0d80712e7543c168e596edc72cc3b163677375";
 
 const onAggregatorUpdate = (
   client: AptosClient,

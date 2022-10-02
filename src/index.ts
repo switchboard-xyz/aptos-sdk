@@ -15,8 +15,8 @@ import BN from "bn.js";
 import * as SHA3 from "js-sha3";
 
 export { OracleJob, IOracleJob } from "@switchboard-xyz/common";
-export const SWITCHBOARD_DEVNET_ADDRESS = `0xb27f7bbf7caf2368b08032d005e8beab151a885054cdca55c4cc644f0a308d2b`;
-export const SWITCHBOARD_TESTNET_ADDRESS = `0xb27f7bbf7caf2368b08032d005e8beab151a885054cdca55c4cc644f0a308d2b`;
+export const SWITCHBOARD_DEVNET_ADDRESS = `0xb68fc782f172f8df315814d25a0d80712e7543c168e596edc72cc3b163677375`;
+export const SWITCHBOARD_TESTNET_ADDRESS = `0xb68fc782f172f8df315814d25a0d80712e7543c168e596edc72cc3b163677375`;
 
 export class AptosDecimal {
   constructor(
@@ -91,8 +91,6 @@ export interface AggregatorInitParams {
   rewardEscrow?: string;
   readWhitelist?: MaybeHexString[];
   limitReadsToWhitelist?: boolean;
-  gasPrice?: number;
-  gasPriceFeed?: string;
 }
 
 export interface AggregatorSaveResultParams {
@@ -140,8 +138,6 @@ export interface AggregatorSetConfigParams {
   rewardEscrow: MaybeHexString;
   readWhitelist?: MaybeHexString[];
   limitReadsToWhitelist?: boolean;
-  gasPrice?: number;
-  gasPriceFeed?: MaybeHexString;
   coinType?: string;
 }
 
@@ -182,7 +178,6 @@ export interface OracleQueueInitParams {
   unpermissionedFeedsEnabled: boolean;
   unpermissionedVrfEnabled: boolean;
   lockLeaseFunding: boolean;
-  gasPrice?: number;
 
   // this needs to be swapped with Coin or something later
   enableBufferRelayers: boolean;
@@ -206,7 +201,6 @@ export interface OracleQueueSetConfigsParams {
   unpermissionedFeedsEnabled: boolean;
   unpermissionedVrfEnabled?: boolean;
   lockLeaseFunding: boolean;
-  gasPrice?: number;
 
   // this needs to be swapped with Coin or something later
   enableBufferRelayers: boolean;
@@ -623,10 +617,7 @@ export class AggregatorAccount {
 
         params.readWhitelist ?? [],
         params.limitReadsToWhitelist ?? false,
-        params.gasPrice ?? 0,
-        params.gasPriceFeed
-          ? HexString.ensure(params.gasPriceFeed).hex()
-          : "0x0",
+
         HexString.ensure(params.authority).hex(),
         HexString.ensure(seed).hex(),
       ],
@@ -783,10 +774,6 @@ export class AggregatorAccount {
           : HexString.ensure(params.authority).hex(),
         params.readWhitelist ?? [],
         params.limitReadsToWhitelist ?? false,
-        params.gasPrice ?? 0,
-        params.gasPriceFeed
-          ? HexString.ensure(params.gasPriceFeed).hex()
-          : "0x0",
         params.authority,
       ],
       [params.coinType ?? "0x1::aptos_coin::AptosCoin"]
@@ -1135,7 +1122,6 @@ export class OracleQueueAccount {
         params.lockLeaseFunding,
         params.enableBufferRelayers,
         params.maxSize,
-        params.gasPrice ?? 0,
       ],
       [params.coinType ?? "0x1::aptos_coin::AptosCoin"]
     );
@@ -1176,7 +1162,6 @@ export class OracleQueueAccount {
         params.unpermissionedFeedsEnabled,
         params.lockLeaseFunding,
         params.maxSize,
-        params.gasPrice ?? 0,
       ],
       [params.coinType ?? "0x1::aptos_coin::AptosCoin"]
     );
@@ -1611,10 +1596,6 @@ export async function createFeedTx(
           : HexString.ensure(params.authority).hex(),
         params.readWhitelist ?? [],
         params.limitReadsToWhitelist ?? false,
-        params.gasPrice ?? 0,
-        params.gasPriceFeed
-          ? HexString.ensure(params.gasPriceFeed).hex()
-          : "0x0",
 
         // lease
         params.initialLoadAmount,

@@ -85,8 +85,6 @@ module switchboard::aggregator {
         read_whitelist: vector<address>,
         crank_disabled: bool,
         history_limit: u64,
-        gas_price: u64,
-        gas_price_feed: address,
         limit_reads_to_whitelist: bool,
 
         // Aggregator Data
@@ -132,8 +130,6 @@ module switchboard::aggregator {
         reward_escrow: address,
         read_whitelist: vector<address>,
         limit_reads_to_whitelist: bool,
-        gas_price: u64,
-        gas_price_feed: address,
         authority: address,
     }
 
@@ -265,31 +261,6 @@ module switchboard::aggregator {
     public fun authority(addr: address): address acquires Aggregator {
         let aggregator = borrow_global<Aggregator>(addr);
         aggregator.authority
-    }
-
-    public fun current_gas_price<CoinType>(addr: address): u64 acquires Aggregator {
-        let aggregator_gas_price = gas_price(addr);
-        let aggregator_gas_price_feed = gas_price_feed(addr);
-        let gas_price: u64 = if (aggregator_gas_price != 0) {
-            aggregator_gas_price
-        } else if (exist(aggregator_gas_price_feed)) {
-            let latest_value = latest_value(addr);
-            (math::scale_to_decimals(&latest_value, 0) as u64)
-        } else {
-            0
-        };
-
-        gas_price
-    }
-
-    public fun gas_price(addr: address): u64 acquires Aggregator {
-        let aggregator = borrow_global<Aggregator>(addr);
-        aggregator.gas_price
-    }
-
-    public fun gas_price_feed(addr: address): address acquires Aggregator {
-        let aggregator = borrow_global<Aggregator>(addr);
-        aggregator.gas_price_feed
     }
 
     public fun is_locked(addr: address): bool acquires Aggregator {
@@ -465,8 +436,6 @@ module switchboard::aggregator {
             reward_escrow: @0x55,
             read_whitelist: vector::empty(),
             limit_reads_to_whitelist: false,
-            gas_price: 1,
-            gas_price_feed: @0x0,
         };
 
         move_to<Aggregator>(account, aggregator);

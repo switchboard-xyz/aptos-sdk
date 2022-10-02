@@ -8,11 +8,11 @@ import {
 import YAML from "yaml";
 import fs from "fs";
 
-const NODE_URL = "https://fullnode.testnet.aptoslabs.com/v1";
-const FAUCET_URL = "https://faucet.testnet.aptoslabs.com";
+const NODE_URL = "https://fullnode.devnet.aptoslabs.com/v1";
+const FAUCET_URL = "https://faucet.devnet.aptoslabs.com";
 
 const SWITCHBOARD_ADDRESS =
-  "0x14611263909398572be034debb2e61b6751cafbeaddd994b9a1250cb76b99d38";
+  "0xb68fc782f172f8df315814d25a0d80712e7543c168e596edc72cc3b163677375";
 
 // run it all at once
 (async () => {
@@ -54,8 +54,7 @@ const SWITCHBOARD_ADDRESS =
         metadata: "Nothing to see here",
         authority: user.address(),
         oracleTimeout: 3000,
-        reward: 100,
-        gasPrice: 101,
+        reward: 52400, // gas cost of a saveResult
         minStake: 0,
         slashingEnabled: false,
         varianceToleranceMultiplierValue: 0,
@@ -91,7 +90,6 @@ const SWITCHBOARD_ADDRESS =
       oracleTimeout: 3000,
       reward: 1,
       minStake: 0,
-      gasPrice: 101,
       slashingEnabled: false,
       varianceToleranceMultiplierValue: 0,
       varianceToleranceMultiplierScale: 0,

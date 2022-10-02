@@ -7,7 +7,7 @@ A library of utility functions to interact with Switchboard Modules on Aptos
 
 ## Live Deployment:
 
-We're currently on Aptos Testnet and Devnet at address `0x14611263909398572be034debb2e61b6751cafbeaddd994b9a1250cb76b99d38`. For the simplest way to create and manage Switchboard feeds on Aptos, check out our [publisher](https://app.switchboard.xyz).
+We're currently on Aptos Testnet and Devnet at address `0xb68fc782f172f8df315814d25a0d80712e7543c168e596edc72cc3b163677375`. For the simplest way to create and manage Switchboard feeds on Aptos, check out our [publisher](https://app.switchboard.xyz).
 
 Our automated updates will be live again by Monday (Oct 3).
 
@@ -34,13 +34,13 @@ const NODE_URL = "https://fullnode.devnet.aptoslabs.com/v1";
 const FAUCET_URL = "https://faucet.devnet.aptoslabs.com";
 
 const SWITCHBOARD_ADDRESS =
-  "0x14611263909398572be034debb2e61b6751cafbeaddd994b9a1250cb76b99d38";
+  "0xb68fc782f172f8df315814d25a0d80712e7543c168e596edc72cc3b163677375";
 
 const SWITCHBOARD_QUEUE_ADDRESS =
-  "0x14611263909398572be034debb2e61b6751cafbeaddd994b9a1250cb76b99d38";
+  "0xb68fc782f172f8df315814d25a0d80712e7543c168e596edc72cc3b163677375";
 
 const SWITCHBOARD_CRANK_ADDRESS =
-  "0x14611263909398572be034debb2e61b6751cafbeaddd994b9a1250cb76b99d38";
+  "0xb68fc782f172f8df315814d25a0d80712e7543c168e596edc72cc3b163677375";
 
 const client = new AptosClient(NODE_URL);
 const faucetClient = new FaucetClient(NODE_URL, FAUCET_URL);
@@ -157,7 +157,7 @@ console.log(await aggregatorAccount.loadData());
 
 ```toml
 [addresses]
-switchboard = "0x14611263909398572be034debb2e61b6751cafbeaddd994b9a1250cb76b99d38"
+switchboard = "0xb68fc782f172f8df315814d25a0d80712e7543c168e596edc72cc3b163677375"
 
 [dependencies]
 MoveStdlib = { git = "https://github.com/aptos-labs/aptos-core.git", subdir = "aptos-move/framework/move-stdlib/", rev = "devnet" }
