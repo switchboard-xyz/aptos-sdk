@@ -15,8 +15,8 @@ import BN from "bn.js";
 import * as SHA3 from "js-sha3";
 
 export { OracleJob, IOracleJob } from "@switchboard-xyz/common";
-export const SWITCHBOARD_DEVNET_ADDRESS = `0xb68fc782f172f8df315814d25a0d80712e7543c168e596edc72cc3b163677375`;
-export const SWITCHBOARD_TESTNET_ADDRESS = `0xb68fc782f172f8df315814d25a0d80712e7543c168e596edc72cc3b163677375`;
+export const SWITCHBOARD_DEVNET_ADDRESS = `0xc9b4bb0b1f7a343687c4f8bc6eea36dd2a3aa8d654e640050ab5b8635a6b9cbd`;
+export const SWITCHBOARD_TESTNET_ADDRESS = `0xc9b4bb0b1f7a343687c4f8bc6eea36dd2a3aa8d654e640050ab5b8635a6b9cbd`;
 
 export class AptosDecimal {
   constructor(

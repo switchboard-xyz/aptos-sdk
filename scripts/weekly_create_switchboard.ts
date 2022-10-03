@@ -12,7 +12,7 @@ const NODE_URL = "https://fullnode.devnet.aptoslabs.com/v1";
 const FAUCET_URL = "https://faucet.devnet.aptoslabs.com";
 
 const SWITCHBOARD_ADDRESS =
-  "0xb68fc782f172f8df315814d25a0d80712e7543c168e596edc72cc3b163677375";
+  "0xc9b4bb0b1f7a343687c4f8bc6eea36dd2a3aa8d654e640050ab5b8635a6b9cbd";
 
 // run it all at once
 (async () => {
@@ -34,15 +34,15 @@ const SWITCHBOARD_ADDRESS =
     console.log(e);
   }
 
-  await faucetClient.fundAccount(user.address(), 5000);
+  //await faucetClient.fundAccount(user.address(), 5000);
 
   console.log(`User account ${user.address().hex()} funded.`);
 
-  // user will be authority
-  await faucetClient.fundAccount(
-    HexString.ensure(SWITCHBOARD_ADDRESS),
-    5000000000
-  );
+  // // user will be authority
+  // await faucetClient.fundAccount(
+  //   HexString.ensure(SWITCHBOARD_ADDRESS),
+  //   5000000000
+  // );
 
   let queue: any;
   try {

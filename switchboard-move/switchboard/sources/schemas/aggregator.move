@@ -102,6 +102,7 @@ module switchboard::aggregator {
         is_locked: bool,
         crank_row_count: u64,
         _ebuf: vector<u8>,
+        features: vector<bool>,
     }
 
     struct AggregatorHistoryRow has drop, copy, store {
@@ -160,6 +161,7 @@ module switchboard::aggregator {
     public fun min_update_delay_seconds_from_conf(conf: &AggregatorConfigParams): u64 {
         conf.min_update_delay_seconds
     }
+
 
     public fun exist(addr: address): bool {
         exists<Aggregator>(addr)
@@ -431,11 +433,12 @@ module switchboard::aggregator {
             history: vector::empty(),
             history_limit: 0,
             history_write_idx: 0,
-            _ebuf: vector::empty(),
             read_charge: 0,
             reward_escrow: @0x55,
             read_whitelist: vector::empty(),
             limit_reads_to_whitelist: false,
+            features: vector::empty(),
+            _ebuf: vector::empty(),
         };
 
         move_to<Aggregator>(account, aggregator);
