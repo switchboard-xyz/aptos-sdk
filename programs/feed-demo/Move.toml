@@ -15,6 +15,6 @@ AptosStdlib = { git = "https://github.com/aptos-labs/aptos-core.git", subdir = "
 
 [dependencies.Switchboard]
 git = "https://github.com/switchboard-xyz/sbv2-aptos.git"
-subdir = "switchboard-move/switchboard/"
+subdir = "move/switchboard/"
 rev = "main"
 
