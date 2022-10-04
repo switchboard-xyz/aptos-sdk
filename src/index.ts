@@ -1244,11 +1244,7 @@ export class LeaseAccount {
       this.client,
       account,
       `${this.switchboardAddress}::lease_extend_action::run`,
-      [
-        HexString.ensure(this.address).hex(),
-        HexString.ensure(params.queueAddress).hex(),
-        params.loadAmount,
-      ],
+      [HexString.ensure(this.address).hex(), params.loadAmount],
       [this.coinType]
     );
   }
@@ -1263,11 +1259,7 @@ export class LeaseAccount {
   ): Types.TransactionPayload {
     return getAptosTx(
       `${this.switchboardAddress}::lease_extend_action::run`,
-      [
-        HexString.ensure(this.address).hex(),
-        HexString.ensure(params.queueAddress).hex(),
-        params.loadAmount,
-      ],
+      [HexString.ensure(this.address).hex(), params.loadAmount],
       [this.coinType]
     );
   }
