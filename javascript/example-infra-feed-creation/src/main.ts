@@ -23,14 +23,14 @@ import {
   AggregatorAccount,
   fetchAggregators,
   createOracle,
+  SWITCHBOARD_DEVNET_ADDRESS,
 } from "@switchboard-xyz/aptos.js";
 import Big from "big.js";
 
 const NODE_URL = "https://fullnode.devnet.aptoslabs.com/v1";
 const FAUCET_URL = "https://faucet.devnet.aptoslabs.com";
 
-const SWITCHBOARD_ADDRESS =
-  "0xc9b4bb0b1f7a343687c4f8bc6eea36dd2a3aa8d654e640050ab5b8635a6b9cbd";
+const SWITCHBOARD_ADDRESS = SWITCHBOARD_DEVNET_ADDRESS;
 
 const onAggregatorUpdate = (
   client: AptosClient,
@@ -245,7 +245,9 @@ const onAggregatorOpenRound = (
           oracleIdx: 0,
           error: false,
           value: new Big(json.result),
-          jobsChecksum: aggregatorData.jobs_checksum,
+          jobsChecksum: Buffer.from(aggregatorData.jobsChecksum).toString(
+            "hex"
+          ),
           minResponse: new Big(json.result),
           maxResponse: new Big(json.result),
         });

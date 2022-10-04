@@ -18,20 +18,16 @@ import {
   OracleJob,
   createFeed,
   AggregatorAccount,
+  SWITCHBOARD_TESTNET_ADDRESS,
 } from "@switchboard-xyz/aptos.js";
 import Big from "big.js";
 
 const NODE_URL = "https://fullnode.testnet.aptoslabs.com/v1";
 const FAUCET_URL = "https://faucet.testnet.aptoslabs.com";
 
-const SWITCHBOARD_TESTNET_ADDRESS =
-  "0xc9b4bb0b1f7a343687c4f8bc6eea36dd2a3aa8d654e640050ab5b8635a6b9cbd";
+const SWITCHBOARD_QUEUE_ADDRESS = SWITCHBOARD_TESTNET_ADDRESS;
 
-const SWITCHBOARD_QUEUE_ADDRESS =
-  "0xc9b4bb0b1f7a343687c4f8bc6eea36dd2a3aa8d654e640050ab5b8635a6b9cbd";
-
-const SWITCHBOARD_CRANK_ADDRESS =
-  "0xc9b4bb0b1f7a343687c4f8bc6eea36dd2a3aa8d654e640050ab5b8635a6b9cbd";
+const SWITCHBOARD_CRANK_ADDRESS = SWITCHBOARD_TESTNET_ADDRESS;
 
 const onAggregatorUpdate = (
   client: AptosClient,
