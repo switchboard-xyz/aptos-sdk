@@ -673,6 +673,13 @@ export class AggregatorAccount {
     );
   }
 
+  removeJobTx(params: AggregatorAddJobParams): Types.TransactionPayload {
+    return getAptosTx(
+      `${this.switchboardAddress}::aggregator_remove_job_action::run`,
+      [HexString.ensure(this.address).hex(), HexString.ensure(params.job).hex()]
+    );
+  }
+
   async saveResult(
     account: AptosAccount,
     params: AggregatorSaveResultParams
@@ -740,7 +747,7 @@ export class AggregatorAccount {
   openRoundTx(): Types.TransactionPayload {
     return getAptosTx(
       `${this.switchboardAddress}::aggregator_open_round_action::run`,
-      [HexString.ensure(this.address).hex()],
+      [HexString.ensure(this.address).hex(), 1],
       [this.coinType ?? "0x1::aptos_coin::AptosCoin"]
     );
   }
