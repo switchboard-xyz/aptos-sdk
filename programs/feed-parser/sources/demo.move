@@ -1,4 +1,4 @@
-module demo::demo_app {
+module switchboard_feed_parser::switchboard_feed_parser {
     use std::signer;
     use switchboard::aggregator; // For reading aggregators
     use switchboard::math;
