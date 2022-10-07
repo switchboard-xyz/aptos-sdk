@@ -11,3 +11,4 @@ demo/build/
 demo/build/Switchboard_Demo/
 demo/build/Switchboard_Demo/**
 build/
+dist
