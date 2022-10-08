@@ -1305,11 +1305,9 @@ export class LeaseAccount {
     return getAptosTx(
       `${this.switchboardAddress}::lease_withdraw_action::run`,
       [
-        [
-          HexString.ensure(this.address).hex(),
-          HexString.ensure(params.queueAddress).hex(),
-          params.amount,
-        ],
+        HexString.ensure(this.address).hex(),
+        HexString.ensure(params.queueAddress).hex(),
+        params.amount,
       ],
       [this.coinType]
     );
