@@ -449,4 +449,16 @@ module switchboard::aggregator {
         let ref = borrow_global_mut<Aggregator>(signer::address_of(account));
         ref.latest_confirmed_round.result = math::new(value, dec, neg);
     }
+
+    #[test_only]
+    public entry fun update_open_timestamp(account: &signer, timestamp: u64) acquires Aggregator {
+        let ref = borrow_global_mut<Aggregator>(signer::address_of(account));
+        ref.latest_confirmed_round.round_open_timestamp = timestamp;
+    }
+
+    #[test_only]
+    public entry fun update_confirmed_timestamp(account: &signer, timestamp: u64) acquires Aggregator {
+        let ref = borrow_global_mut<Aggregator>(signer::address_of(account));
+        ref.latest_confirmed_round.round_confirmed_timestamp = timestamp;
+    }
 }
