@@ -1,5 +1,5 @@
 module switchboard::aggregator {
-    use aptos_framework::account::{SignerCapability};
+    use aptos_framework::account::{Self, SignerCapability};
     use aptos_framework::timestamp;
     use aptos_framework::block;
     use switchboard::math::{Self, SwitchboardDecimal};
