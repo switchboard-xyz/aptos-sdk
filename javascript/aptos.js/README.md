@@ -5,11 +5,13 @@
 
 A library of utility functions to interact with Switchboard Modules on Aptos
 
+### NOTE (Oct 11 / 2022)
+
+Make sure that subdir is pointing to the correct subdirectory, `subdir = "move/switchboard/"`. You'll also have to run an `aptos move clean` to clear the cache from `~/.move` and pull the latest version if you're on `main`.
+
 ## Live Deployment:
 
 We're currently on Aptos Testnet and Devnet at address `0xc9b4bb0b1f7a343687c4f8bc6eea36dd2a3aa8d654e640050ab5b8635a6b9cbd`. For the simplest way to create and manage Switchboard feeds on Aptos, check out our [publisher](https://app.switchboard.xyz).
-
-Our automated updates will be live again by Monday (Oct 3).
 
 ## Install
 
