@@ -1,11 +1,11 @@
 module switchboard::aggregator {
-    use aptos_framework::account::{Self, SignerCapability};
+    use aptos_framework::account::{SignerCapability};
     use aptos_framework::timestamp;
     use aptos_framework::block;
     use switchboard::math::{Self, SwitchboardDecimal};
     use switchboard::errors;
     use std::option::{Self, Option};
-    use std::signer; 
+    use std::signer;
     use std::vector;
     use std::coin::{Self, Coin};
 
@@ -63,7 +63,7 @@ module switchboard::aggregator {
     }
 
     struct Aggregator has key, store, drop {
-        
+
         // Aggregator account signer cap
         signer_cap: SignerCapability,
 
@@ -149,7 +149,7 @@ module switchboard::aggregator {
     public fun history_limit_from_conf(conf: &AggregatorConfigParams): u64 {
         conf.history_limit
     }
-    
+
     public fun batch_size_from_conf(conf: &AggregatorConfigParams): u64 {
         conf.batch_size
     }
@@ -179,7 +179,7 @@ module switchboard::aggregator {
         } else {
             assert!(
                 coin::value(&fee) == aggregator.read_charge ||
-                vector::contains(&aggregator.read_whitelist, &signer::address_of(account)), 
+                vector::contains(&aggregator.read_whitelist, &signer::address_of(account)),
                 errors::InvalidArgument()
             );
         };
@@ -200,7 +200,7 @@ module switchboard::aggregator {
         } else {
             assert!(
                 coin::value(&fee) == aggregator.read_charge ||
-                vector::contains(&aggregator.read_whitelist, &signer::address_of(account)), 
+                vector::contains(&aggregator.read_whitelist, &signer::address_of(account)),
                 errors::InvalidArgument()
             );
         };
@@ -314,7 +314,7 @@ module switchboard::aggregator {
     public fun curent_round_oracle_key_at_idx(addr: address, idx: u64): address acquires Aggregator {
         *vector::borrow(&borrow_global<Aggregator>(addr).current_round.oracle_keys, idx)
     }
-    
+
     public fun current_round_std_dev(addr: address): SwitchboardDecimal acquires Aggregator {
         let aggregator = borrow_global<Aggregator>(addr);
         aggregator.current_round.std_deviation
@@ -339,7 +339,7 @@ module switchboard::aggregator {
     public fun batch_size(self: address): u64 acquires Aggregator {
         borrow_global<Aggregator>(self).batch_size
     }
-    
+
     public fun queue_addr(addr: address): address acquires Aggregator {
         borrow_global<Aggregator>(addr).queue_addr
     }
@@ -347,7 +347,7 @@ module switchboard::aggregator {
     public fun history_limit(self: address): u64 acquires Aggregator {
         borrow_global<Aggregator>(self).history_limit
     }
-    
+
     public fun can_open_round(addr: address): bool acquires Aggregator {
         let ref = borrow_global<Aggregator>(addr);
         timestamp::now_seconds() >= ref.start_after &&
@@ -383,7 +383,7 @@ module switchboard::aggregator {
             min_update_delay_seconds: 5,
             start_after: 0,
             variance_threshold: math::new(0, 0, false),
-            force_report_period: 0, 
+            force_report_period: 0,
             expiration: 0,
             next_allowed_update_time: 0,
             is_locked: false,
