@@ -1054,12 +1054,12 @@ export class CrankAccount {
   /**
    * Pop an aggregator off the Crank
    */
-  async pop(account: AptosAccount): Promise<string> {
+  async pop(account: AptosAccount, pop_idx?: number): Promise<string> {
     return await sendAptosTx(
       this.client,
       account,
       `${this.switchboardAddress}::crank_pop_action::run`,
-      [HexString.ensure(this.address).hex()],
+      [HexString.ensure(this.address).hex(), pop_idx],
       [this.coinType]
     );
   }
