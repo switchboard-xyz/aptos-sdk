@@ -172,6 +172,8 @@ export interface OracleInitParams {
 
 export interface OracleQueueInitParams {
   authority: MaybeHexString;
+  name: string;
+  metadata: string;
   oracleTimeout: number;
   reward: number;
   minStake: number;
@@ -1183,6 +1185,8 @@ export class OracleQueueAccount {
       `${switchboardAddress}::oracle_queue_init_action::run`,
       [
         HexString.ensure(params.authority).hex(),
+        params.name,
+        params.metadata,
         params.oracleTimeout,
         params.reward,
         params.minStake,
@@ -1227,6 +1231,8 @@ export class OracleQueueAccount {
       [
         this.address,
         HexString.ensure(params.authority).hex(),
+        params.name,
+        params.metadata,
         params.oracleTimeout,
         params.reward,
         params.minStake,
