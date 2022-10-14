@@ -8,7 +8,11 @@ import {
   TxnBuilderTypes,
   Types,
 } from "aptos";
-import { MoveStructTag, EntryFunctionId } from "aptos/src/generated";
+import {
+  MoveStructTag,
+  EntryFunctionId,
+  MoveResource,
+} from "aptos/src/generated";
 import Big from "big.js";
 import { OracleJob } from "@switchboard-xyz/common";
 import BN from "bn.js";
@@ -93,6 +97,7 @@ export interface AggregatorInitParams {
   rewardEscrow?: string;
   readWhitelist?: MaybeHexString[];
   limitReadsToWhitelist?: boolean;
+  seed?: MaybeHexString;
 }
 
 export interface AggregatorSaveResultParams {
@@ -162,11 +167,10 @@ export interface OracleInitParams {
   authority: MaybeHexString;
   queue: MaybeHexString;
   coinType: MoveStructTag;
+  seed?: MaybeHexString;
 }
 
 export interface OracleQueueInitParams {
-  name: string;
-  metadata: string;
   authority: MaybeHexString;
   oracleTimeout: number;
   reward: number;
@@ -184,6 +188,10 @@ export interface OracleQueueInitParams {
   // this needs to be swapped with Coin or something later
   enableBufferRelayers: boolean;
   maxSize: number;
+  save_confirmation_reward?: number;
+  save_reward?: number;
+  open_round_reward?: number;
+  slashing_penalty?: number;
   coinType: MoveStructTag;
 }
 
@@ -207,6 +215,10 @@ export interface OracleQueueSetConfigsParams {
   // this needs to be swapped with Coin or something later
   enableBufferRelayers: boolean;
   maxSize: number;
+  save_confirmation_reward?: number;
+  save_reward?: number;
+  open_round_reward?: number;
+  slashing_penalty?: number;
   coinType: MoveStructTag;
 }
 
@@ -282,8 +294,7 @@ export async function sendAptosTx(
   signer: AptosAccount,
   method: EntryFunctionId,
   args: Array<any>,
-  type_args: Array<string> = [],
-  retryCount = 2
+  type_args: Array<string> = []
 ): Promise<string> {
   const payload = {
     type: "entry_function_payload",
@@ -292,26 +303,21 @@ export async function sendAptosTx(
     arguments: args,
   };
 
-  const txnRequest = await client.generateTransaction(
-    signer.address(),
-    payload,
-    { gas_unit_price: "101" }
-  );
+  let txnRequest = await client.generateTransaction(signer.address(), payload);
 
-  const simulation = (await client.simulateTransaction(signer, txnRequest))[0];
-  if (simulation.vm_status === "Out of gas") {
-    if (retryCount > 0) {
-      const faucetClient = new FaucetClient(
-        "https://fullnode.testnet.aptoslabs.com/v1",
-        "https://faucet.testnet.aptoslabs.com"
-      );
-      await faucetClient.fundAccount(signer.address(), 500000);
-      return sendAptosTx(client, signer, method, args, type_args, --retryCount);
-    }
-  }
+  const simulation = (
+    await client.simulateTransaction(signer, txnRequest, {
+      estimateGasUnitPrice: true,
+      estimateMaxGasAmount: true,
+    })
+  )[0];
+
+  txnRequest = await client.generateTransaction(signer.address(), payload, {
+    gas_unit_price: simulation.gas_unit_price,
+  });
 
   if (simulation.success === false) {
-    console.log(simulation);
+    console.error(simulation);
     throw new Error(`TxFailure: ${simulation.vm_status}`);
   }
 
@@ -347,13 +353,23 @@ export async function simulateAndRun(
   user: AptosAccount,
   txn: Types.TransactionPayload
 ) {
-  const txnRequest = await client.generateTransaction(
+  let txnRequest = await client.generateTransaction(
     user.address(),
-    txn as Types.EntryFunctionPayload,
-    { gas_unit_price: "101" }
+    txn as Types.EntryFunctionPayload
   );
 
-  const simulation = (await client.simulateTransaction(user, txnRequest))[0];
+  const simulation = (
+    await client.simulateTransaction(user, txnRequest, {
+      estimateGasUnitPrice: true,
+      estimateMaxGasAmount: true,
+    })
+  )[0];
+
+  txnRequest = await client.generateTransaction(
+    user.address(),
+    txn as Types.EntryFunctionPayload,
+    { gas_unit_price: simulation.gas_unit_price }
+  );
 
   if (simulation.success === false) {
     console.log(simulation);
@@ -391,15 +407,25 @@ export async function sendRawAptosTx(
       )
     );
 
-  const rawTxn = await client.generateRawTransaction(
+  let rawTxn = await client.generateRawTransaction(
+    signer.address(),
+    entryFunctionPayload
+  );
+
+  const simulation = (
+    await client.simulateTransaction(signer, rawTxn, {
+      estimateGasUnitPrice: true,
+      estimateMaxGasAmount: true,
+    })
+  )[0];
+
+  rawTxn = await client.generateRawTransaction(
     signer.address(),
     entryFunctionPayload,
-    { gasUnitPrice: BigInt(100) }
+    { gasUnitPrice: BigInt(simulation.gas_unit_price) }
   );
 
   const bcsTxn = AptosClient.generateBCSTransaction(signer, rawTxn);
-
-  const simulation = (await client.simulateTransaction(signer, rawTxn))[0];
 
   if (simulation.vm_status === "Out of gas") {
     if (retryCount > 0) {
@@ -545,12 +571,36 @@ export class AggregatorAccount {
   ) {}
 
   async loadData(): Promise<types.Aggregator> {
-    const agg = (
-      await this.client.getAccountResource(
-        HexString.ensure(this.address).hex(),
-        `${this.switchboardAddress}::aggregator::Aggregator`
+    const results = await this.client.getAccountResources(
+      HexString.ensure(this.address).hex()
+    );
+
+    const agg = results.reduce((prev: any, current: any) => {
+      return {
+        ...prev,
+        ...current.data,
+      };
+    }, {});
+    const latestConfirmedRound = results
+      .filter(
+        (res) =>
+          res.type ===
+          `${this.switchboardAddress}::aggregator::AggregatorRound<${this.switchboardAddress}::aggregator::LatestConfirmedRound>`
       )
-    ).data;
+      .pop()!.data;
+    const currentRound = results
+      .filter(
+        (res) =>
+          res.type ===
+          `${this.switchboardAddress}::aggregator::AggregatorRound<${this.switchboardAddress}::aggregator::CurrentRound>`
+      )
+      .pop()!.data;
+
+    // @ts-ignore
+    agg.current_round = currentRound;
+    // @ts-ignore
+    agg.latest_confirmed_round = latestConfirmedRound;
+
     return types.Aggregator.fromMoveStruct(agg as any);
   }
 
@@ -587,7 +637,9 @@ export class AggregatorAccount {
       params.varianceThreshold ?? new Big(0)
     );
 
-    const seed = new AptosAccount().address();
+    const seed = params.seed
+      ? HexString.ensure(HexString.ensure(params.seed))
+      : new AptosAccount().address();
     const resource_address = generateResourceAccountAddress(
       HexString.ensure(account.address()),
       bcsAddressToBytes(HexString.ensure(seed))
@@ -1038,7 +1090,9 @@ export class OracleAccount {
     params: OracleInitParams,
     switchboardAddress: MaybeHexString
   ): Promise<[OracleAccount, string]> {
-    const seed = new AptosAccount().address();
+    const seed = params.seed
+      ? HexString.ensure(HexString.ensure(params.seed))
+      : new AptosAccount().address();
     const resource_address = generateResourceAccountAddress(
       HexString.ensure(account.address()),
       bcsAddressToBytes(HexString.ensure(seed))
@@ -1118,8 +1172,6 @@ export class OracleQueueAccount {
       account,
       `${switchboardAddress}::oracle_queue_init_action::run`,
       [
-        params.name,
-        params.metadata,
         HexString.ensure(params.authority).hex(),
         params.oracleTimeout,
         params.reward,
@@ -1135,6 +1187,10 @@ export class OracleQueueAccount {
         params.lockLeaseFunding,
         params.enableBufferRelayers,
         params.maxSize,
+        params.save_confirmation_reward ?? 0,
+        params.save_reward ?? 0,
+        params.open_round_reward ?? 0,
+        params.slashing_penalty ?? 0,
       ],
       [params.coinType ?? "0x1::aptos_coin::AptosCoin"]
     );
@@ -1160,8 +1216,6 @@ export class OracleQueueAccount {
       `${this.switchboardAddress}::oracle_queue_set_configs_action::run`,
       [
         this.address,
-        params.name,
-        params.metadata,
         HexString.ensure(params.authority).hex(),
         params.oracleTimeout,
         params.reward,
@@ -1175,6 +1229,10 @@ export class OracleQueueAccount {
         params.unpermissionedFeedsEnabled,
         params.lockLeaseFunding,
         params.maxSize,
+        params.save_confirmation_reward ?? 0,
+        params.save_reward ?? 0,
+        params.open_round_reward ?? 0,
+        params.slashing_penalty ?? 0,
       ],
       [params.coinType ?? "0x1::aptos_coin::AptosCoin"]
     );
@@ -1580,7 +1638,9 @@ export async function createFeedTx(
   params: CreateFeedParams,
   switchboardAddress: MaybeHexString
 ): Promise<[AggregatorAccount, Types.TransactionPayload]> {
-  const seed = new AptosAccount().address();
+  const seed = params.seed
+    ? HexString.ensure(HexString.ensure(params.seed))
+    : new AptosAccount().address();
   const resource_address = generateResourceAccountAddress(
     HexString.ensure(authority),
     bcsAddressToBytes(HexString.ensure(seed))
@@ -1690,7 +1750,9 @@ export async function createOracle(
   params: CreateOracleParams,
   switchboardAddress: MaybeHexString
 ): Promise<[OracleAccount, string]> {
-  const seed = new AptosAccount().address();
+  const seed = params.seed
+    ? HexString.ensure(HexString.ensure(params.seed))
+    : new AptosAccount().address();
   const resource_address = generateResourceAccountAddress(
     HexString.ensure(account.address()),
     bcsAddressToBytes(HexString.ensure(seed))
@@ -1732,7 +1794,7 @@ export function generateResourceAccountAddress(
   const hash = SHA3.sha3_256.create();
   const userAddressBCS = bcsAddressToBytes(origin);
   hash.update(userAddressBCS);
-  hash.update(seed);
+  hash.update(new Uint8Array([...seed, 255]));
   return `0x${hash.hex()}`;
 }
 

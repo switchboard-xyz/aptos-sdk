@@ -4,9 +4,9 @@ import {
   CrankAccount,
   generateResourceAccountAddress,
   createOracle,
-} from "../src";
-import YAML from "yaml";
-import fs from "fs";
+} from "../lib/cjs";
+import * as YAML from "yaml";
+import * as fs from "fs";
 
 const NODE_URL = "https://fullnode.devnet.aptoslabs.com/v1";
 const FAUCET_URL = "https://faucet.devnet.aptoslabs.com";
@@ -50,8 +50,6 @@ const SWITCHBOARD_ADDRESS =
       client,
       user,
       {
-        name: "Switch Queue",
-        metadata: "Nothing to see here",
         authority: user.address(),
         oracleTimeout: 3000,
         reward: 52400, // gas cost of a saveResult
@@ -84,8 +82,6 @@ const SWITCHBOARD_ADDRESS =
 
   try {
     await queue.setConfigs(user, {
-      name: "Switch Queue",
-      metadata: "Nothing to see here",
       authority: user.address(),
       oracleTimeout: 3000,
       reward: 1,
