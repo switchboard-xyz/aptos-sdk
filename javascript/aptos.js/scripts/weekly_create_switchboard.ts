@@ -8,8 +8,8 @@ import {
 import * as YAML from "yaml";
 import * as fs from "fs";
 
-const NODE_URL = "https://fullnode.devnet.aptoslabs.com/v1";
-const FAUCET_URL = "https://faucet.devnet.aptoslabs.com";
+const NODE_URL = "https://fullnode.testnet.aptoslabs.com/v1";
+const FAUCET_URL = "https://faucet.testnet.aptoslabs.com";
 
 const SWITCHBOARD_ADDRESS =
   "0x34e2eead0aefbc3d0af13c0522be94b002658f4bef8e0740a21086d22236ad77";
@@ -84,29 +84,6 @@ const SWITCHBOARD_ADDRESS =
       user.address().hex(),
       SWITCHBOARD_ADDRESS
     );
-  }
-
-  try {
-    await queue.setConfigs(user, {
-      authority: user.address(),
-      oracleTimeout: 3000,
-      reward: 1,
-      minStake: 0,
-      slashingEnabled: false,
-      varianceToleranceMultiplierValue: 0,
-      varianceToleranceMultiplierScale: 0,
-      feedProbationPeriod: 0,
-      consecutiveFeedFailureLimit: 0,
-      consecutiveOracleFailureLimit: 0,
-      unpermissionedFeedsEnabled: true,
-      unpermissionedVrfEnabled: true,
-      lockLeaseFunding: false,
-      enableBufferRelayers: false,
-      maxSize: 1000,
-      coinType: "0x1::aptos_coin::AptosCoin",
-    });
-  } catch (e) {
-    console.log(e);
   }
 
   let oracle;
