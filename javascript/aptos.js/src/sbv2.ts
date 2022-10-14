@@ -1124,12 +1124,22 @@ export class OracleAccount {
   }
 
   async loadData(): Promise<types.Oracle> {
-    const data = (
-      await this.client.getAccountResource(
-        HexString.ensure(this.address).hex(),
-        `${this.switchboardAddress}::oracle::Oracle`
-      )
-    ).data;
+    const oracleTypes = new Set([
+      `${this.switchboardAddress}::oracle::Oracle`,
+      `${this.switchboardAddress}::oracle::OracleData`,
+      `${this.switchboardAddress}::oracle::OracleConfig`,
+      `${this.switchboardAddress}::oracle::OracleMetrics`,
+    ]);
+    const datas = await this.client.getAccountResources(this.address);
+    const oracleData = datas.filter((resource) =>
+      oracleTypes.has(resource.type)
+    );
+
+    // merge queue data
+    const data = oracleData.reduce(
+      (prev, curr) => ({ ...prev, ...curr.data }),
+      {}
+    );
     return types.Oracle.fromMoveStruct(data as any);
   }
 
@@ -1239,14 +1249,21 @@ export class OracleQueueAccount {
   }
 
   async loadData(): Promise<types.OracleQueue> {
-    const data = (
-      await this.client.getAccountResource(
-        this.address,
-        `${this.switchboardAddress}::oracle_queue::OracleQueue<${
-          this.coinType ?? "0x1::aptos_coin::AptosCoin"
-        }>`
-      )
-    ).data;
+    const queueTypes = new Set([
+      `${this.switchboardAddress}::oracle_queue::OracleQueue<${
+        this.coinType ?? "0x1::aptos_coin::AptosCoin"
+      }>`,
+      `${this.switchboardAddress}::oracle_queue::OracleQueueData`,
+      `${this.switchboardAddress}::oracle_queue::OracleQueueConfig`,
+    ]);
+    const datas = await this.client.getAccountResources(this.address);
+    const queueData = datas.filter((resource) => queueTypes.has(resource.type));
+
+    // merge queue data
+    const data = queueData.reduce(
+      (prev, curr) => ({ ...prev, ...curr.data }),
+      {}
+    );
     return types.OracleQueue.fromMoveStruct(data as any);
   }
 }
