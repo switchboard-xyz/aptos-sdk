@@ -209,6 +209,8 @@ yargs(hideBin(process.argv))
         client,
         queueAccount,
         {
+          name: "queue",
+          metadata: "",
           authority: account.address().hex(),
           oracleTimeout: 180,
           reward: 0,

@@ -310,7 +310,8 @@ export async function sendAptosTx(
   const simulation = (
     await client.simulateTransaction(signer, txnRequest, {
       estimateGasUnitPrice: true,
-      estimateMaxGasAmount: true,
+      estimateMaxGasAmount: true, // @ts-ignore
+      estimatePrioritizedGasUnitPrice: true,
     })
   )[0];
 
@@ -363,7 +364,8 @@ export async function simulateAndRun(
   const simulation = (
     await client.simulateTransaction(user, txnRequest, {
       estimateGasUnitPrice: true,
-      estimateMaxGasAmount: true,
+      estimateMaxGasAmount: true, // @ts-ignore
+      estimatePrioritizedGasUnitPrice: true,
     })
   )[0];
 
@@ -417,7 +419,8 @@ export async function sendRawAptosTx(
   const simulation = (
     await client.simulateTransaction(signer, rawTxn, {
       estimateGasUnitPrice: true,
-      estimateMaxGasAmount: true,
+      estimateMaxGasAmount: true, // @ts-ignore
+      estimatePrioritizedGasUnitPrice: true,
     })
   )[0];
 

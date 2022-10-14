@@ -80,6 +80,8 @@ const onAggregatorOpenRound = (
     client,
     user,
     {
+      name: "switchboard unermissioned queue",
+      metadata: "running",
       authority: user.address(),
       oracleTimeout: 3000,
       reward: 1,

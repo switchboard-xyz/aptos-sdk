@@ -50,6 +50,8 @@ const SWITCHBOARD_ADDRESS =
       client,
       user,
       {
+        name: "queue",
+        metadata: "",
         authority: user.address(),
         oracleTimeout: 3000,
         reward: 52400, // gas cost of a saveResult
