@@ -7,9 +7,10 @@ const yargs = require("yargs");
 const { hideBin } = require("yargs/helpers");
 // import yargs from "yargs";
 // import { hideBin } from "yargs/helpers";
-import fs from "fs";
-import path from "path";
-import YAML from "yaml";
+import * as YAML from "yaml";
+import * as fs from "fs";
+import * as path from "path";
+
 import chalk from "chalk";
 import { AptosAccount, AptosClient, FaucetClient, HexString } from "aptos";
 import {
@@ -208,8 +209,6 @@ yargs(hideBin(process.argv))
         client,
         queueAccount,
         {
-          name: "TestQueue",
-          metadata: "Testing123",
           authority: account.address().hex(),
           oracleTimeout: 180,
           reward: 0,
