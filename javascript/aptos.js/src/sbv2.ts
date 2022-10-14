@@ -1059,7 +1059,7 @@ export class CrankAccount {
       this.client,
       account,
       `${this.switchboardAddress}::crank_pop_action::run`,
-      [HexString.ensure(this.address).hex(), pop_idx],
+      [HexString.ensure(this.address).hex(), pop_idx ?? 0],
       [this.coinType]
     );
   }
