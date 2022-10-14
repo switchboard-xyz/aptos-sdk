@@ -12,7 +12,7 @@ const NODE_URL = "https://fullnode.devnet.aptoslabs.com/v1";
 const FAUCET_URL = "https://faucet.devnet.aptoslabs.com";
 
 const SWITCHBOARD_ADDRESS =
-  "0xc9b4bb0b1f7a343687c4f8bc6eea36dd2a3aa8d654e640050ab5b8635a6b9cbd";
+  "0x34e2eead0aefbc3d0af13c0522be94b002658f4bef8e0740a21086d22236ad77";
 
 // run it all at once
 (async () => {
@@ -53,8 +53,12 @@ const SWITCHBOARD_ADDRESS =
         name: "queue",
         metadata: "",
         authority: user.address(),
-        oracleTimeout: 3000,
-        reward: 52400, // gas cost of a saveResult
+        oracleTimeout: 30000,
+        reward: 1100, // base reward
+        // everything else is added on top
+        save_confirmation_reward: 2000,
+        save_reward: 850,
+        open_round_reward: 200,
         minStake: 0,
         slashingEnabled: false,
         varianceToleranceMultiplierValue: 0,
@@ -151,7 +155,6 @@ const SWITCHBOARD_ADDRESS =
       SWITCHBOARD_ADDRESS
     );
     console.log(`Created crank at ${crank.address}, tx hash ${txhash}`);
-    console.log("Crank", await crank.loadData());
     crank = c;
   } catch (e) {
     console.log("Crank already created.");
@@ -160,7 +163,7 @@ const SWITCHBOARD_ADDRESS =
 
   console.log("\n\n\n\n\n");
 
-  console.log("Oracle", await oracle.loadData());
-  console.log("Crank", await crank.loadData());
-  console.log("OracleQueue", await queue.loadData());
+  console.log("Oracle", oracle.address);
+  console.log("Crank", crank.address);
+  console.log("OracleQueue", queue.address);
 })();

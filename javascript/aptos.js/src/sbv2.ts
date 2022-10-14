@@ -21,8 +21,8 @@ import * as SHA3 from "js-sha3";
 import * as types from "./generated/types/index.js";
 
 export { OracleJob, IOracleJob } from "@switchboard-xyz/common";
-export const SWITCHBOARD_DEVNET_ADDRESS = `0xc9b4bb0b1f7a343687c4f8bc6eea36dd2a3aa8d654e640050ab5b8635a6b9cbd`;
-export const SWITCHBOARD_TESTNET_ADDRESS = `0xc9b4bb0b1f7a343687c4f8bc6eea36dd2a3aa8d654e640050ab5b8635a6b9cbd`;
+export const SWITCHBOARD_DEVNET_ADDRESS = `0x34e2eead0aefbc3d0af13c0522be94b002658f4bef8e0740a21086d22236ad77`;
+export const SWITCHBOARD_TESTNET_ADDRESS = `0x34e2eead0aefbc3d0af13c0522be94b002658f4bef8e0740a21086d22236ad77`;
 
 export class AptosDecimal {
   constructor(
