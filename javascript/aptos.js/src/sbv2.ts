@@ -1133,18 +1133,32 @@ export class OracleAccount {
       `${this.switchboardAddress}::oracle::Oracle`,
       `${this.switchboardAddress}::oracle::OracleData`,
       `${this.switchboardAddress}::oracle::OracleConfig`,
-      `${this.switchboardAddress}::oracle::OracleMetrics`,
     ]);
     const datas = await this.client.getAccountResources(this.address);
+
+    const metrics = datas.find(
+      (data) =>
+        data.type === `${this.switchboardAddress}::oracle::OracleMetrics`
+    );
+
     const oracleData = datas.filter((resource) =>
       oracleTypes.has(resource.type)
     );
+
+    oracleData.push({
+      type: "",
+      data: {
+        // @ts-ignore
+        metrics: metrics.data,
+      },
+    });
 
     // merge queue data
     const data = oracleData.reduce(
       (prev, curr) => ({ ...prev, ...curr.data }),
       {}
     );
+
     return types.Oracle.fromMoveStruct(data as any);
   }
 

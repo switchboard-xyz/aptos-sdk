@@ -116,6 +116,8 @@ const onAggregatorOpenRound = (
     SWITCHBOARD_ADDRESS
   );
 
+  console.log(await oracle.loadData());
+
   console.log(`Oracle ${oracle.address} created. tx hash: ${oracleTxHash}`);
 
   // first heartbeat
