@@ -129,9 +129,7 @@ export class Job implements IJob {
       reference_count: this.referenceCount.toString(),
       total_spent: this.totalSpent.toString(),
       created_at: this.createdAt.toString(),
-      variables: this.variables.map((item) =>
-        Buffer.from(item).toString("hex")
-      ),
+      variables: this.variables.map((item) => [...item]),
       features: this.features.map((item) => item),
       _ebuf: Buffer.from(this._ebuf).toString("hex"),
     };
@@ -161,9 +159,7 @@ export class Job implements IJob {
       referenceCount: new BN(obj.reference_count),
       totalSpent: new BN(obj.total_spent),
       createdAt: new BN(obj.created_at),
-      variables: obj.variables.map(
-        (item) => new Uint8Array(Buffer.from(item, "hex"))
-      ),
+      variables: obj.variables.map((item) => new Uint8Array(item)),
       features: obj.features.map((item) => item),
       _ebuf:
         typeof obj._ebuf === "string"
