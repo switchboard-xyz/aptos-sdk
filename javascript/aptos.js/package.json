@@ -1,7 +1,7 @@
 {
   "name": "@switchboard-xyz/aptos.js",
   "description": "API wrapper for intergating with the Switchboardv2 program on Aptos",
-  "version": "2.3.9",
+  "version": "2.4.0",
   "license": "MIT",
   "bin": {
     "sbv2-aptos": "./sbv2-aptos.ts"
