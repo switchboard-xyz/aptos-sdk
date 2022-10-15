@@ -862,7 +862,7 @@ export class AggregatorAccount {
 
   static async shouldReportValue(
     value: Big,
-    aggregator: any
+    aggregator: types.Aggregator
   ): Promise<boolean> {
     if ((aggregator.latestConfirmedRound?.numSuccess ?? 0) === 0) {
       return true;
@@ -873,14 +873,14 @@ export class AggregatorAccount {
       return false;
     }
     const varianceThreshold: Big = new AptosDecimal(
-      aggregator.varianceThreshold.mantissa,
+      aggregator.varianceThreshold.value.toString(10),
       aggregator.varianceThreshold.dec,
-      aggregator.varianceThreshold.neg
+      Boolean(aggregator.varianceThreshold.neg)
     ).toBig();
     const latestResult: Big = new AptosDecimal(
-      aggregator.latestConfirmedRound.result.mantissa,
+      aggregator.latestConfirmedRound.result.value.toString(),
       aggregator.latestConfirmedRound.result.dec,
-      aggregator.latestConfirmedRound.result.neg
+      Boolean(aggregator.latestConfirmedRound.result.neg)
     ).toBig();
     const forceReportPeriod = new BN(aggregator.forceReportPeriod, 10);
     const lastTimestamp = new BN(

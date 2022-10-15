@@ -8,8 +8,11 @@ import {
 import * as YAML from "yaml";
 import * as fs from "fs";
 
-const NODE_URL = "https://fullnode.testnet.aptoslabs.com/v1";
-const FAUCET_URL = "https://faucet.testnet.aptoslabs.com";
+// const NODE_URL = "https://fullnode.testnet.aptoslabs.com/v1";
+// const FAUCET_URL = "https://faucet.testnet.aptoslabs.com";
+
+const NODE_URL = "http://0.0.0.0:8080/v1";
+const FAUCET_URL = "0.0.0.0:8081/";
 
 const SWITCHBOARD_ADDRESS =
   "0x34e2eead0aefbc3d0af13c0522be94b002658f4bef8e0740a21086d22236ad77";

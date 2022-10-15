@@ -265,7 +265,10 @@ const onAggregatorOpenRound = (
    * Log Data Objects
    */
   console.log("logging all data objects");
-  console.log("AggregatorAccount:", await aggregator.loadData());
+  console.log(
+    "AggregatorAccount:",
+    JSON.stringify(await aggregator.loadData(), null, 2)
+  );
   console.log(
     "LeaseAccount:",
     await new LeaseAccount(
