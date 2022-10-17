@@ -8,11 +8,11 @@ import {
 import * as YAML from "yaml";
 import * as fs from "fs";
 
-// const NODE_URL = "https://fullnode.testnet.aptoslabs.com/v1";
-// const FAUCET_URL = "https://faucet.testnet.aptoslabs.com";
+const NODE_URL = "https://fullnode.testnet.aptoslabs.com/v1";
+const FAUCET_URL = "https://faucet.testnet.aptoslabs.com";
 
-const NODE_URL = "http://0.0.0.0:8080/v1";
-const FAUCET_URL = "0.0.0.0:8081/";
+// const NODE_URL = "http://0.0.0.0:8080/v1";
+// const FAUCET_URL = "0.0.0.0:8081/";
 
 const SWITCHBOARD_ADDRESS =
   "0x34e2eead0aefbc3d0af13c0522be94b002658f4bef8e0740a21086d22236ad77";
@@ -57,11 +57,11 @@ const SWITCHBOARD_ADDRESS =
         metadata: "",
         authority: user.address(),
         oracleTimeout: 30000,
-        reward: 1100, // base reward
+        reward: 1100 * 1000, // base reward
         // everything else is added on top
-        save_confirmation_reward: 2000,
-        save_reward: 850,
-        open_round_reward: 200,
+        save_confirmation_reward: 2000 * 1000,
+        save_reward: 850 * 1000,
+        open_round_reward: 200 * 1000,
         minStake: 0,
         slashingEnabled: false,
         varianceToleranceMultiplierValue: 0,
@@ -87,8 +87,41 @@ const SWITCHBOARD_ADDRESS =
       user.address().hex(),
       SWITCHBOARD_ADDRESS
     );
-  }
 
+    /**
+     *
+     *
+     */
+    try {
+      await queue.setConfigs(user, {
+        name: "queue",
+        metadata: "nothing to see here",
+        authority: user.address().hex(),
+        oracleTimeout: 30000,
+        reward: 1100 * 1000, // base reward
+        // everything else is added on top
+        save_confirmation_reward: 2000 * 1000,
+        save_reward: 850 * 1000,
+        open_round_reward: 200 * 1000,
+        minStake: 0,
+        slashingEnabled: false,
+        varianceToleranceMultiplierValue: 0,
+        varianceToleranceMultiplierScale: 0,
+        feedProbationPeriod: 0,
+        consecutiveFeedFailureLimit: 0,
+        consecutiveOracleFailureLimit: 0,
+        unpermissionedFeedsEnabled: true,
+        unpermissionedVrfEnabled: true,
+        lockLeaseFunding: false,
+        enableBufferRelayers: false,
+        maxSize: 1000,
+        coinType: "0x1::aptos_coin::AptosCoin",
+      });
+    } catch (e) {
+      console.log(e);
+    }
+  }
+  return;
   let oracle;
   try {
     const [o, oracleTxHash] = await createOracle(
