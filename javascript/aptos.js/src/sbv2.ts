@@ -315,6 +315,7 @@ export async function sendAptosTx(
     })
   )[0];
 
+  console.log(simulation.gas_used);
   txnRequest = await client.generateTransaction(signer.address(), payload, {
     gas_unit_price: simulation.gas_unit_price,
   });
@@ -368,6 +369,8 @@ export async function simulateAndRun(
       estimatePrioritizedGasUnitPrice: true,
     })
   )[0];
+
+  console.log(simulation.gas_used);
 
   txnRequest = await client.generateTransaction(
     user.address(),
@@ -423,6 +426,8 @@ export async function sendRawAptosTx(
       estimatePrioritizedGasUnitPrice: true,
     })
   )[0];
+
+  console.log(simulation.gas_used);
 
   rawTxn = await client.generateRawTransaction(
     signer.address(),
@@ -579,7 +584,6 @@ export class AggregatorAccount {
     const results = await this.client.getAccountResources(
       HexString.ensure(this.address).hex()
     );
-
     const agg = results.reduce((prev: any, current: any) => {
       return {
         ...prev,
@@ -600,6 +604,12 @@ export class AggregatorAccount {
           `${this.switchboardAddress}::aggregator::AggregatorRound<${this.switchboardAddress}::aggregator::CurrentRound>`
       )
       .pop()!.data;
+
+    // removed field current_payout
+    // @ts-ignore
+    currentRound.current_payout = [];
+    // @ts-ignore
+    latestConfirmedRound.current_payout = [];
 
     // @ts-ignore
     agg.current_round = currentRound;
@@ -1247,9 +1257,9 @@ export class OracleQueueAccount {
       `${this.switchboardAddress}::oracle_queue_set_configs_action::run`,
       [
         this.address,
-        HexString.ensure(params.authority).hex(),
         params.name,
         params.metadata,
+        HexString.ensure(params.authority).hex(),
         params.oracleTimeout,
         params.reward,
         params.minStake,
