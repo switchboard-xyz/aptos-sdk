@@ -1,5 +1,5 @@
 [package]
-name = "Switchboard_Feed_Parser"
+name = "SwitchboardFeedParser"
 version = "0.1.0"
 
 [addresses]
@@ -15,6 +15,6 @@ AptosStdlib = { git = "https://github.com/aptos-labs/aptos-core.git", subdir = "
 
 [dependencies.Switchboard]
 git = "https://github.com/switchboard-xyz/sbv2-aptos.git"
-subdir = "programs/feed-parser/"
+subdir = "move/switchboard/"
 rev = "main"
 
