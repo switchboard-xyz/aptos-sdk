@@ -1,5 +1,5 @@
 module switchboard::aggregator {
-    use aptos_framework::account::{SignerCapability};
+    use aptos_framework::account::{Self, SignerCapability};
     use aptos_framework::timestamp;
     use aptos_framework::block;
     use switchboard::math::{Self, SwitchboardDecimal};
@@ -461,6 +461,99 @@ module switchboard::aggregator {
         &checksum == vec
     }
 
+    #[test_only]
+    public entry fun new_test(account: &signer, value: u128, dec: u8, neg: bool) {
+        let cap = account::create_test_signer_cap(signer::address_of(account));
+        move_to(
+            account, 
+            Aggregator {
+                signer_cap: cap,
+
+                // Configs
+                authority: signer::address_of(account),
+                name: b"Switchboard Aggregator",
+                metadata: b"",
+
+                // Aggregator data that's fairly fixed
+                created_at: timestamp::now_seconds(),
+                is_locked: false,
+                _ebuf: vector::empty(),
+                features: vector::empty(),
+            }
+        );
+        
+        move_to(
+            account, 
+            AggregatorConfig {
+                queue_addr: @0x51,
+                batch_size: 1,
+                min_oracle_results: 1,
+                min_update_delay_seconds: 5,
+                history_limit: 0,
+                crank_addr: @0x5,
+                crank_disabled: false,
+                crank_row_count: 0,
+                next_allowed_update_time: 0,
+                consecutive_failure_count: 0,
+                start_after: 0,
+                variance_threshold: math::zero(),
+                force_report_period: 0,
+                min_job_results: 1,
+                expiration: 0,
+            }
+        );
+        move_to(
+            account, 
+            AggregatorReadConfig {
+                read_charge: 0,
+                reward_escrow: @0x55,
+                read_whitelist: vector::empty(),
+                limit_reads_to_whitelist: false,
+            }
+        );
+        move_to(
+            account, 
+            AggregatorJobData {
+                job_keys: vector::empty(),
+                job_weights: vector::empty(),
+                jobs_checksum: vector::empty(),
+            }
+        );
+        move_to(
+            account, 
+            AggregatorHistoryData {
+                history: vector::empty(),
+                history_write_idx: 0,
+            }
+        );
+        move_to(account, AggregatorRound<LatestConfirmedRound> {
+            id: 0,
+            round_open_timestamp: 0,
+            round_open_block_height: block::get_current_block_height(),
+            result: math::new(value, dec, neg),
+            std_deviation: math::zero(),
+            min_response: math::zero(),
+            max_response: math::zero(),
+            oracle_keys: vector::empty(),
+            medians: vector::empty(),
+            errors_fulfilled: vector::empty(),
+            num_error: 0,
+            num_success: 0,
+            is_closed: false,
+            round_confirmed_timestamp: 0,
+            current_payout: vector::empty(),
+        });
+        move_to(
+            account,
+            AggregatorResultsConfig {
+                variance_threshold: math::zero(),
+                force_report_period: 0,
+                min_job_results: 1,
+                expiration: 0,
+            }
+        );
+        move_to(account, default_round<CurrentRound>());
+    }
 
     #[test_only]
     public entry fun update_value(account: &signer, value: u128, dec: u8, neg: bool) acquires AggregatorRound {
