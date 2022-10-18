@@ -1,11 +1,11 @@
 import { AptosClient, AptosAccount, HexString, CoinClient } from "aptos";
-import { OracleQueueAccount, CrankAccount } from "../lib/cjs";
+import { OracleQueueAccount, CrankAccount, sendAptosTx } from "../lib/cjs";
 import * as YAML from "yaml";
 import * as fs from "fs";
 
 // const NODE_URL = "https://fullnode.mainnet.aptoslabs.com/v1";
-// const NODE_URL = "https://fullnode.testnet.aptoslabs.com/v1";
-const NODE_URL = "http://0.0.0.0:8080/v1";
+const NODE_URL = "https://fullnode.testnet.aptoslabs.com/v1";
+//const NODE_URL = "http://0.0.0.0:8080/v1";
 
 // TODO: MAKE THIS THE DEPLOYER ADDRESS
 const SWITCHBOARD_ADDRESS =
@@ -13,7 +13,28 @@ const SWITCHBOARD_ADDRESS =
 
 // TODO: MAKE THIS THE AUTHORITY THAT WILL OWN THE QUEUES (authority of both permissioned and permissionless queues)
 const QUEUE_AUTHORITY =
-  "0x34e2eead0aefbc3d0af13c0522be94b002658f4bef8e0740a21086d22236ad77"; // (localnet)
+  "0xe8f304576e94600b5d1b0966d8921f31b46041523bbf65f56d68a4a6fed9979f"; // (localnet)
+
+const transfer = async (
+  client: AptosClient,
+  from: AptosAccount,
+  to: AptosAccount,
+  amount: number
+) => {
+  const payload = {
+    type: "entry_function_payload",
+    function: "0x1::aptos_account::transfer",
+    type_arguments: [],
+    arguments: [to.address().hex(), amount],
+  };
+  await sendAptosTx(
+    client,
+    from,
+    payload.function,
+    payload.arguments,
+    payload.type_arguments
+  );
+};
 
 (async () => {
   const client = new AptosClient(NODE_URL);
@@ -36,9 +57,7 @@ const QUEUE_AUTHORITY =
     throw new Error("Could not get funder account.");
   }
 
-  const ONE_APT = 10_000_000; // octas per APT
-
-  const coinClient = new CoinClient(client);
+  const ONE_APT = 100_000_000; // octas per APT
 
   /*
     PERMISSIONLESS QUEUE 
@@ -51,7 +70,7 @@ const QUEUE_AUTHORITY =
       `permissionless-queue-owner-keys-${queue_owner.address().hex()}`,
       JSON.stringify(queue_owner.toPrivateKeyObject())
     );
-    await coinClient.transfer(funder, queue_owner, ONE_APT);
+    await transfer(client, funder, queue_owner, ONE_APT);
     console.log(
       `Authority account ${queue_owner.address().hex()} funded for queue`
     );
@@ -105,10 +124,10 @@ const QUEUE_AUTHORITY =
     // CREATE QUEUE OWNER AND FUND 1 APT
     const queue_owner = new AptosAccount();
     fs.writeFileSync(
-      `permissionless-queue-owner-keys-${queue_owner.address().hex()}`,
+      `permissioned-queue-owner-keys-${queue_owner.address().hex()}`,
       JSON.stringify(queue_owner.toPrivateKeyObject())
     );
-    await coinClient.transfer(funder, queue_owner, ONE_APT);
+    await transfer(client, funder, queue_owner, ONE_APT);
     console.log(
       `Authority account ${queue_owner.address().hex()} funded for queue`
     );
@@ -164,7 +183,7 @@ const QUEUE_AUTHORITY =
       `permissioned-crank-owner-keys-${crank_owner.address().hex()}`,
       JSON.stringify(crank_owner.toPrivateKeyObject())
     );
-    await coinClient.transfer(funder, crank_owner, ONE_APT);
+    await transfer(client, funder, crank_owner, ONE_APT);
     console.log(
       `Authority account ${crank_owner.address().hex()} funded for crank`
     );
@@ -179,7 +198,7 @@ const QUEUE_AUTHORITY =
 
     const [c, txhash] = await CrankAccount.init(
       client,
-      permissioned_crank,
+      crank_owner,
       {
         queueAddress: permissioned_queue.address,
         coinType: "0x1::aptos_coin::AptosCoin",
@@ -205,7 +224,8 @@ const QUEUE_AUTHORITY =
       `permissionless-crank-owner-keys-${crank_owner.address().hex()}`,
       JSON.stringify(crank_owner.toPrivateKeyObject())
     );
-    await coinClient.transfer(funder, crank_owner, ONE_APT);
+
+    await transfer(client, funder, crank_owner, ONE_APT);
     console.log(
       `Authority account ${crank_owner.address().hex()} funded for crank`
     );
@@ -220,9 +240,9 @@ const QUEUE_AUTHORITY =
 
     const [c, txhash] = await CrankAccount.init(
       client,
-      permissionless_crank,
+      crank_owner,
       {
-        queueAddress: permissionless_crank.address,
+        queueAddress: permissionless_queue.address,
         coinType: "0x1::aptos_coin::AptosCoin",
       },
       SWITCHBOARD_ADDRESS
