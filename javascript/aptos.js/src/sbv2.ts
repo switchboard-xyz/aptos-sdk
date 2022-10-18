@@ -296,7 +296,8 @@ export async function sendAptosTx(
   signer: AptosAccount,
   method: EntryFunctionId,
   args: Array<any>,
-  type_args: Array<string> = []
+  type_args: Array<string> = [],
+  maxGasPrice: number = 2000
 ): Promise<string> {
   const payload = {
     type: "entry_function_payload",
@@ -315,7 +316,12 @@ export async function sendAptosTx(
     })
   )[0];
 
-  console.log(simulation.gas_used);
+  if (Number(simulation.gas_unit_price) > maxGasPrice) {
+    throw Error(
+      `Estimated gas price from simulation ${simulation.gas_unit_price} above maximum (${maxGasPrice}).`
+    );
+  }
+
   txnRequest = await client.generateTransaction(signer.address(), payload, {
     gas_unit_price: simulation.gas_unit_price,
   });
@@ -355,7 +361,8 @@ export function getAptosTx(
 export async function simulateAndRun(
   client: AptosClient,
   user: AptosAccount,
-  txn: Types.TransactionPayload
+  txn: Types.TransactionPayload,
+  maxGasPrice: number = 3000
 ) {
   let txnRequest = await client.generateTransaction(
     user.address(),
@@ -370,7 +377,11 @@ export async function simulateAndRun(
     })
   )[0];
 
-  console.log(simulation.gas_used);
+  if (Number(simulation.gas_unit_price) > maxGasPrice) {
+    throw Error(
+      `Estimated gas price from simulation ${simulation.gas_unit_price} above maximum (${maxGasPrice}).`
+    );
+  }
 
   txnRequest = await client.generateTransaction(
     user.address(),
@@ -395,7 +406,7 @@ export async function sendRawAptosTx(
   method: EntryFunctionId,
   raw_args: Array<any>,
   raw_type_args: BCS.Seq<TxnBuilderTypes.TypeTag> = [],
-  retryCount = 2
+  maxGasPrice: number = 2000
 ): Promise<string> {
   // We need to pass a token type to the `transfer` function.
 
@@ -427,7 +438,11 @@ export async function sendRawAptosTx(
     })
   )[0];
 
-  console.log(simulation.gas_used);
+  if (Number(simulation.gas_unit_price) > maxGasPrice) {
+    throw Error(
+      `Estimated gas price from simulation ${simulation.gas_unit_price} above maximum (${maxGasPrice}).`
+    );
+  }
 
   rawTxn = await client.generateRawTransaction(
     signer.address(),
@@ -437,23 +452,6 @@ export async function sendRawAptosTx(
 
   const bcsTxn = AptosClient.generateBCSTransaction(signer, rawTxn);
 
-  if (simulation.vm_status === "Out of gas") {
-    if (retryCount > 0) {
-      const faucetClient = new FaucetClient(
-        "https://fullnode.devnet.aptoslabs.com/v1",
-        "https://faucet.devnet.aptoslabs.com"
-      );
-      await faucetClient.fundAccount(signer.address(), 5000);
-      return sendRawAptosTx(
-        client,
-        signer,
-        method,
-        raw_args,
-        raw_type_args,
-        --retryCount
-      );
-    }
-  }
   if (simulation.success === false) {
     console.log(simulation);
     throw new Error(`TxFailure: ${simulation.vm_status}`);
