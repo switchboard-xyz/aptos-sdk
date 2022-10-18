@@ -1,16 +1,5 @@
-import {
-  AptosClient,
-  AptosAccount,
-  FaucetClient,
-  HexString,
-  CoinClient,
-} from "aptos";
-import {
-  OracleQueueAccount,
-  CrankAccount,
-  generateResourceAccountAddress,
-  createOracle,
-} from "../lib/cjs";
+import { AptosClient, AptosAccount, HexString, CoinClient } from "aptos";
+import { OracleQueueAccount, CrankAccount } from "../lib/cjs";
 import * as YAML from "yaml";
 import * as fs from "fs";
 
@@ -23,7 +12,8 @@ const SWITCHBOARD_ADDRESS =
   "0x34e2eead0aefbc3d0af13c0522be94b002658f4bef8e0740a21086d22236ad77"; // (localnet)
 
 // TODO: MAKE THIS THE AUTHORITY THAT WILL OWN THE QUEUES (authority of both permissioned and permissionless queues)
-const QUEUE_AUTHORITY = ""; // "0x34e2eead0aefbc3d0af13c0522be94b002658f4bef8e0740a21086d22236ad77"; // (localnet)
+const QUEUE_AUTHORITY =
+  "0x34e2eead0aefbc3d0af13c0522be94b002658f4bef8e0740a21086d22236ad77"; // (localnet)
 
 (async () => {
   const client = new AptosClient(NODE_URL);
@@ -148,7 +138,7 @@ const QUEUE_AUTHORITY = ""; // "0x34e2eead0aefbc3d0af13c0522be94b002658f4bef8e07
         feedProbationPeriod: 0,
         consecutiveFeedFailureLimit: 0,
         consecutiveOracleFailureLimit: 0,
-        unpermissionedFeedsEnabled: true,
+        unpermissionedFeedsEnabled: false,
         unpermissionedVrfEnabled: false,
         lockLeaseFunding: false,
         enableBufferRelayers: false,
