@@ -821,7 +821,7 @@ export class AggregatorAccount {
 
   async setConfigTx(
     params: AggregatorSetConfigParams
-  ): Types.TransactionPayload {
+  ): Promise<Types.TransactionPayload> {
     const aggregator = await this.loadData();
     // TODO
     const { mantissa: vtMantissa, scale: vtScale } = AptosDecimal.fromBig(
@@ -833,8 +833,8 @@ export class AggregatorAccount {
         HexString.ensure(this.address).hex(),
         params.name ?? aggregator.name,
         params.metadata ?? aggregator.metadata,
-        HexString.ensure(params.queueAddress ?? aggregator.queueAddress).hex(),
-        HexString.ensure(params.crankAddress ?? aggregator.crankAddress).hex(),
+        HexString.ensure(params.queueAddress ?? aggregator.queueAddr).hex(),
+        HexString.ensure(params.crankAddress ?? aggregator.crankAddr).hex(),
         params.batchSize ?? aggregator.batchSize,
         params.minOracleResults ?? aggregator.minOracleResults,
         params.minJobResults ?? aggregator.minJobResults,
@@ -844,9 +844,9 @@ export class AggregatorAccount {
         vtScale,
         params.forceReportPeriod ?? aggregator.forceReportPeriod,
         params.expiration ?? aggregator.expiration,
-        params.disableCrank ?? aggregator.disableCrank,
-        params.historySize ?? aggregator.historySize,
-        params.readCharge ?? aggregator.rewardCharge,
+        false, //params.disableCrank ?? aggregator.disableCrank,
+        1000, //params.historySize ?? aggregator.historySize,
+        params.readCharge ?? aggregator.readCharge,
         params.rewardEscrow
           ? HexString.ensure(params.rewardEscrow).hex()
           : HexString.ensure(params.authority).hex(),
@@ -868,12 +868,12 @@ export class AggregatorAccount {
     const { mantissa: vtMantissa, scale: vtScale } = AptosDecimal.fromBig(
       params.varianceThreshold ?? new Big(0)
     );
-    const params = [
+    const paramsRaw: Array<any> = [
       HexString.ensure(this.address).hex(),
       params.name ?? aggregator.name,
       params.metadata ?? aggregator.metadata,
-      HexString.ensure(params.queueAddress ?? aggregator.queueAddress).hex(),
-      HexString.ensure(params.crankAddress ?? aggregator.crankAddress).hex(),
+      HexString.ensure(params.queueAddress ?? aggregator.queueAddr).hex(),
+      HexString.ensure(params.crankAddress ?? aggregator.crankAddr).hex(),
       params.batchSize ?? aggregator.batchSize,
       params.minOracleResults ?? aggregator.minOracleResults,
       params.minJobResults ?? aggregator.minJobResults,
@@ -883,9 +883,9 @@ export class AggregatorAccount {
       vtScale,
       params.forceReportPeriod ?? aggregator.forceReportPeriod,
       params.expiration ?? aggregator.expiration,
-      params.disableCrank ?? aggregator.disableCrank,
-      params.historySize ?? aggregator.historySize,
-      params.readCharge ?? aggregator.rewardCharge,
+      false, // params.disableCrank ?? aggregator.disableCrank,
+      1000, // params.historySize ?? (aggregator as any).historySize,
+      params.readCharge ?? aggregator.readCharge,
       params.rewardEscrow
         ? HexString.ensure(params.rewardEscrow).hex()
         : HexString.ensure(params.authority).hex(),
@@ -897,7 +897,7 @@ export class AggregatorAccount {
       this.client,
       account,
       `${this.switchboardAddress}::aggregator_set_configs_action::run`,
-      params,
+      paramsRaw,
       [params.coinType ?? "0x1::aptos_coin::AptosCoin"] // TODO
     );
   }
