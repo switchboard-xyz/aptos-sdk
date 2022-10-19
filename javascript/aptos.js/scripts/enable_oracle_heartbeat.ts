@@ -6,6 +6,7 @@ import {
 } from "../lib/cjs";
 import * as YAML from "yaml";
 import * as fs from "fs";
+import Big from "big.js";
 
 const NODE_URL = "https://fullnode.mainnet.aptoslabs.com/v1";
 // const NODE_URL = "https://fullnode.testnet.aptoslabs.com/v1";
@@ -40,20 +41,27 @@ const feeds = [
   "0xdc1045b4d9fd1f4221fc2f91b2090d88483ba9745f29cf2d96574611204659a5",
 ];
 
+// const feeds = [
+//   "0xdc7f6fbc4efe2995e1e37b9f73d113085e4ee3597d47210a2933ad3bf5b78774",
+//   "0x7b5f536d201280a10d33d8c2202a1892b1dd8247aecfef7762ea8e7565eac7b6",
+//   "0x5af65afeeab555f8b742ce7fc2c539a5cb6a6fb2a6e6d96bc1b075fb28067808",
+//   "0xdc1045b4d9fd1f4221fc2f91b2090d88483ba9745f29cf2d96574611204659a5",
+// ];
+
 // const oracles = [
 //   "0xd7d2baef5dc653c2c84715b3d4ac7463446387c7d21c41e306bf4ec201454abb",
 //   "0x935ae73d4176dc45ca5cf4daad8c8abe0295e5d332ba78de6312a1411374c347",
 //   "0xd5d5ad988fedce6b2465496e978a1e828f91b6a82a67158e595fecbfa1cd5479",
 // ];
 
-  /*
+/*
   CREATE 1 ORACLE AND WRITE OUT THE KEY
  */
 
-  async () => {
-    const client = new AptosClient(NODE_URL);
+(async () => {
+  const client = new AptosClient(NODE_URL);
 
-    let funder;
+  let funder;
 
   // if file extension ends with yaml
   try {
@@ -81,22 +89,13 @@ const feeds = [
         feed,
         SWITCHBOARD_ADDRESS
       );
-      await sendAptosTx(
-        client,
-        account,
-        `${this.switchboardAddress}::aggregator_open_round_action::run`,
-        [HexString.ensure(this.address).hex(), jitter ?? 1],
-        [this.coinType]
-      );
-
+      console.log(JSON.stringify(await feedAccount.loadData(), null, 2));
       // enable heartbeat on oracle
-      await feedAccount.setConfigTx(funder, {
-        authority: funder.address().hex(),
-        granter: QUEUE_ADDRESS,
-        grantee: oracle,
-        permission: SwitchboardPermission.PERMIT_ORACLE_HEARTBEAT,
-        enable: true,
-      });
+      // await feedAccount.setConfig(funder, {
+      // varianceThreshold: new Big(2),
+      // minUpdateDelaySeconds: 45,
+      // forceReportPeriod: 300,
+      // });
     } catch (e) {
       console.log(e);
     }

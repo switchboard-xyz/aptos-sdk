@@ -5,13 +5,28 @@
 
 A library of utility functions to interact with Switchboard Modules on Aptos
 
+**Official Documentation**:
+[https://docs.switchboard.xyz/aptos](https://docs.switchboard.xyz/aptos)
+
 ### NOTE (Oct 11 / 2022)
 
-Make sure that subdir is pointing to the correct subdirectory, `subdir = "move/switchboard/"`. You'll also have to run an `aptos move clean` to clear the cache from `~/.move` and pull the latest version if you're on `main`.
+Make sure that subdir is pointing to the correct subdirectory,
+`subdir = "move/switchboard/"`. You'll also have to run an `aptos move clean` to
+clear the cache from `~/.move` and pull the latest version if you're on `main`.
 
 ## Live Deployment:
 
-We're currently on Aptos Testnet and Devnet at address `0x34e2eead0aefbc3d0af13c0522be94b002658f4bef8e0740a21086d22236ad77`. For the simplest way to create and manage Switchboard feeds on Aptos, check out our [publisher](https://app.switchboard.xyz).
+| Cluster  | Address                                                            |
+| -------- | ------------------------------------------------------------------ |
+| Mainnet  | 0x7d7e436f0b2aafde60774efb26ccc432cf881b677aca7faaf2a01879bd19fb8  |
+| Testnet  | 0x34e2eead0aefbc3d0af13c0522be94b002658f4bef8e0740a21086d22236ad77 |
+| Devnet\* | 0x34e2eead0aefbc3d0af13c0522be94b002658f4bef8e0740a21086d22236ad77 |
+
+\*Devnet is currently experiencing faucet issues and may be unrelaible until
+resolved.
+
+For the simplest way to create and manage Switchboard feeds on Aptos, check out
+our [publisher](https://app.switchboard.xyz).
 
 #### Feed Addresses (same on devnet and testnet)
 
