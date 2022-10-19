@@ -35,9 +35,9 @@ const oracles = [
 ];
 
 const feeds = [
-  "0xdc7f6fbc4efe2995e1e37b9f73d113085e4ee3597d47210a2933ad3bf5b78774",
-  "0x7b5f536d201280a10d33d8c2202a1892b1dd8247aecfef7762ea8e7565eac7b6",
-  "0x5af65afeeab555f8b742ce7fc2c539a5cb6a6fb2a6e6d96bc1b075fb28067808",
+  // "0xdc7f6fbc4efe2995e1e37b9f73d113085e4ee3597d47210a2933ad3bf5b78774",
+  // "0x7b5f536d201280a10d33d8c2202a1892b1dd8247aecfef7762ea8e7565eac7b6",
+  // "0x5af65afeeab555f8b742ce7fc2c539a5cb6a6fb2a6e6d96bc1b075fb28067808",
   "0xdc1045b4d9fd1f4221fc2f91b2090d88483ba9745f29cf2d96574611204659a5",
 ];
 
@@ -91,11 +91,11 @@ const feeds = [
       );
       console.log(JSON.stringify(await feedAccount.loadData(), null, 2));
       // enable heartbeat on oracle
-      // await feedAccount.setConfig(funder, {
-      // varianceThreshold: new Big(2),
-      // minUpdateDelaySeconds: 45,
-      // forceReportPeriod: 300,
-      // });
+      await feedAccount.setConfig(funder, {
+        varianceThreshold: new Big(2),
+        minUpdateDelaySeconds: 45,
+        forceReportPeriod: 300,
+      });
     } catch (e) {
       console.log(e);
     }
