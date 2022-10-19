@@ -125,24 +125,23 @@ export interface AggregatorRemoveJobParams {
 }
 
 export interface AggregatorSetConfigParams {
-  address: string;
-  authority: string;
+  authority?: string;
   name?: string;
   metadata?: string;
   queueAddress?: MaybeHexString;
   crankAddress?: MaybeHexString;
-  batchSize: number;
-  minOracleResults: number;
-  minJobResults: number;
-  minUpdateDelaySeconds: number;
+  batchSize?: number;
+  minOracleResults?: number;
+  minJobResults?: number;
+  minUpdateDelaySeconds?: number;
   startAfter?: number;
   varianceThreshold?: Big;
   forceReportPeriod?: number;
   expiration?: number;
-  disableCrank: boolean;
-  historySize: number;
-  readCharge: number;
-  rewardEscrow: MaybeHexString;
+  disableCrank?: boolean;
+  historySize?: number;
+  readCharge?: number;
+  rewardEscrow?: MaybeHexString;
   readWhitelist?: MaybeHexString[];
   limitReadsToWhitelist?: boolean;
   coinType?: string;
@@ -820,7 +819,11 @@ export class AggregatorAccount {
     );
   }
 
-  setConfigTx(params: AggregatorSetConfigParams): Types.TransactionPayload {
+  async setConfigTx(
+    params: AggregatorSetConfigParams
+  ): Types.TransactionPayload {
+    const aggregator = await this.loadData();
+    // TODO
     const { mantissa: vtMantissa, scale: vtScale } = AptosDecimal.fromBig(
       params.varianceThreshold ?? new Big(0)
     );
@@ -828,32 +831,75 @@ export class AggregatorAccount {
       `${this.switchboardAddress}::aggregator_set_configs_action::run`,
       [
         HexString.ensure(this.address).hex(),
-        params.name ?? "",
-        params.metadata ?? "",
-        HexString.ensure(params.queueAddress).hex(),
-        HexString.ensure(params.crankAddress).hex(),
-        params.batchSize,
-        params.minOracleResults,
-        params.minJobResults,
-        params.minUpdateDelaySeconds,
-        params.startAfter ?? 0,
+        params.name ?? aggregator.name,
+        params.metadata ?? aggregator.metadata,
+        HexString.ensure(params.queueAddress ?? aggregator.queueAddress).hex(),
+        HexString.ensure(params.crankAddress ?? aggregator.crankAddress).hex(),
+        params.batchSize ?? aggregator.batchSize,
+        params.minOracleResults ?? aggregator.minOracleResults,
+        params.minJobResults ?? aggregator.minJobResults,
+        params.minUpdateDelaySeconds ?? aggregator.minUpdateDelaySeconds,
+        params.startAfter ?? aggregator.startAfter,
         Number(vtMantissa),
         vtScale,
-        params.forceReportPeriod ?? 0,
-        params.expiration ?? 0,
-        params.disableCrank ?? false,
-        params.historySize ?? 0,
-        params.readCharge ?? 0,
+        params.forceReportPeriod ?? aggregator.forceReportPeriod,
+        params.expiration ?? aggregator.expiration,
+        params.disableCrank ?? aggregator.disableCrank,
+        params.historySize ?? aggregator.historySize,
+        params.readCharge ?? aggregator.rewardCharge,
         params.rewardEscrow
           ? HexString.ensure(params.rewardEscrow).hex()
           : HexString.ensure(params.authority).hex(),
-        params.readWhitelist ?? [],
-        params.limitReadsToWhitelist ?? false,
-        params.authority,
+        params.readWhitelist ?? aggregator.readWhitelist,
+        params.limitReadsToWhitelist ?? aggregator.limitReadsToWhitelist,
+        params.authority ?? aggregator.authority,
       ],
-      [params.coinType ?? "0x1::aptos_coin::AptosCoin"]
+      [params.coinType ?? "0x1::aptos_coin::AptosCoin"] // TODO
     );
     return tx;
+  }
+
+  async setConfig(
+    account: AptosAccount,
+    params: AggregatorSetConfigParams
+  ): Promise<string> {
+    const aggregator = await this.loadData();
+    // TODO
+    const { mantissa: vtMantissa, scale: vtScale } = AptosDecimal.fromBig(
+      params.varianceThreshold ?? new Big(0)
+    );
+    const params = [
+      HexString.ensure(this.address).hex(),
+      params.name ?? aggregator.name,
+      params.metadata ?? aggregator.metadata,
+      HexString.ensure(params.queueAddress ?? aggregator.queueAddress).hex(),
+      HexString.ensure(params.crankAddress ?? aggregator.crankAddress).hex(),
+      params.batchSize ?? aggregator.batchSize,
+      params.minOracleResults ?? aggregator.minOracleResults,
+      params.minJobResults ?? aggregator.minJobResults,
+      params.minUpdateDelaySeconds ?? aggregator.minUpdateDelaySeconds,
+      params.startAfter ?? aggregator.startAfter,
+      Number(vtMantissa),
+      vtScale,
+      params.forceReportPeriod ?? aggregator.forceReportPeriod,
+      params.expiration ?? aggregator.expiration,
+      params.disableCrank ?? aggregator.disableCrank,
+      params.historySize ?? aggregator.historySize,
+      params.readCharge ?? aggregator.rewardCharge,
+      params.rewardEscrow
+        ? HexString.ensure(params.rewardEscrow).hex()
+        : HexString.ensure(params.authority).hex(),
+      params.readWhitelist ?? aggregator.readWhitelist,
+      params.limitReadsToWhitelist ?? aggregator.limitReadsToWhitelist,
+      params.authority ?? aggregator.authority,
+    ];
+    return await sendAptosTx(
+      this.client,
+      account,
+      `${this.switchboardAddress}::aggregator_set_configs_action::run`,
+      params,
+      [params.coinType ?? "0x1::aptos_coin::AptosCoin"] // TODO
+    );
   }
 
   async watch(callback: EventCallback): Promise<AptosEvent> {
