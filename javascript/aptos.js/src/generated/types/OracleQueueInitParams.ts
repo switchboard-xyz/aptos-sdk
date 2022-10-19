@@ -3,9 +3,9 @@ import * as types from "../types/index.js"; // eslint-disable-line @typescript-e
 import { HexString } from "aptos"; // eslint-disable-line @typescript-eslint/no-unused-vars
 
 export interface IOracleQueueInitParams {
+  authority: HexString;
   name: Uint8Array;
   metadata: Uint8Array;
-  authority: HexString;
   oracleTimeout: BN;
   reward: BN;
   minStake: BN;
@@ -20,12 +20,16 @@ export interface IOracleQueueInitParams {
   enableBufferRelayers: boolean;
   maxSize: BN;
   data: Array<HexString>;
+  saveConfirmationReward: BN;
+  saveReward: BN;
+  openRoundReward: BN;
+  slashingPenalty: BN;
 }
 
 export interface OracleQueueInitParamsJSON {
+  authority: string;
   name: Array<number>;
   metadata: Array<number>;
-  authority: string;
   oracleTimeout: string;
   reward: string;
   minStake: string;
@@ -40,12 +44,16 @@ export interface OracleQueueInitParamsJSON {
   enableBufferRelayers: boolean;
   maxSize: string;
   data: Array<string>;
+  saveConfirmationReward: string;
+  saveReward: string;
+  openRoundReward: string;
+  slashingPenalty: string;
 }
 
 export interface OracleQueueInitParamsMoveStruct {
+  authority: string;
   name: string;
   metadata: string;
-  authority: string;
   oracle_timeout: string;
   reward: string;
   min_stake: string;
@@ -60,12 +68,16 @@ export interface OracleQueueInitParamsMoveStruct {
   enable_buffer_relayers: boolean;
   max_size: string;
   data: Array<string>;
+  save_confirmation_reward: string;
+  save_reward: string;
+  open_round_reward: string;
+  slashing_penalty: string;
 }
 
 export class OracleQueueInitParams implements IOracleQueueInitParams {
+  readonly authority: HexString;
   readonly name: Uint8Array;
   readonly metadata: Uint8Array;
-  readonly authority: HexString;
   readonly oracleTimeout: BN;
   readonly reward: BN;
   readonly minStake: BN;
@@ -80,11 +92,15 @@ export class OracleQueueInitParams implements IOracleQueueInitParams {
   readonly enableBufferRelayers: boolean;
   readonly maxSize: BN;
   readonly data: Array<HexString>;
+  readonly saveConfirmationReward: BN;
+  readonly saveReward: BN;
+  readonly openRoundReward: BN;
+  readonly slashingPenalty: BN;
 
   constructor(fields: IOracleQueueInitParams) {
+    this.authority = fields.authority;
     this.name = fields.name;
     this.metadata = fields.metadata;
-    this.authority = fields.authority;
     this.oracleTimeout = fields.oracleTimeout;
     this.reward = fields.reward;
     this.minStake = fields.minStake;
@@ -99,13 +115,17 @@ export class OracleQueueInitParams implements IOracleQueueInitParams {
     this.enableBufferRelayers = fields.enableBufferRelayers;
     this.maxSize = fields.maxSize;
     this.data = fields.data;
+    this.saveConfirmationReward = fields.saveConfirmationReward;
+    this.saveReward = fields.saveReward;
+    this.openRoundReward = fields.openRoundReward;
+    this.slashingPenalty = fields.slashingPenalty;
   }
 
   toJSON(): OracleQueueInitParamsJSON {
     return {
+      authority: this.authority.toString(),
       name: [...this.name],
       metadata: [...this.metadata],
-      authority: this.authority.toString(),
       oracleTimeout: this.oracleTimeout.toString(),
       reward: this.reward.toString(),
       minStake: this.minStake.toString(),
@@ -121,14 +141,18 @@ export class OracleQueueInitParams implements IOracleQueueInitParams {
       enableBufferRelayers: this.enableBufferRelayers,
       maxSize: this.maxSize.toString(),
       data: this.data.map((item) => item.toString()),
+      saveConfirmationReward: this.saveConfirmationReward.toString(),
+      saveReward: this.saveReward.toString(),
+      openRoundReward: this.openRoundReward.toString(),
+      slashingPenalty: this.slashingPenalty.toString(),
     };
   }
 
   static fromJSON(obj: OracleQueueInitParamsJSON) {
     return new OracleQueueInitParams({
+      authority: HexString.ensure(obj.authority),
       name: new Uint8Array(obj.name),
       metadata: new Uint8Array(obj.metadata),
-      authority: HexString.ensure(obj.authority),
       oracleTimeout: new BN(obj.oracleTimeout),
       reward: new BN(obj.reward),
       minStake: new BN(obj.minStake),
@@ -145,14 +169,18 @@ export class OracleQueueInitParams implements IOracleQueueInitParams {
       enableBufferRelayers: obj.enableBufferRelayers,
       maxSize: new BN(obj.maxSize),
       data: obj.data.map((item) => HexString.ensure(item)),
+      saveConfirmationReward: new BN(obj.saveConfirmationReward),
+      saveReward: new BN(obj.saveReward),
+      openRoundReward: new BN(obj.openRoundReward),
+      slashingPenalty: new BN(obj.slashingPenalty),
     });
   }
 
   toMoveStruct(): OracleQueueInitParamsMoveStruct {
     return {
+      authority: this.authority.toString(),
       name: Buffer.from(this.name).toString("hex"),
       metadata: Buffer.from(this.metadata).toString("hex"),
-      authority: this.authority.toString(),
       oracle_timeout: this.oracleTimeout.toString(),
       reward: this.reward.toString(),
       min_stake: this.minStake.toString(),
@@ -170,11 +198,16 @@ export class OracleQueueInitParams implements IOracleQueueInitParams {
       enable_buffer_relayers: this.enableBufferRelayers,
       max_size: this.maxSize.toString(),
       data: this.data.map((item) => item.toString()),
+      save_confirmation_reward: this.saveConfirmationReward.toString(),
+      save_reward: this.saveReward.toString(),
+      open_round_reward: this.openRoundReward.toString(),
+      slashing_penalty: this.slashingPenalty.toString(),
     };
   }
 
   static fromMoveStruct(obj: OracleQueueInitParamsMoveStruct) {
     return new OracleQueueInitParams({
+      authority: HexString.ensure(obj.authority),
       name:
         typeof obj.name === "string"
           ? new Uint8Array(Buffer.from(obj.name.slice(2), "hex"))
@@ -183,7 +216,6 @@ export class OracleQueueInitParams implements IOracleQueueInitParams {
         typeof obj.metadata === "string"
           ? new Uint8Array(Buffer.from(obj.metadata.slice(2), "hex"))
           : new Uint8Array(obj.metadata),
-      authority: HexString.ensure(obj.authority),
       oracleTimeout: new BN(obj.oracle_timeout),
       reward: new BN(obj.reward),
       minStake: new BN(obj.min_stake),
@@ -202,6 +234,10 @@ export class OracleQueueInitParams implements IOracleQueueInitParams {
       enableBufferRelayers: obj.enable_buffer_relayers,
       maxSize: new BN(obj.max_size),
       data: obj.data.map((item) => HexString.ensure(item)),
+      saveConfirmationReward: new BN(obj.save_confirmation_reward),
+      saveReward: new BN(obj.save_reward),
+      openRoundReward: new BN(obj.open_round_reward),
+      slashingPenalty: new BN(obj.slashing_penalty),
     });
   }
 }

@@ -1,4 +1,6 @@
 export * as types from "./generated/index.js";
+export * as errors from "./generated/errors.js";
+
 export {
   TESTNET_PROGRAM_ID,
   MAINNET_PROGRAM_ID,

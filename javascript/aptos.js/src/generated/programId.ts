@@ -1,7 +1,8 @@
-export const PROGRAM_ID =
-  "0x34e2eead0aefbc3d0af13c0522be94b002658f4bef8e0740a21086d22236ad77";
-export const MAINNET_PROGRAM_ID = PROGRAM_ID;
+export const MAINNET_PROGRAM_ID =
+  "0x7d7e436f0b2aafde60774efb26ccc432cf881b677aca7faaf2a01879bd19fb8";
 export const TESTNET_PROGRAM_ID =
   "0x34e2eead0aefbc3d0af13c0522be94b002658f4bef8e0740a21086d22236ad77";
 export const DEVNET_PROGRAM_ID =
   "0x34e2eead0aefbc3d0af13c0522be94b002658f4bef8e0740a21086d22236ad77";
+
+export const PROGRAM_ID = MAINNET_PROGRAM_ID;

@@ -18,6 +18,10 @@ export interface IOracleQueueSetConfigsParams {
   unpermissionedFeedsEnabled: boolean;
   lockLeaseFunding: boolean;
   maxSize: BN;
+  saveConfirmationReward: BN;
+  saveReward: BN;
+  openRoundReward: BN;
+  slashingPenalty: BN;
 }
 
 export interface OracleQueueSetConfigsParamsJSON {
@@ -36,6 +40,10 @@ export interface OracleQueueSetConfigsParamsJSON {
   unpermissionedFeedsEnabled: boolean;
   lockLeaseFunding: boolean;
   maxSize: string;
+  saveConfirmationReward: string;
+  saveReward: string;
+  openRoundReward: string;
+  slashingPenalty: string;
 }
 
 export interface OracleQueueSetConfigsParamsMoveStruct {
@@ -54,6 +62,10 @@ export interface OracleQueueSetConfigsParamsMoveStruct {
   unpermissioned_feeds_enabled: boolean;
   lock_lease_funding: boolean;
   max_size: string;
+  save_confirmation_reward: string;
+  save_reward: string;
+  open_round_reward: string;
+  slashing_penalty: string;
 }
 
 export class OracleQueueSetConfigsParams
@@ -74,6 +86,10 @@ export class OracleQueueSetConfigsParams
   readonly unpermissionedFeedsEnabled: boolean;
   readonly lockLeaseFunding: boolean;
   readonly maxSize: BN;
+  readonly saveConfirmationReward: BN;
+  readonly saveReward: BN;
+  readonly openRoundReward: BN;
+  readonly slashingPenalty: BN;
 
   constructor(fields: IOracleQueueSetConfigsParams) {
     this.addr = fields.addr;
@@ -91,6 +107,10 @@ export class OracleQueueSetConfigsParams
     this.unpermissionedFeedsEnabled = fields.unpermissionedFeedsEnabled;
     this.lockLeaseFunding = fields.lockLeaseFunding;
     this.maxSize = fields.maxSize;
+    this.saveConfirmationReward = fields.saveConfirmationReward;
+    this.saveReward = fields.saveReward;
+    this.openRoundReward = fields.openRoundReward;
+    this.slashingPenalty = fields.slashingPenalty;
   }
 
   toJSON(): OracleQueueSetConfigsParamsJSON {
@@ -111,6 +131,10 @@ export class OracleQueueSetConfigsParams
       unpermissionedFeedsEnabled: this.unpermissionedFeedsEnabled,
       lockLeaseFunding: this.lockLeaseFunding,
       maxSize: this.maxSize.toString(),
+      saveConfirmationReward: this.saveConfirmationReward.toString(),
+      saveReward: this.saveReward.toString(),
+      openRoundReward: this.openRoundReward.toString(),
+      slashingPenalty: this.slashingPenalty.toString(),
     };
   }
 
@@ -133,6 +157,10 @@ export class OracleQueueSetConfigsParams
       unpermissionedFeedsEnabled: obj.unpermissionedFeedsEnabled,
       lockLeaseFunding: obj.lockLeaseFunding,
       maxSize: new BN(obj.maxSize),
+      saveConfirmationReward: new BN(obj.saveConfirmationReward),
+      saveReward: new BN(obj.saveReward),
+      openRoundReward: new BN(obj.openRoundReward),
+      slashingPenalty: new BN(obj.slashingPenalty),
     });
   }
 
@@ -156,6 +184,10 @@ export class OracleQueueSetConfigsParams
       unpermissioned_feeds_enabled: this.unpermissionedFeedsEnabled,
       lock_lease_funding: this.lockLeaseFunding,
       max_size: this.maxSize.toString(),
+      save_confirmation_reward: this.saveConfirmationReward.toString(),
+      save_reward: this.saveReward.toString(),
+      open_round_reward: this.openRoundReward.toString(),
+      slashing_penalty: this.slashingPenalty.toString(),
     };
   }
 
@@ -186,6 +218,10 @@ export class OracleQueueSetConfigsParams
       unpermissionedFeedsEnabled: obj.unpermissioned_feeds_enabled,
       lockLeaseFunding: obj.lock_lease_funding,
       maxSize: new BN(obj.max_size),
+      saveConfirmationReward: new BN(obj.save_confirmation_reward),
+      saveReward: new BN(obj.save_reward),
+      openRoundReward: new BN(obj.open_round_reward),
+      slashingPenalty: new BN(obj.slashing_penalty),
     });
   }
 }
