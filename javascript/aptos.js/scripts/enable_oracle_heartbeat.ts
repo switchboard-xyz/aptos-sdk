@@ -56,7 +56,7 @@ const feeds = [
       fs.readFileSync("../.aptos/config.yaml", "utf8")
     );
     funder = new AptosAccount(
-      HexString.ensure(parsedYaml.profiles.wallet.private_key).toUint8Array()
+      HexString.ensure(parsedYaml.profiles.default.private_key).toUint8Array()
     );
   } catch (e) {
     console.log(e);
@@ -76,12 +76,13 @@ const feeds = [
         feed,
         SWITCHBOARD_ADDRESS
       );
+      console.log(JSON.stringify(await feedAccount.loadData(), null, 2));
       // enable heartbeat on oracle
-      await feedAccount.setConfig(funder, {
-        varianceThreshold: new Big(2),
-        minUpdateDelaySeconds: 45,
-        forceReportPeriod: 300,
-      });
+      // await feedAccount.setConfig(funder, {
+      // varianceThreshold: new Big(2),
+      // minUpdateDelaySeconds: 45,
+      // forceReportPeriod: 300,
+      // });
     } catch (e) {
       console.log(e);
     }
