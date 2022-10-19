@@ -38,6 +38,7 @@ export * from "./LeaseFundEvent.js";
 export * from "./ProbationBrokenEvent.js";
 export * from "./FeedPermissionRevokedEvent.js";
 export * from "./GarbageCollectFailureEvent.js";
+export * from "./OptionalMoveStruct.js";
 export * from "./OracleBootedEvent.js";
 export * from "./CrankLeaseInsufficientFundsEvent.js";
 export * from "./CrankPopExpectedFailureEvent.js";

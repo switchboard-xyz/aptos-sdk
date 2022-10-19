@@ -47,7 +47,7 @@ export interface AggregatorRoundMoveStruct {
   min_response: types.SwitchboardDecimalMoveStruct;
   max_response: types.SwitchboardDecimalMoveStruct;
   oracle_keys: Array<string>;
-  medians: Array<types.SwitchboardDecimalMoveStruct | null>;
+  medians: Array<types.OptionalMoveStruct<types.SwitchboardDecimalJSON>>;
   current_payout: Array<types.SwitchboardDecimalMoveStruct>;
   errors_fulfilled: Array<boolean>;
   num_success: string;
@@ -147,7 +147,9 @@ export class AggregatorRound implements IAggregatorRound {
       min_response: this.minResponse.toMoveStruct(),
       max_response: this.maxResponse.toMoveStruct(),
       oracle_keys: this.oracleKeys.map((item) => item.toString()),
-      medians: this.medians.map((item) => (item ? item.toMoveStruct() : null)),
+      medians: this.medians.map((item) =>
+        item ? { vec: [item.toMoveStruct()] } : null
+      ),
       current_payout: this.currentPayout.map((item) => item.toMoveStruct()),
       errors_fulfilled: this.errorsFulfilled.map((item) => item),
       num_success: this.numSuccess.toString(),
@@ -169,7 +171,9 @@ export class AggregatorRound implements IAggregatorRound {
       oracleKeys: obj.oracle_keys.map((item) => HexString.ensure(item)),
       medians: Array.from(
         obj.medians.map((item) =>
-          item ? types.SwitchboardDecimal.fromMoveStruct(item) : null
+          item.vec.length > 0
+            ? types.SwitchboardDecimal.fromMoveStruct(item.vec[0])
+            : null
         )
       ),
       currentPayout: obj.current_payout.map((item) =>
