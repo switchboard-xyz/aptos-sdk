@@ -24,11 +24,8 @@ const SWITCHBOARD_ADDRESS =
   "0x34e2eead0aefbc3d0af13c0522be94b002658f4bef8e0740a21086d22236ad77"; // (localnet)
 
 // TODO: MAKE THIS THE AUTHORITY THAT WILL OWN THE ORACLE
-const ORACLE_AUTHORITY =
-  "0xe8f304576e94600b5d1b0966d8921f31b46041523bbf65f56d68a4a6fed9979f"; // "0x34e2eead0aefbc3d0af13c0522be94b002658f4bef8e0740a21086d22236ad77"; // (localnet)
-const PERMISSIONLESS_QUEUE_ADDRESS =
+const QUEUE_ADDRESS =
   "0x6e691165ebaaee3a7d862b94c9b88319cfa803a584c9e3bd538c3ae8380b9304"; // "0x34e2eead0aefbc3d0af13c0522be94b002658f4bef8e0740a21086d22236ad77"; // (localnet)
-const PERMISSIONED_QUEUE_ADDRESS = "";
 /*
   CREATE 1 ORACLE AND WRITE OUT THE KEY
  */
@@ -103,9 +100,9 @@ const PERMISSIONED_QUEUE_ADDRESS = "";
       funder,
       {
         name: "Switchboard OracleAccount",
-        authority: ORACLE_AUTHORITY,
+        authority: oracle_owner.address().hex(),
         metadata: "",
-        queue: PERMISSIONLESS_QUEUE_ADDRESS,
+        queue: QUEUE_ADDRESS,
         coinType: "0x1::aptos_coin::AptosCoin",
       },
       SWITCHBOARD_ADDRESS
