@@ -31,7 +31,7 @@ module switchboard::aggregator {
         oracle_keys: vector<address>,
         // Represents all successful node responses this round. `NaN` if empty.
         medians: vector<Option<SwitchboardDecimal>>,
-        // Current rewards/slashes oracles have received this round.
+        // Payouts so far in a given round
         current_payout: vector<SwitchboardDecimal>,
         // could do specific error codes
         errors_fulfilled: vector<bool>,
@@ -57,12 +57,12 @@ module switchboard::aggregator {
             max_response: math::zero(),
             oracle_keys: vector::empty(),
             medians: vector::empty(),
-            current_payout: vector::empty(),
             errors_fulfilled: vector::empty(),
             num_error: 0,
             num_success: 0,
             is_closed: false,
             round_confirmed_timestamp: 0,
+            current_payout: vector::empty(),
         }
     }
 
@@ -245,9 +245,9 @@ module switchboard::aggregator {
         addr: address, 
         fee: Coin<CoinType>
     ): SwitchboardDecimal acquires AggregatorConfig, AggregatorReadConfig, AggregatorRound {
-        let aggregator_config = borrow_global_mut<AggregatorConfig>(addr);
-        aggregator_config; // to prevent type error
+        let _aggregator_config = borrow_global_mut<AggregatorConfig>(addr);
         let aggregator_read_config = borrow_global_mut<AggregatorReadConfig>(addr);
+
         if (aggregator_read_config.limit_reads_to_whitelist) {
             assert!(vector::contains(&aggregator_read_config.read_whitelist, &signer::address_of(account)), errors::PermissionDenied());
         } else {
@@ -268,9 +268,8 @@ module switchboard::aggregator {
         SwitchboardDecimal, /* Min Oracle Response */
         SwitchboardDecimal, /* Max Oracle Response */
     ) acquires AggregatorConfig, AggregatorReadConfig, AggregatorRound {
-        let aggregator_config = borrow_global_mut<AggregatorConfig>(addr);
+        let _aggregator_config = borrow_global_mut<AggregatorConfig>(addr);
         let aggregator_read_config = borrow_global_mut<AggregatorReadConfig>(addr);
-        aggregator_config; // to prevent type error
         if (aggregator_read_config.limit_reads_to_whitelist) {
             assert!(vector::contains(&aggregator_read_config.read_whitelist, &signer::address_of(account)), errors::PermissionDenied());
         } else {
@@ -296,6 +295,7 @@ module switchboard::aggregator {
         assert!(aggregator_read_config.read_charge == 0 && !aggregator_read_config.limit_reads_to_whitelist, errors::PermissionDenied());
         borrow_global<AggregatorRound<LatestConfirmedRound>>(addr).result
     }
+
 
     public fun latest_round(addr: address): (
         SwitchboardDecimal, /* Result */
