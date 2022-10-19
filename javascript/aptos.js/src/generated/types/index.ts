@@ -63,3 +63,4 @@ export * from "./OracleQueueConfig.js";
 export * from "./OracleQueue.js";
 export * from "./Permission.js";
 export * from "./SwitchboardDecimal.js";
+export * from "./OptionalMoveStruct.js";
