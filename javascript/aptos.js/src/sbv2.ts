@@ -840,8 +840,10 @@ export class AggregatorAccount {
         params.minJobResults ?? aggregator.minJobResults,
         params.minUpdateDelaySeconds ?? aggregator.minUpdateDelaySeconds,
         params.startAfter ?? aggregator.startAfter,
-        Number(vtMantissa),
-        vtScale,
+        params.varianceThreshold
+          ? Number(vtMantissa)
+          : aggregator.varianceThreshold.value,
+        params.varianceThreshold ? vtScale : aggregator.varianceThreshold.dec,
         params.forceReportPeriod ?? aggregator.forceReportPeriod,
         params.expiration ?? aggregator.expiration,
         false, //params.disableCrank ?? aggregator.disableCrank,
@@ -879,8 +881,10 @@ export class AggregatorAccount {
       params.minJobResults ?? aggregator.minJobResults,
       params.minUpdateDelaySeconds ?? aggregator.minUpdateDelaySeconds,
       params.startAfter ?? aggregator.startAfter,
-      Number(vtMantissa),
-      vtScale,
+      params.varianceThreshold
+        ? Number(vtMantissa)
+        : aggregator.varianceThreshold.value,
+      params.varianceThreshold ? vtScale : aggregator.varianceThreshold.dec,
       params.forceReportPeriod ?? aggregator.forceReportPeriod,
       params.expiration ?? aggregator.expiration,
       false, // params.disableCrank ?? aggregator.disableCrank,
