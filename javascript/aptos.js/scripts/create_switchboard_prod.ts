@@ -4,16 +4,17 @@ import * as YAML from "yaml";
 import * as fs from "fs";
 
 // const NODE_URL = "https://fullnode.mainnet.aptoslabs.com/v1";
-const NODE_URL = "https://fullnode.testnet.aptoslabs.com/v1";
+const NODE_URL =
+  "https://7023b384-9d18-4480-ba7a-bb629d724ae9:881b272ea3154b9dbb64b0bfe3878c9f@aptos-mainnet.nodereal.io/v1";
 //const NODE_URL = "http://0.0.0.0:8080/v1";
 
 // TODO: MAKE THIS THE DEPLOYER ADDRESS
 const SWITCHBOARD_ADDRESS =
-  "0x34e2eead0aefbc3d0af13c0522be94b002658f4bef8e0740a21086d22236ad77"; // (localnet)
+  "0x07d7e436f0b2aafde60774efb26ccc432cf881b677aca7faaf2a01879bd19fb8"; // (localnet)
 
 // TODO: MAKE THIS THE AUTHORITY THAT WILL OWN THE QUEUES (authority of both permissioned and permissionless queues)
 const QUEUE_AUTHORITY =
-  "0xe8f304576e94600b5d1b0966d8921f31b46041523bbf65f56d68a4a6fed9979f"; // (localnet)
+  "0xca62eccbbdb22b5de18165d0bdf2d7127569b91498f0a7f6944028793cef8137"; // (localnet)
 
 const transfer = async (
   client: AptosClient,
@@ -57,7 +58,8 @@ const transfer = async (
     throw new Error("Could not get funder account.");
   }
 
-  const ONE_APT = 100_000_000; // octas per APT
+  const QUEUE_COST = 100_000_000; // octas per APT
+  const CRANK_COST = 100_000_000; // octas per APT
 
   /*
     PERMISSIONLESS QUEUE 
@@ -70,7 +72,7 @@ const transfer = async (
       `permissionless-queue-owner-keys-${queue_owner.address().hex()}`,
       JSON.stringify(queue_owner.toPrivateKeyObject())
     );
-    await transfer(client, funder, queue_owner, ONE_APT);
+    await transfer(client, funder, queue_owner, QUEUE_COST);
     console.log(
       `Authority account ${queue_owner.address().hex()} funded for queue`
     );
@@ -91,8 +93,8 @@ const transfer = async (
         name: "switchboard permissionless queue",
         metadata: "",
         authority: QUEUE_AUTHORITY || queue_owner.address().hex(),
-        oracleTimeout: 30000,
-        reward: 1850 * 500, // base reward
+        oracleTimeout: 180,
+        reward: 0,
         // everything else is added on top
         minStake: 0,
         slashingEnabled: false,
@@ -127,7 +129,7 @@ const transfer = async (
       `permissioned-queue-owner-keys-${queue_owner.address().hex()}`,
       JSON.stringify(queue_owner.toPrivateKeyObject())
     );
-    await transfer(client, funder, queue_owner, ONE_APT);
+    await transfer(client, funder, queue_owner, QUEUE_COST);
     console.log(
       `Authority account ${queue_owner.address().hex()} funded for queue`
     );
@@ -147,7 +149,7 @@ const transfer = async (
         name: "switchboard permissioned queue",
         metadata: "",
         authority: QUEUE_AUTHORITY || queue_owner.address().hex(),
-        oracleTimeout: 30000,
+        oracleTimeout: 180,
         reward: 0, // base reward
         // everything else is added on top
         minStake: 0,
@@ -183,7 +185,7 @@ const transfer = async (
       `permissioned-crank-owner-keys-${crank_owner.address().hex()}`,
       JSON.stringify(crank_owner.toPrivateKeyObject())
     );
-    await transfer(client, funder, crank_owner, ONE_APT);
+    await transfer(client, funder, crank_owner, CRANK_COST);
     console.log(
       `Authority account ${crank_owner.address().hex()} funded for crank`
     );
@@ -225,7 +227,7 @@ const transfer = async (
       JSON.stringify(crank_owner.toPrivateKeyObject())
     );
 
-    await transfer(client, funder, crank_owner, ONE_APT);
+    await transfer(client, funder, crank_owner, CRANK_COST);
     console.log(
       `Authority account ${crank_owner.address().hex()} funded for crank`
     );

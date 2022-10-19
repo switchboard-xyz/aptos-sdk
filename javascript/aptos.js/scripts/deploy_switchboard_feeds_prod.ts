@@ -35,42 +35,43 @@ import {
   usdcKraken,
 } from "./job_data/usdc";
 
-const NODE_URL = "https://fullnode.devnet.aptoslabs.com/v1";
-const FAUCET_URL = "https://faucet.devnet.aptoslabs.com";
+const NODE_URL =
+  "https://7023b384-9d18-4480-ba7a-bb629d724ae9:881b272ea3154b9dbb64b0bfe3878c9f@aptos-mainnet.nodereal.io/v1";
 
 const SWITCHBOARD_ADDRESS =
-  "0x34e2eead0aefbc3d0af13c0522be94b002658f4bef8e0740a21086d22236ad77";
+  "0x7d7e436f0b2aafde60774efb26ccc432cf881b677aca7faaf2a01879bd19fb8";
 
 const SWITCHBOARD_QUEUE_ADDRESS =
-  "0x34e2eead0aefbc3d0af13c0522be94b002658f4bef8e0740a21086d22236ad77";
+  "0x11fbd91e4a718066891f37958f0b68d10e720f2edf8d57854fb20c299a119a8c";
 
 const SWITCHBOARD_CRANK_ADDRESS =
-  "0x34e2eead0aefbc3d0af13c0522be94b002658f4bef8e0740a21086d22236ad77";
+  "0xbc9576fedda51d33e8129b5f122ef4707c2079dfb11cd836e86adcb168cbd473";
 
 // run it all at once
 (async () => {
   // INFRA ------
   const client = new AptosClient(NODE_URL);
-  const faucetClient = new FaucetClient(NODE_URL, FAUCET_URL);
 
   // if file extension ends with yaml
-  const parsedYaml = YAML.parse(fs.readFileSync(".aptos/config.yaml", "utf8"));
+  const parsedYaml = YAML.parse(
+    fs.readFileSync("../.aptos/config.yaml", "utf8")
+  );
   const user = new AptosAccount(
     HexString.ensure(parsedYaml.profiles.default.private_key).toUint8Array()
   );
   const program = new AptosAccount(
-    HexString.ensure(parsedYaml.profiles.program.private_key).toUint8Array()
+    HexString.ensure(parsedYaml.profiles.default.private_key).toUint8Array()
   );
-  const permissioned = new AptosAccount(
-    HexString.ensure(
-      parsedYaml.profiles.permissioned.private_key
-    ).toUint8Array()
-  );
-  const permissionless = new AptosAccount(
-    HexString.ensure(
-      parsedYaml.profiles.permissioned.private_key
-    ).toUint8Array()
-  );
+  // const permissioned = new AptosAccount(
+  // HexString.ensure(
+  // parsedYaml.profiles.permissioned.private_key
+  // ).toUint8Array()
+  // );
+  // const permissionless = new AptosAccount(
+  // HexString.ensure(
+  // parsedYaml.profiles.permissioned.private_key
+  // ).toUint8Array()
+  // );
 
   const FEED_KEY_1 = generateResourceAccountAddress(
     user.address(),
@@ -109,14 +110,15 @@ const SWITCHBOARD_CRANK_ADDRESS =
         name: "BTC/USD",
         authority: user.address(),
         queueAddress: SWITCHBOARD_QUEUE_ADDRESS,
-        batchSize: 1,
+        batchSize: 3,
         minJobResults: 2,
-        minOracleResults: 1,
+        minOracleResults: 3,
         minUpdateDelaySeconds: 10,
-        varianceThreshold: new Big(0),
+        varianceThreshold: new Big(1),
+        forceReportPeriod: 180,
         coinType: "0x1::aptos_coin::AptosCoin",
         crankAddress: SWITCHBOARD_CRANK_ADDRESS,
-        initialLoadAmount: 100_000,
+        initialLoadAmount: 0,
         seed: "0x1",
         jobs: [
           {
@@ -174,14 +176,15 @@ const SWITCHBOARD_CRANK_ADDRESS =
         name: "ETH/USD",
         authority: user.address(),
         queueAddress: SWITCHBOARD_QUEUE_ADDRESS,
-        batchSize: 1,
+        batchSize: 3,
         minJobResults: 2,
-        minOracleResults: 1,
+        minOracleResults: 3,
         minUpdateDelaySeconds: 10,
-        varianceThreshold: new Big(0),
+        varianceThreshold: new Big(1),
+        forceReportPeriod: 180,
         coinType: "0x1::aptos_coin::AptosCoin",
         crankAddress: SWITCHBOARD_CRANK_ADDRESS,
-        initialLoadAmount: 100_000,
+        initialLoadAmount: 0,
         seed: "0x2",
         jobs: [
           {
@@ -238,14 +241,15 @@ const SWITCHBOARD_CRANK_ADDRESS =
       {
         authority: user.address(),
         queueAddress: SWITCHBOARD_QUEUE_ADDRESS,
-        batchSize: 1,
+        batchSize: 3,
         minJobResults: 2,
-        minOracleResults: 1,
+        minOracleResults: 3,
         minUpdateDelaySeconds: 10,
-        varianceThreshold: new Big(0),
+        varianceThreshold: new Big(1),
+        forceReportPeriod: 180,
         coinType: "0x1::aptos_coin::AptosCoin",
         crankAddress: SWITCHBOARD_CRANK_ADDRESS,
-        initialLoadAmount: 100_000,
+        initialLoadAmount: 0,
         seed: "0x3",
         jobs: [
           {
@@ -295,14 +299,15 @@ const SWITCHBOARD_CRANK_ADDRESS =
       {
         authority: user.address(),
         queueAddress: SWITCHBOARD_QUEUE_ADDRESS,
-        batchSize: 1,
+        batchSize: 3,
         minJobResults: 2,
-        minOracleResults: 1,
+        minOracleResults: 3,
         minUpdateDelaySeconds: 10,
-        varianceThreshold: new Big(0),
+        varianceThreshold: new Big(1),
+        forceReportPeriod: 180,
         coinType: "0x1::aptos_coin::AptosCoin",
         crankAddress: SWITCHBOARD_CRANK_ADDRESS,
-        initialLoadAmount: 100_000,
+        initialLoadAmount: 0,
         seed: "0x4",
         jobs: [
           {
@@ -345,63 +350,64 @@ const SWITCHBOARD_CRANK_ADDRESS =
   /**
    * NEAR
    */
-  try {
-    const [aggregator, createFeedTx] = await createFeed(
-      client,
-      user,
-      {
-        authority: user.address(),
-        queueAddress: SWITCHBOARD_QUEUE_ADDRESS,
-        batchSize: 1,
-        minJobResults: 2,
-        minOracleResults: 1,
-        minUpdateDelaySeconds: 10,
-        varianceThreshold: new Big(0),
-        coinType: "0x1::aptos_coin::AptosCoin",
-        crankAddress: SWITCHBOARD_CRANK_ADDRESS,
-        initialLoadAmount: 100_000,
-        seed: "0x5",
-        jobs: [
-          {
-            name: "NEAR/USD near",
-            metadata: "near",
-            authority: user.address().hex(),
-            data: nearBinance.toString("base64"),
-            weight: 1,
-          },
-          {
-            name: "NEAR/USD bitfinex",
-            metadata: "bitfinex",
-            authority: user.address().hex(),
-            data: nearBitfinex.toString("base64"),
-            weight: 1,
-          },
-          {
-            name: "NEAR/USD coinbase",
-            metadata: "coinbase",
-            authority: user.address().hex(),
-            data: nearCoinbase.toString("base64"),
-            weight: 1,
-          },
-          {
-            name: "NEAR/USD ftx",
-            metadata: "ftx",
-            authority: user.address().hex(),
-            data: nearFtx.toString("base64"),
-            weight: 1,
-          },
-        ],
-      },
-      SWITCHBOARD_ADDRESS
-    );
-    console.log("made near feed", aggregator.address);
-  } catch (e) {
-    console.log(`couldn't make near feed`, e);
-  }
+  // try {
+  // const [aggregator, createFeedTx] = await createFeed(
+  // client,
+  // user,
+  // {
+  // authority: user.address(),
+  // queueAddress: SWITCHBOARD_QUEUE_ADDRESS,
+  // batchSize: 1,
+  // minJobResults: 2,
+  // minOracleResults: 1,
+  // minUpdateDelaySeconds: 10,
+  // varianceThreshold: new Big(0),
+  // forceReportPeriod: 180,
+  // coinType: "0x1::aptos_coin::AptosCoin",
+  // crankAddress: SWITCHBOARD_CRANK_ADDRESS,
+  // initialLoadAmount: 100_000,
+  // seed: "0x5",
+  // jobs: [
+  // {
+  // name: "NEAR/USD near",
+  // metadata: "near",
+  // authority: user.address().hex(),
+  // data: nearBinance.toString("base64"),
+  // weight: 1,
+  // },
+  // {
+  // name: "NEAR/USD bitfinex",
+  // metadata: "bitfinex",
+  // authority: user.address().hex(),
+  // data: nearBitfinex.toString("base64"),
+  // weight: 1,
+  // },
+  // {
+  // name: "NEAR/USD coinbase",
+  // metadata: "coinbase",
+  // authority: user.address().hex(),
+  // data: nearCoinbase.toString("base64"),
+  // weight: 1,
+  // },
+  // {
+  // name: "NEAR/USD ftx",
+  // metadata: "ftx",
+  // authority: user.address().hex(),
+  // data: nearFtx.toString("base64"),
+  // weight: 1,
+  // },
+  // ],
+  // },
+  // SWITCHBOARD_ADDRESS
+  // );
+  // console.log("made near feed", aggregator.address);
+  // } catch (e) {
+  // console.log(`couldn't make near feed`, e);
+  // }
 
   console.log("BTC / USD", FEED_KEY_1);
   console.log("ETH / USD", FEED_KEY_2);
   console.log("SOL / USD", FEED_KEY_3);
   console.log("USDC / USD", FEED_KEY_4);
-  console.log("NEAR / USD", FEED_KEY_5);
+  // console.log("NEAR / USD", FEED_KEY_5);
 })();
