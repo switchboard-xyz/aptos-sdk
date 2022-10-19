@@ -6,6 +6,7 @@ import {
 } from "../lib/cjs";
 import * as YAML from "yaml";
 import * as fs from "fs";
+import Big from "big.js";
 
 const NODE_URL = "https://fullnode.mainnet.aptoslabs.com/v1";
 // const NODE_URL = "https://fullnode.testnet.aptoslabs.com/v1";
@@ -75,21 +76,11 @@ const feeds = [
         feed,
         SWITCHBOARD_ADDRESS
       );
-      await sendAptosTx(
-        client,
-        account,
-        `${this.switchboardAddress}::aggregator_open_round_action::run`,
-        [HexString.ensure(this.address).hex(), jitter ?? 1],
-        [this.coinType]
-      );
-
       // enable heartbeat on oracle
-      await feedAccount.setConfigTx(funder, {
-        authority: funder.address().hex(),
-        granter: QUEUE_ADDRESS,
-        grantee: oracle,
-        permission: SwitchboardPermission.PERMIT_ORACLE_HEARTBEAT,
-        enable: true,
+      await feedAccount.setConfig(funder, {
+        varianceThreshold: new Big(2),
+        minUpdateDelaySeconds: 45,
+        forceReportPeriod: 300,
       });
     } catch (e) {
       console.log(e);

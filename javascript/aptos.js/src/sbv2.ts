@@ -851,7 +851,7 @@ export class AggregatorAccount {
         params.readCharge ?? aggregator.readCharge,
         params.rewardEscrow
           ? HexString.ensure(params.rewardEscrow).hex()
-          : HexString.ensure(params.authority).hex(),
+          : HexString.ensure(aggregator.rewardEscrow).hex(),
         params.readWhitelist ?? aggregator.readWhitelist,
         params.limitReadsToWhitelist ?? aggregator.limitReadsToWhitelist,
         params.authority ?? aggregator.authority,
@@ -866,7 +866,8 @@ export class AggregatorAccount {
     params: AggregatorSetConfigParams
   ): Promise<string> {
     const aggregator = await this.loadData();
-    // TODO
+    console.log(aggregator);
+    // TODO: this looks wrong
     const { mantissa: vtMantissa, scale: vtScale } = AptosDecimal.fromBig(
       params.varianceThreshold ?? new Big(0)
     );
@@ -876,23 +877,27 @@ export class AggregatorAccount {
       params.metadata ?? aggregator.metadata,
       HexString.ensure(params.queueAddress ?? aggregator.queueAddr).hex(),
       HexString.ensure(params.crankAddress ?? aggregator.crankAddr).hex(),
-      params.batchSize ?? aggregator.batchSize,
-      params.minOracleResults ?? aggregator.minOracleResults,
-      params.minJobResults ?? aggregator.minJobResults,
-      params.minUpdateDelaySeconds ?? aggregator.minUpdateDelaySeconds,
-      params.startAfter ?? aggregator.startAfter,
-      params.varianceThreshold
-        ? Number(vtMantissa)
-        : aggregator.varianceThreshold.value,
-      params.varianceThreshold ? vtScale : aggregator.varianceThreshold.dec,
-      params.forceReportPeriod ?? aggregator.forceReportPeriod,
-      params.expiration ?? aggregator.expiration,
+      String(params.batchSize ?? aggregator.batchSize),
+      String(params.minOracleResults ?? aggregator.minOracleResults),
+      String(params.minJobResults ?? aggregator.minJobResults),
+      String(params.minUpdateDelaySeconds ?? aggregator.minUpdateDelaySeconds),
+      String(params.startAfter ?? aggregator.startAfter),
+      String(
+        params.varianceThreshold
+          ? Number(vtMantissa)
+          : aggregator.varianceThreshold.value
+      ),
+      String(
+        params.varianceThreshold ? vtScale : aggregator.varianceThreshold.dec
+      ),
+      String(params.forceReportPeriod ?? aggregator.forceReportPeriod),
+      String(params.expiration ?? aggregator.expiration),
       false, // params.disableCrank ?? aggregator.disableCrank,
-      1000, // params.historySize ?? (aggregator as any).historySize,
-      params.readCharge ?? aggregator.readCharge,
+      "1000", // params.historySize ?? (aggregator as any).historySize,
+      String(params.readCharge ?? aggregator.readCharge),
       params.rewardEscrow
         ? HexString.ensure(params.rewardEscrow).hex()
-        : HexString.ensure(params.authority).hex(),
+        : HexString.ensure(aggregator.rewardEscrow).hex(),
       params.readWhitelist ?? aggregator.readWhitelist,
       params.limitReadsToWhitelist ?? aggregator.limitReadsToWhitelist,
       params.authority ?? aggregator.authority,
