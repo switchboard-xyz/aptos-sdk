@@ -19,8 +19,8 @@ clear the cache from `~/.move` and pull the latest version if you're on `main`.
 | Cluster  | Address                                                            |
 | -------- | ------------------------------------------------------------------ |
 | Mainnet  | 0x7d7e436f0b2aafde60774efb26ccc432cf881b677aca7faaf2a01879bd19fb8  |
-| Testnet  | 0x34e2eead0aefbc3d0af13c0522be94b002658f4bef8e0740a21086d22236ad77 |
-| Devnet\* | 0x34e2eead0aefbc3d0af13c0522be94b002658f4bef8e0740a21086d22236ad77 |
+| Testnet  | 0xb91d3fef0eeb4e685dc85e739c7d3e2968784945be4424e92e2f86e2418bf271 |
+| Devnet\* | 0xb91d3fef0eeb4e685dc85e739c7d3e2968784945be4424e92e2f86e2418bf271 |
 
 \*Devnet is currently experiencing faucet issues and may be unrelaible until
 resolved.
@@ -31,12 +31,12 @@ our [publisher](https://app.switchboard.xyz).
 #### Feed Addresses (same on devnet and testnet)
 
 ```
-// will be live from the afternoon of Fri / Oct 14
-BTC / USD 0x438bd2ed3f086faff9d88bd3ae8b86595711b07a565c8d66c1e6e6a524d6f542
-ETH / USD 0x3b1a60430a6612bc57df60e6050e0ff18526d4304715e99564a7e2ddf64d4e2d
-SOL / USD 0x851dafa2206d045ac2c7a9ad865c892de2791c83ca8c8c886a16c72079e94932
-USDC / USD 0x167bedf4c119ef72b974f7dcfc9ef5f0667d6bf1d9a1fc94e0157b2ed7b8598d
-NEAR / USD 0x3bb8e1c708e4f7eb07884b41c9863d73d485c2e527df52c0b1651b799f367bc2
+btc feed 0xc07d068fe17f67a85147702359b5819d226591307a5bb54139794f8931327e88
+eth feed 0xcaccdee7954db165b1b0923a619b58808937dbf4afb19091fdbb7f0584f41da1
+sol feed 0xe2677e5bd7473c13b7a8849d463b0b920b9bb02e98bbb6e638992dcf02394688
+usdc feed 0x1f7b23e6d81fa2102b2e994d2e54d26d116426c7dda5417925265f7b46f50c73
+near feed 0x33b7483ec735e6b82a2410e80db68980faf5c462873a75539a57cc26e4347ce8
+apt feed 0x7ac62190ba57b945975146f3d8725430ad3821391070b965b38206fe4cec9fd5
 ```
 
 ## Install
