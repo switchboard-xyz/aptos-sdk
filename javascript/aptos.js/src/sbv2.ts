@@ -953,6 +953,7 @@ export class AggregatorAccount {
     if (lastTimestamp.add(forceReportPeriod).lt(timestamp)) {
       return true;
     }
+
     let diff = safeDiv(latestResult, value);
     if (diff.abs().gt(1)) {
       diff = safeDiv(value, latestResult);
@@ -963,6 +964,7 @@ export class AggregatorAccount {
       return true;
     }
     const change = new Big(1).minus(diff);
+    console.log(change.toNumber(), varianceThreshold.toNumber());
 
     return change.gt(varianceThreshold);
   }
@@ -1124,6 +1126,19 @@ export class CrankAccount {
       account,
       `${this.switchboardAddress}::crank_pop_action::run`,
       [HexString.ensure(this.address).hex(), pop_idx ?? 0],
+      [this.coinType]
+    );
+  }
+
+  /**
+   * Pop many aggregators off the Crank
+   */
+  async pop_n(account: AptosAccount, pop_list: number[]): Promise<string> {
+    return await sendAptosTx(
+      this.client,
+      account,
+      `${this.switchboardAddress}::crank_pop_n_action::run`,
+      [HexString.ensure(this.address).hex(), pop_list],
       [this.coinType]
     );
   }
