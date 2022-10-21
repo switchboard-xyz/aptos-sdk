@@ -866,7 +866,6 @@ export class AggregatorAccount {
     params: AggregatorSetConfigParams
   ): Promise<string> {
     const aggregator = await this.loadData();
-    console.log(aggregator);
     // TODO: this looks wrong
     const { mantissa: vtMantissa, scale: vtScale } = AptosDecimal.fromBig(
       params.varianceThreshold ?? new Big(0)
@@ -964,8 +963,6 @@ export class AggregatorAccount {
       return true;
     }
     const change = new Big(1).minus(diff);
-    console.log(change.toNumber(), varianceThreshold.toNumber());
-
     return change.gt(varianceThreshold);
   }
 }
