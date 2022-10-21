@@ -44,13 +44,7 @@ const SWITCHBOARD_ADDRESS =
   setInterval(async () => {
     const crank = new CrankAccount(client, CRANK_ADDRESS, SWITCHBOARD_ADDRESS);
     const data = await crank.loadData();
-    const heap = data.heap.sort((a, b) => {
-      if (a.timestamp.lt(b.timestamp)) {
-        return -1;
-      } else {
-        return 1;
-      }
-    });
+    const heap = data.heap;
 
     const heapEntries = Array.from(heap.entries());
 
