@@ -97,12 +97,13 @@ const SWITCHBOARD_ADDRESS =
     }
 
     // Do the pop
-
-    try {
-      const tx = await crank.pop_n(funder, poplist);
-      console.log(`popped ${poplist.length}`, tx);
-    } catch (e) {
-      console.log("could not pop:", e);
+    if (poplist.length) {
+      try {
+        const tx = await crank.pop_n(funder, poplist);
+        console.log(`popped ${poplist.length}`, tx);
+      } catch (e) {
+        console.log("could not pop:", e);
+      }
     }
   }, 10000);
 })();
