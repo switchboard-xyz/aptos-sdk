@@ -9,23 +9,22 @@
  * Adds Job to Aggregator
  * Push Aggregator to Crank
  */
+import { AptosAccount, AptosClient, FaucetClient, HexString } from "aptos";
+import Big from "big.js";
 import { Buffer } from "buffer";
-import { AptosClient, AptosAccount, FaucetClient, HexString } from "aptos";
 import {
-  LeaseAccount,
+  AggregatorAccount,
   AptosEvent,
-  EventCallback,
-  JobAccount,
-  OracleJob,
-  OracleQueueAccount,
   CrankAccount,
   createFeed,
-  AggregatorAccount,
-  fetchAggregators,
   createOracle,
-  SWITCHBOARD_DEVNET_ADDRESS,
+  EventCallback,
+  fetchAggregators,
+  JobAccount,
+  LeaseAccount,
+  OracleJob,
+  OracleQueueAccount,
 } from "../lib/cjs";
-import Big from "big.js";
 
 const NODE_URL = "http://0.0.0.0:8080";
 const FAUCET_URL = "http://0.0.0.0:8081";
@@ -37,16 +36,13 @@ const onAggregatorUpdate = (
   client: AptosClient,
   cb: EventCallback,
   pollIntervalMs: number = 1000
-) => {
-  const event = new AptosEvent(
+): Promise<AptosEvent> => {
+  return AggregatorAccount.watch(
     client,
-    HexString.ensure(SWITCHBOARD_ADDRESS),
-    `${SWITCHBOARD_ADDRESS}::switchboard::State`,
-    "aggregator_update_events",
+    SWITCHBOARD_ADDRESS,
+    cb,
     pollIntervalMs
   );
-  event.onTrigger(cb);
-  return event;
 };
 
 const onAggregatorOpenRound = (
@@ -200,7 +196,7 @@ const onAggregatorOpenRound = (
     `Created AggregatorAccount and LeaseAccount resources at account address ${aggregator.address}. Tx hash ${createFeedTx}`
   );
 
-  const updatePoller = onAggregatorUpdate(client, async (e) => {
+  const updatePoller = await onAggregatorUpdate(client, async (e) => {
     console.log(`NEW RESULT:`, e.data);
   });
 
