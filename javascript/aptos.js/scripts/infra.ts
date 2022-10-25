@@ -36,7 +36,7 @@ const onAggregatorUpdate = (
   client: AptosClient,
   cb: EventCallback,
   pollIntervalMs: number = 1000
-): Promise<AptosEvent> => {
+): AptosEvent => {
   return AggregatorAccount.watch(
     client,
     SWITCHBOARD_ADDRESS,
