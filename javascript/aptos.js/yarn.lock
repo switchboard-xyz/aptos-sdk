@@ -186,6 +186,48 @@
     js-sha3 "^0.8.0"
     node-fetch "^2.1.6"
 
+"@switchboard-xyz/aptos.js@^2.5.20":
+  version "2.5.20"
+  resolved "https://registry.yarnpkg.com/@switchboard-xyz/aptos.js/-/aptos.js-2.5.20.tgz#bb23b917ab6f78e8e52d55c739e1ede588c50e3e"
+  integrity sha512-Q6gsW05eLur3KFwog7LIg1cnXlCaIhoyTs+68QEXktWWDL5E4432pMrGVSNoxergID5AyoGRDGAVNVi2zLVviw==
+  dependencies:
+    "@switchboard-xyz/aptos.js" "^2.5.15"
+    "@switchboard-xyz/common" "^2.0.0"
+    aptos "^1.3.16"
+    big.js "^6.2.1"
+    bn.js "^5.2.1"
+    chalk "^5.0.1"
+    js-sha3 "^0.8.0"
+    node-fetch "^2.1.6"
+
+"@switchboard-xyz/aptos.js@^2.5.21":
+  version "2.5.21"
+  resolved "https://registry.yarnpkg.com/@switchboard-xyz/aptos.js/-/aptos.js-2.5.21.tgz#32d8d6065f08afd5742e2551a37dc48534947ada"
+  integrity sha512-MCLFAx3E9nWcoWHDXhMIqtf9meekvUItNg1Pb3LVQRwQ5aorGT5q/RcQKeDwJMFEQHhMSQckQHdHJ220+8gM4w==
+  dependencies:
+    "@switchboard-xyz/aptos.js" "^2.5.20"
+    "@switchboard-xyz/common" "^2.0.0"
+    aptos "^1.3.16"
+    big.js "^6.2.1"
+    bn.js "^5.2.1"
+    chalk "^5.0.1"
+    js-sha3 "^0.8.0"
+    node-fetch "^2.1.6"
+
+"@switchboard-xyz/aptos.js@^2.5.22":
+  version "2.5.22"
+  resolved "https://registry.yarnpkg.com/@switchboard-xyz/aptos.js/-/aptos.js-2.5.22.tgz#20e35f4a5297cb41433ea0084307b57201b7ac17"
+  integrity sha512-qYy/GrUHOTRbjMMRVBgAhguTg2xmPehxiHtxWb6j6a2syaRTicC5Qxt4JZKz8Em4SHu5jE0QTZUQHr4yhWcBmQ==
+  dependencies:
+    "@switchboard-xyz/aptos.js" "^2.5.21"
+    "@switchboard-xyz/common" "^2.0.0"
+    aptos "^1.3.16"
+    big.js "^6.2.1"
+    bn.js "^5.2.1"
+    chalk "^5.0.1"
+    js-sha3 "^0.8.0"
+    node-fetch "^2.1.6"
+
 "@switchboard-xyz/common@^2.0.0":
   version "2.0.0"
   resolved "https://registry.npmjs.org/@switchboard-xyz/common/-/common-2.0.0.tgz"

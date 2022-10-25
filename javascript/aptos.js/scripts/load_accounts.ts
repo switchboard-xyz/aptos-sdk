@@ -5,7 +5,7 @@ import * as fs from "fs";
 // const NODE_URL = "https://fullnode.mainnet.aptoslabs.com/v1";
 // const NODE_URL = "https://fullnode.testnet.aptoslabs.com/v1";
 const NODE_URL =
-  "https://aptos-mainnet.nodereal.io/v1/881b272ea3154b9dbb64b0bfe3878c9f";
+  "https://aptos-mainnet.nodereal.io/v1/74fd755ce23849fdb8562acf424d38cb/v1";
 // TODO: MAKE THIS THE DEPLOYER ADDRESS
 const SWITCHBOARD_ADDRESS =
   "0x7d7e436f0b2aafde60774efb26ccc432cf881b677aca7faaf2a01879bd19fb8";
@@ -17,7 +17,8 @@ const accounts = [
   "0xf92bc956b9e25f38a2e4829b58f03ca9724233985cdda3f818bc3e62d6ed7d9c",
   "0x1ac99ac3f4050a68dd37a7af88d9337893235ee3da7135e454258e86b44393c9",
   "0xbe628dafb5f30cb7bc7f5994b998741151fddbb48264cd2e040d92f83b1be3fd",
-  "0xca62eccbbdb22b5de18165d0bdf2d7127569b91498f0a7f6944028793cef8137",
+  // CRANK TURNER
+  // "0xca62eccbbdb22b5de18165d0bdf2d7127569b91498f0a7f6944028793cef8137",
 ];
 const transfer = async (
   client: AptosClient,
@@ -51,7 +52,7 @@ const transfer = async (
       fs.readFileSync("../.aptos/config.yaml", "utf8")
     );
     funder = new AptosAccount(
-      HexString.ensure(parsedYaml.profiles.wallet.private_key).toUint8Array()
+      HexString.ensure(parsedYaml.profiles.default.private_key).toUint8Array()
     );
   } catch (e) {
     console.log(e);
@@ -62,17 +63,18 @@ const transfer = async (
   const coinClient = new CoinClient(client);
   for (let account of accounts) {
     try {
-      console.log(`funding ${account}`);
+      console.log(`checking ${account}`);
       const balance = await coinClient.checkBalance(
         new AptosAccount(undefined, account)
       );
-      if (balance < 20_000_000) {
-        try {
-          transfer(client, funder, account, 100_000_000); // give them 1 APT if they're below 1
-        } catch (e) {
-          console.log(e);
-        }
+      // if (Number(balance) < 20_000_000) {
+      console.log(`funding ${account}`);
+      try {
+        transfer(client, funder, account, 200_000_000); // give them 1 APT if they're below 1
+      } catch (e) {
+        console.log(e);
       }
+      // }
     } catch (e) {
       // transfer(client, funder, account, 100_000_000); // give them 1 APT if they're below 1
       console.error(e);
