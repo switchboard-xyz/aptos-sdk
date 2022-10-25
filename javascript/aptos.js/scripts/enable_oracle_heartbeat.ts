@@ -35,10 +35,11 @@ const oracles = [
 ];
 
 const feeds = [
-  // "0xdc7f6fbc4efe2995e1e37b9f73d113085e4ee3597d47210a2933ad3bf5b78774",
-  // "0x7b5f536d201280a10d33d8c2202a1892b1dd8247aecfef7762ea8e7565eac7b6",
-  // "0x5af65afeeab555f8b742ce7fc2c539a5cb6a6fb2a6e6d96bc1b075fb28067808",
+  "0xdc7f6fbc4efe2995e1e37b9f73d113085e4ee3597d47210a2933ad3bf5b78774",
+  "0x7b5f536d201280a10d33d8c2202a1892b1dd8247aecfef7762ea8e7565eac7b6",
+  "0x5af65afeeab555f8b742ce7fc2c539a5cb6a6fb2a6e6d96bc1b075fb28067808",
   "0xdc1045b4d9fd1f4221fc2f91b2090d88483ba9745f29cf2d96574611204659a5",
+  "0xb8f20223af69dcbc33d29e8555e46d031915fc38cb1a4fff5d5167a1e08e8367",
 ];
 
 // const feeds = [
@@ -60,6 +61,8 @@ const feeds = [
 
 (async () => {
   const client = new AptosClient(NODE_URL);
+  console.log(await client.estimateGasPrice());
+  return;
 
   let funder;
 
@@ -69,16 +72,19 @@ const feeds = [
       fs.readFileSync("../.aptos/config.yaml", "utf8")
     );
     funder = new AptosAccount(
-      HexString.ensure(parsedYaml.profiles.wallet.private_key).toUint8Array()
+      HexString.ensure(parsedYaml.profiles.default.private_key).toUint8Array()
     );
   } catch (e) {
     console.log(e);
   }
+  // const out = await client.getAccountResource("0xf92bc956b9e25f38a2e4829b58f03ca9724233985cdda3f818bc3e62d6ed7d9c", "0x1::coin::CoinStore<0x1::aptos_coin::AptosCoin>");
+  //
+  // console.log(Number((out.data as any).coin.value) / 100000000);
+  // return;
 
   if (!funder) {
     throw new Error("Could not get funder account.");
   }
-
   for (let feed of feeds) {
     /*
       ORACLE CREATION
@@ -92,9 +98,12 @@ const feeds = [
       console.log(JSON.stringify(await feedAccount.loadData(), null, 2));
       // enable heartbeat on oracle
       await feedAccount.setConfig(funder, {
-        varianceThreshold: new Big(2),
-        minUpdateDelaySeconds: 45,
-        forceReportPeriod: 300,
+        varianceThreshold: new Big(1),
+        minUpdateDelaySeconds: 30,
+        forceReportPeriod: 900,
+        minJobResults: 1,
+        minOracleResults: 1,
+        batchSize: 1,
       });
     } catch (e) {
       console.log(e);
@@ -104,25 +113,25 @@ const feeds = [
       throw new Error("Could not get funder account.");
     }
 
-    for (let oracle of oracles) {
-      /*
-      ORACLE CREATION
-    */
-      try {
-        const oraclePermission = new Permission(client, SWITCHBOARD_ADDRESS);
-
-        // enable heartbeat on oracle
-        await oraclePermission.set(funder, {
-          authority: funder.address().hex(),
-          granter: QUEUE_ADDRESS,
-          grantee: oracle,
-          permission: SwitchboardPermission.PERMIT_ORACLE_HEARTBEAT,
-          enable: true,
-        });
-      } catch (e) {
-        console.log(e);
-      }
-    }
+    // for (let oracle of oracles) {
+    // [>
+    // ORACLE CREATION
+    // */
+    // try {
+    // const oraclePermission = new Permission(client, SWITCHBOARD_ADDRESS);
+    //
+    // // enable heartbeat on oracle
+    // await oraclePermission.set(funder, {
+    // authority: funder.address().hex(),
+    // granter: QUEUE_ADDRESS,
+    // grantee: oracle,
+    // permission: SwitchboardPermission.PERMIT_ORACLE_HEARTBEAT,
+    // enable: true,
+    // });
+    // } catch (e) {
+    // console.log(e);
+    // }
+    // }
   }
   // for (let oracle of oracles) {
   // [>

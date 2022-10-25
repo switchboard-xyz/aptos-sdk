@@ -857,7 +857,8 @@ export class AggregatorAccount {
             this.coinType ?? "0x1::aptos_coin::AptosCoin"
           )
         ),
-      ]
+      ],
+      200
     );
   }
 
@@ -867,7 +868,8 @@ export class AggregatorAccount {
       account,
       `${this.switchboardAddress}::aggregator_open_round_action::run`,
       [HexString.ensure(this.address).hex(), jitter ?? 1],
-      [this.coinType]
+      [this.coinType],
+      200
     );
   }
 

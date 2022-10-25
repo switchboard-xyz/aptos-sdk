@@ -7,6 +7,7 @@ import {
 import * as YAML from "yaml";
 import * as fs from "fs";
 import Big from "big.js";
+import { aptBinance } from "./job_data/apt";
 import {
   btcBinance,
   btcBitfinex,
@@ -35,8 +36,7 @@ import {
   usdcKraken,
 } from "./job_data/usdc";
 
-const NODE_URL =
-  "https://7023b384-9d18-4480-ba7a-bb629d724ae9:881b272ea3154b9dbb64b0bfe3878c9f@aptos-mainnet.nodereal.io/v1";
+const NODE_URL = "https://aptos-mainnet.nodereal.io/v1/baee52f0ce4f4dd0893fd6466659bd04/v1";
 
 const SWITCHBOARD_ADDRESS =
   "0x7d7e436f0b2aafde60774efb26ccc432cf881b677aca7faaf2a01879bd19fb8";
@@ -347,6 +347,40 @@ const SWITCHBOARD_CRANK_ADDRESS =
     console.log(`couldn't make usdc feed`, e);
   }
 
+  try {
+    const [aggregator, createFeedTx] = await createFeed(
+      client,
+      user,
+      {
+        name: "APT/USD",
+        authority: user.address(),
+        queueAddress: SWITCHBOARD_QUEUE_ADDRESS,
+        batchSize: 3,
+        minJobResults: 2,
+        minOracleResults: 3,
+        minUpdateDelaySeconds: 10,
+        varianceThreshold: new Big(0.5),
+        forceReportPeriod: 300,
+        coinType: "0x1::aptos_coin::AptosCoin",
+        crankAddress: SWITCHBOARD_CRANK_ADDRESS,
+        initialLoadAmount: 0,
+        seed: "0x5",
+        jobs: [
+          {
+            name: "APT/USDT binance",
+            metadata: "binance",
+            authority: user.address().hex(),
+            data: aptBinance.toString("base64"),
+            weight: 1,
+          },
+        ],
+      },
+      SWITCHBOARD_ADDRESS
+    );
+  } catch (e) {
+    console.log(`couldn't make APT feed`, e);
+  }
+
   /**
    * NEAR
    */
@@ -409,5 +443,6 @@ const SWITCHBOARD_CRANK_ADDRESS =
   console.log("ETH / USD", FEED_KEY_2);
   console.log("SOL / USD", FEED_KEY_3);
   console.log("USDC / USD", FEED_KEY_4);
+  console.log("APT / USD", FEED_KEY_5);
   // console.log("NEAR / USD", FEED_KEY_5);
 })();
