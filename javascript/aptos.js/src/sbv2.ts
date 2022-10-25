@@ -967,12 +967,12 @@ export class AggregatorAccount {
     );
   }
 
-  static async watch(
+  static watch(
     client: AptosClient,
     switchboardAddress: MaybeHexString,
     callback: EventCallback,
     pollingIntervalMs = 1000
-  ): Promise<AptosEvent> {
+  ): AptosEvent {
     const switchboardHexString = HexString.ensure(switchboardAddress);
     const event = new AptosEvent(
       client,
@@ -981,7 +981,7 @@ export class AggregatorAccount {
       "aggregator_update_events",
       pollingIntervalMs
     );
-    await event.onTrigger(callback);
+    event.onTrigger(callback);
     return event;
   }
 

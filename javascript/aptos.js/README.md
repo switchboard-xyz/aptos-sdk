@@ -145,7 +145,7 @@ const onAggregatorUpdate = (
   client: AptosClient,
   callback: EventCallback,
   pollIntervalMs: number = 1000
-): Promise<AptosEvent> => {
+): AptosEvent => {
   return AggregatorAccount.watch(
     client,
     SWITCHBOARD_ADDRESS,
@@ -155,7 +155,7 @@ const onAggregatorUpdate = (
 };
 
 // initialize event listener
-const updatePoller = await onAggregatorUpdate(client, async (e) => {
+const updatePoller = onAggregatorUpdate(client, async (e) => {
   if (aggregator.address == e.data.aggregator_address) {
     console.log(`NEW RESULT:`, e.data);
   }

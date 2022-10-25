@@ -36,7 +36,7 @@ const onAggregatorUpdate = (
   client: AptosClient,
   cb: EventCallback,
   pollIntervalMs: number = 1000
-): Promise<AptosEvent> => {
+): AptosEvent => {
   return AggregatorAccount.watch(
     client,
     SWITCHBOARD_ADDRESS,
@@ -194,7 +194,7 @@ const onAggregatorOpenRound = (
     `Created AggregatorAccount and LeaseAccount resources at account address ${aggregator.address}. Tx hash ${createFeedTx}`
   );
 
-  const updatePoller = await onAggregatorUpdate(client, async (e) => {
+  const updatePoller = onAggregatorUpdate(client, async (e) => {
     console.log(`NEW RESULT:`, e.data);
   });
 
