@@ -143,22 +143,19 @@ await aggregator.openRound(user);
 // create event listener
 const onAggregatorUpdate = (
   client: AptosClient,
-  cb: EventCallback,
+  callback: EventCallback,
   pollIntervalMs: number = 1000
-) => {
-  const event = new AptosEvent(
+): Promise<AptosEvent> => {
+  return AggregatorAccount.watch(
     client,
-    HexString.ensure(SWITCHBOARD_ADDRESS),
-    `${SWITCHBOARD_ADDRESS}::switchboard::State`,
-    "aggregator_update_events",
+    SWITCHBOARD_ADDRESS,
+    callback,
     pollIntervalMs
   );
-  event.onTrigger(cb);
-  return event;
 };
 
 // initialize event listener
-const updatePoller = onAggregatorUpdate(client, async (e) => {
+const updatePoller = await onAggregatorUpdate(client, async (e) => {
   if (aggregator.address == e.data.aggregator_address) {
     console.log(`NEW RESULT:`, e.data);
   }

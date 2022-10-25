@@ -9,18 +9,18 @@
  * Adds Job to Aggregator
  * Push Aggregator to Crank
  */
-import { Buffer } from "buffer";
-import { AptosClient, AptosAccount, FaucetClient, HexString } from "aptos";
 import {
-  LeaseAccount,
-  AptosEvent,
-  EventCallback,
-  OracleJob,
-  createFeed,
   AggregatorAccount,
+  AptosEvent,
+  createFeed,
+  EventCallback,
+  LeaseAccount,
+  OracleJob,
   SWITCHBOARD_TESTNET_ADDRESS,
 } from "@switchboard-xyz/aptos.js";
+import { AptosAccount, AptosClient, FaucetClient } from "aptos";
 import Big from "big.js";
+import { Buffer } from "buffer";
 
 const NODE_URL = "https://fullnode.testnet.aptoslabs.com/v1";
 const FAUCET_URL = "https://faucet.testnet.aptoslabs.com";
@@ -33,16 +33,13 @@ const onAggregatorUpdate = (
   client: AptosClient,
   cb: EventCallback,
   pollIntervalMs: number = 1000
-) => {
-  const event = new AptosEvent(
+): Promise<AptosEvent> => {
+  return AggregatorAccount.watch(
     client,
-    HexString.ensure(SWITCHBOARD_TESTNET_ADDRESS),
-    `${SWITCHBOARD_TESTNET_ADDRESS}::switchboard::State`,
-    "aggregator_update_events",
+    SWITCHBOARD_TESTNET_ADDRESS,
+    cb,
     pollIntervalMs
   );
-  event.onTrigger(cb);
-  return event;
 };
 
 // run it all at once
