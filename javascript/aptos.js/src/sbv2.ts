@@ -1,26 +1,21 @@
+import { OracleJob } from "@switchboard-xyz/common";
 import {
-  AptosClient,
   AptosAccount,
+  AptosClient,
+  BCS,
   HexString,
   MaybeHexString,
-  FaucetClient,
-  BCS,
   TxnBuilderTypes,
   Types,
 } from "aptos";
-import {
-  MoveStructTag,
-  EntryFunctionId,
-  MoveResource,
-} from "aptos/src/generated";
+import { EntryFunctionId, MoveStructTag } from "aptos/src/generated";
 import Big from "big.js";
-import { OracleJob } from "@switchboard-xyz/common";
 import BN from "bn.js";
 import * as SHA3 from "js-sha3";
 
 import * as types from "./generated/types/index.js";
 
-export { OracleJob, IOracleJob } from "@switchboard-xyz/common";
+export { IOracleJob, OracleJob } from "@switchboard-xyz/common";
 export const SWITCHBOARD_DEVNET_ADDRESS = `0x34e2eead0aefbc3d0af13c0522be94b002658f4bef8e0740a21086d22236ad77`;
 export const SWITCHBOARD_TESTNET_ADDRESS = `0x34e2eead0aefbc3d0af13c0522be94b002658f4bef8e0740a21086d22236ad77`;
 
@@ -912,13 +907,19 @@ export class AggregatorAccount {
     );
   }
 
-  async watch(callback: EventCallback): Promise<AptosEvent> {
+  static async watch(
+    client: AptosClient,
+    switchboardAddress: MaybeHexString,
+    callback: EventCallback,
+    pollingIntervalMs = 1000
+  ): Promise<AptosEvent> {
+    const switchboardHexString = HexString.ensure(switchboardAddress);
     const event = new AptosEvent(
-      this.client,
-      HexString.ensure(this.switchboardAddress),
-      `${this.switchboardAddress}::switchboard::State`,
+      client,
+      switchboardHexString,
+      `${switchboardHexString.hex()}::switchboard::State`,
       "aggregator_update_events",
-      1000
+      pollingIntervalMs
     );
     await event.onTrigger(callback);
     return event;
