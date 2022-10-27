@@ -15,9 +15,63 @@ import * as SHA3 from "js-sha3";
 
 import * as types from "./generated/types/index.js";
 
-export { IOracleJob, OracleJob } from "@switchboard-xyz/common";
-export const SWITCHBOARD_DEVNET_ADDRESS = `0x34e2eead0aefbc3d0af13c0522be94b002658f4bef8e0740a21086d22236ad77`;
-export const SWITCHBOARD_TESTNET_ADDRESS = `0x34e2eead0aefbc3d0af13c0522be94b002658f4bef8e0740a21086d22236ad77`;
+export { OracleJob, IOracleJob } from "@switchboard-xyz/common";
+export const SWITCHBOARD_DEVNET_ADDRESS = `0xb91d3fef0eeb4e685dc85e739c7d3e2968784945be4424e92e2f86e2418bf271`;
+export const SWITCHBOARD_TESTNET_ADDRESS = `0xb91d3fef0eeb4e685dc85e739c7d3e2968784945be4424e92e2f86e2418bf271`;
+export const SWITCHBOARD_MAINNET_ADDRESS = `0x7d7e436f0b2aafde60774efb26ccc432cf881b677aca7faaf2a01879bd19fb8`;
+
+export interface EncodeUpdateParams {
+  account: AptosAccount;
+  result: Big | number;
+  minResult: Big | number;
+  maxResult: Big | number;
+  timestamp: number;
+  aggregatorAddress: MaybeHexString;
+  oraclePublicKey: string;
+  oracleAddress?: MaybeHexString;
+}
+
+export function encodeUpdate({
+  account,
+  result,
+  minResult,
+  maxResult,
+  timestamp,
+  aggregatorAddress,
+  oraclePublicKey,
+  oracleAddress,
+}: EncodeUpdateParams) {
+  const serializeSwitchboardDecimal = (dec: AptosDecimal) => [
+    ...BCS.bcsSerializeU128(Number(dec.mantissa)).reverse(),
+    ...BCS.bcsSerializeU8(dec.scale).reverse(),
+    ...BCS.bcsSerializeBool(dec.neg).reverse(),
+  ];
+
+  const sbResult = AptosDecimal.fromBig(new Big(result));
+  const sbMinResult = AptosDecimal.fromBig(new Big(minResult));
+  const sbMaxResult = AptosDecimal.fromBig(new Big(maxResult));
+
+  const message = new Uint8Array([
+    ...serializeSwitchboardDecimal(sbResult),
+    ...serializeSwitchboardDecimal(sbMinResult),
+    ...serializeSwitchboardDecimal(sbMaxResult),
+    ...BCS.bcsSerializeUint64(timestamp).reverse(),
+    ...BCS.bcsToBytes(
+      TxnBuilderTypes.AccountAddress.fromHex(aggregatorAddress)
+    ),
+    ...BCS.bcsToBytes(
+      TxnBuilderTypes.AccountAddress.fromHex(oracleAddress ?? "0x0")
+    ),
+    ...BCS.bcsSerializeBytes(
+      new TxnBuilderTypes.Ed25519PublicKey(
+        Buffer.from(oraclePublicKey, "hex")
+      ).toBytes()
+    ),
+  ]);
+
+  const signature = account.signBuffer(message).toUint8Array();
+  return new Uint8Array([...message, ...signature]);
+}
 
 export class AptosDecimal {
   constructor(
@@ -45,6 +99,12 @@ export class AptosDecimal {
     while (value.length - e > 9) {
       value.pop();
     }
+
+    // Aptos decimals cannot have a negative scale
+    while (value.length - e < 0) {
+      value.push(0);
+    }
+
     return new AptosDecimal(value.join(""), value.length - e, val.s === -1);
   }
 
@@ -907,12 +967,12 @@ export class AggregatorAccount {
     );
   }
 
-  static async watch(
+  static watch(
     client: AptosClient,
     switchboardAddress: MaybeHexString,
     callback: EventCallback,
     pollingIntervalMs = 1000
-  ): Promise<AptosEvent> {
+  ): AptosEvent {
     const switchboardHexString = HexString.ensure(switchboardAddress);
     const event = new AptosEvent(
       client,
@@ -921,7 +981,7 @@ export class AggregatorAccount {
       "aggregator_update_events",
       pollingIntervalMs
     );
-    await event.onTrigger(callback);
+    event.onTrigger(callback);
     return event;
   }
 
