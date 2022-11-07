@@ -27,6 +27,7 @@ export interface EncodeUpdateParams {
   maxResult: Big | number;
   timestamp: number;
   aggregatorAddress: MaybeHexString;
+  jobsChecksum: string;
   oraclePublicKey: string;
   oracleAddress?: MaybeHexString;
 }
@@ -38,6 +39,7 @@ export function encodeUpdate({
   maxResult,
   timestamp,
   aggregatorAddress,
+  jobsChecksum,
   oraclePublicKey,
   oracleAddress,
 }: EncodeUpdateParams) {
@@ -59,6 +61,7 @@ export function encodeUpdate({
     ...BCS.bcsToBytes(
       TxnBuilderTypes.AccountAddress.fromHex(aggregatorAddress)
     ),
+    ...BCS.bcsSerializeBytes(Buffer.from(jobsChecksum, "hex")),
     ...BCS.bcsToBytes(
       TxnBuilderTypes.AccountAddress.fromHex(oracleAddress ?? "0x0")
     ),
@@ -444,7 +447,7 @@ export async function simulateAndRun(
   );
 
   if (simulation.success === false) {
-    console.log(simulation);
+    console.error(simulation);
     throw new Error(`TxFailure: ${simulation.vm_status}`);
   }
 
@@ -507,7 +510,7 @@ export async function sendRawAptosTx(
   const bcsTxn = AptosClient.generateBCSTransaction(signer, rawTxn);
 
   if (simulation.success === false) {
-    console.log(simulation);
+    console.error(simulation);
     throw new Error(`TxFailure: ${simulation.vm_status}`);
   }
 
@@ -902,9 +905,9 @@ export class AggregatorAccount {
           : aggregator.varianceThreshold.value,
         params.varianceThreshold ? vtScale : aggregator.varianceThreshold.dec,
         params.forceReportPeriod ?? aggregator.forceReportPeriod,
-        params.expiration ?? aggregator.expiration,
-        false, //params.disableCrank ?? aggregator.disableCrank,
-        1000, //params.historySize ?? aggregator.historySize,
+        params.expiration ?? aggregator.expiration, // @ts-ignore
+        params.disableCrank ?? false, // @ts-ignore
+        params.historySize ?? 0, // @ts-ignore
         params.readCharge ?? aggregator.readCharge,
         params.rewardEscrow
           ? HexString.ensure(params.rewardEscrow).hex()
@@ -948,8 +951,8 @@ export class AggregatorAccount {
       ),
       String(params.forceReportPeriod ?? aggregator.forceReportPeriod),
       String(params.expiration ?? aggregator.expiration),
-      false, // params.disableCrank ?? aggregator.disableCrank,
-      "1000", // params.historySize ?? (aggregator as any).historySize,
+      params.disableCrank ?? false,
+      params.historySize ?? 0,
       String(params.readCharge ?? aggregator.readCharge),
       params.rewardEscrow
         ? HexString.ensure(params.rewardEscrow).hex()
