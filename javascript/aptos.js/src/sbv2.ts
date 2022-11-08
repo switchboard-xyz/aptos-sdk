@@ -895,20 +895,21 @@ export class AggregatorAccount {
         params.metadata ?? aggregator.metadata,
         HexString.ensure(params.queueAddress ?? aggregator.queueAddr).hex(),
         HexString.ensure(params.crankAddress ?? aggregator.crankAddr).hex(),
-        params.batchSize ?? aggregator.batchSize,
-        params.minOracleResults ?? aggregator.minOracleResults,
-        params.minJobResults ?? aggregator.minJobResults,
-        params.minUpdateDelaySeconds ?? aggregator.minUpdateDelaySeconds,
-        params.startAfter ?? aggregator.startAfter,
+        params.batchSize ?? aggregator.batchSize.toNumber(),
+        params.minOracleResults ?? aggregator.minOracleResults.toNumber(),
+        params.minJobResults ?? aggregator.minJobResults.toNumber(),
+        params.minUpdateDelaySeconds ??
+          aggregator.minUpdateDelaySeconds.toNumber(),
+        params.startAfter ?? aggregator.startAfter.toNumber(),
         params.varianceThreshold
           ? Number(vtMantissa)
-          : aggregator.varianceThreshold.value,
+          : aggregator.varianceThreshold.value.toNumber(),
         params.varianceThreshold ? vtScale : aggregator.varianceThreshold.dec,
-        params.forceReportPeriod ?? aggregator.forceReportPeriod,
-        params.expiration ?? aggregator.expiration, // @ts-ignore
+        params.forceReportPeriod ?? aggregator.forceReportPeriod.toNumber(),
+        params.expiration ?? aggregator.expiration.toNumber(), // @ts-ignore
         params.disableCrank ?? false, // @ts-ignore
         params.historySize ?? 0, // @ts-ignore
-        params.readCharge ?? aggregator.readCharge,
+        params.readCharge ?? aggregator.readCharge.toNumber(),
         params.rewardEscrow
           ? HexString.ensure(params.rewardEscrow).hex()
           : HexString.ensure(aggregator.rewardEscrow).hex(),
@@ -936,24 +937,21 @@ export class AggregatorAccount {
       params.metadata ?? aggregator.metadata,
       HexString.ensure(params.queueAddress ?? aggregator.queueAddr).hex(),
       HexString.ensure(params.crankAddress ?? aggregator.crankAddr).hex(),
-      String(params.batchSize ?? aggregator.batchSize),
-      String(params.minOracleResults ?? aggregator.minOracleResults),
-      String(params.minJobResults ?? aggregator.minJobResults),
-      String(params.minUpdateDelaySeconds ?? aggregator.minUpdateDelaySeconds),
-      String(params.startAfter ?? aggregator.startAfter),
-      String(
-        params.varianceThreshold
-          ? Number(vtMantissa)
-          : aggregator.varianceThreshold.value
-      ),
-      String(
-        params.varianceThreshold ? vtScale : aggregator.varianceThreshold.dec
-      ),
-      String(params.forceReportPeriod ?? aggregator.forceReportPeriod),
-      String(params.expiration ?? aggregator.expiration),
-      params.disableCrank ?? false,
-      params.historySize ?? 0,
-      String(params.readCharge ?? aggregator.readCharge),
+      params.batchSize ?? aggregator.batchSize.toNumber(),
+      params.minOracleResults ?? aggregator.minOracleResults.toNumber(),
+      params.minJobResults ?? aggregator.minJobResults.toNumber(),
+      params.minUpdateDelaySeconds ??
+        aggregator.minUpdateDelaySeconds.toNumber(),
+      params.startAfter ?? aggregator.startAfter.toNumber(),
+      params.varianceThreshold
+        ? Number(vtMantissa)
+        : aggregator.varianceThreshold.value.toNumber(),
+      params.varianceThreshold ? vtScale : aggregator.varianceThreshold.dec,
+      params.forceReportPeriod ?? aggregator.forceReportPeriod.toNumber(),
+      params.expiration ?? aggregator.expiration.toNumber(), // @ts-ignore
+      params.disableCrank ?? false, // @ts-ignore
+      params.historySize ?? 0, // @ts-ignore
+      params.readCharge ?? aggregator.readCharge.toNumber(),
       params.rewardEscrow
         ? HexString.ensure(params.rewardEscrow).hex()
         : HexString.ensure(aggregator.rewardEscrow).hex(),
