@@ -169,6 +169,10 @@ export interface AggregatorSaveResultParams {
   maxResponse: Big;
 }
 
+export interface OracleSaveResultParams extends AggregatorSaveResultParams {
+  aggregatorAddress: MaybeHexString;
+}
+
 export interface JobInitParams {
   name: string;
   metadata: string;
@@ -203,6 +207,18 @@ export interface AggregatorSetConfigParams {
   readWhitelist?: MaybeHexString[];
   limitReadsToWhitelist?: boolean;
   coinType?: string;
+}
+
+export interface AggregatorSetFeedRelayParams {
+  aggregator_addr: MaybeHexString;
+  relay_authority: MaybeHexString; // user that has authority to oracle public keys
+  oracle_keys: string[];
+}
+
+// set_feed_relay_oracle_keys
+export interface AggregatorSetFeedRelayOracleKeys {
+  aggregator_addr: MaybeHexString;
+  oracle_keys: string[];
 }
 
 export interface CrankInitParams {
@@ -1312,6 +1328,96 @@ export class OracleAccount {
       `${this.switchboardAddress}::oracle_heartbeat_action::run`,
       [HexString.ensure(this.address).hex()],
       [this.coinType]
+    );
+  }
+
+  /**
+   * Oracle Bulk Save Results Action
+   */
+  async saveManyResult(
+    account: AptosAccount,
+    params: OracleSaveResultParams[]
+  ): Promise<string> {
+    const aggregator_addrs: MaybeHexString[] = [];
+    const oracle_addrs: MaybeHexString[] = [];
+    const oracle_idxs: number[] = [];
+    const errors: boolean[] = [];
+    const value_nums: string[] = [];
+    const value_scale_factors: number[] = [];
+    const value_negs: boolean[] = [];
+    const jobs_checksums: MaybeHexString[] = [];
+    const min_response_nums: string[] = [];
+    const min_response_scale_factors: number[] = [];
+    const min_response_negs: boolean[] = [];
+    const max_response_nums: string[] = [];
+    const max_response_scale_factors: number[] = [];
+    const max_response_negs: boolean[] = [];
+
+    for (let param of params) {
+      const {
+        mantissa: valueMantissa,
+        scale: valueScale,
+        neg: valueNeg,
+      } = AptosDecimal.fromBig(param.value);
+      const {
+        mantissa: minResponseMantissa,
+        scale: minResponseScale,
+        neg: minResponseNeg,
+      } = AptosDecimal.fromBig(param.minResponse);
+      const {
+        mantissa: maxResponseMantissa,
+        scale: maxResponseScale,
+        neg: maxResponseNeg,
+      } = AptosDecimal.fromBig(param.maxResponse);
+
+      aggregator_addrs.push(param.aggregatorAddress);
+      oracle_addrs.push(param.oracleAddress);
+      oracle_idxs.push(param.oracleIdx);
+      errors.push(param.error);
+      value_nums.push(valueMantissa);
+      value_scale_factors.push(valueScale);
+      value_negs.push(valueNeg);
+      jobs_checksums.push(param.jobsChecksum);
+      min_response_nums.push(minResponseMantissa);
+      min_response_scale_factors.push(minResponseScale);
+      min_response_negs.push(minResponseNeg);
+      max_response_nums.push(maxResponseMantissa);
+      max_response_scale_factors.push(maxResponseScale);
+      max_response_negs.push(maxResponseNeg);
+    }
+
+    return sendRawAptosTx(
+      this.client,
+      account,
+      `${this.switchboardAddress}::oracle_save_many_results::run`,
+      [
+        BCS.bcsToBytes(TxnBuilderTypes.AccountAddress.fromHex(this.address)),
+        aggregator_addrs.map((addr) =>
+          BCS.bcsToBytes(TxnBuilderTypes.AccountAddress.fromHex(addr))
+        ),
+        oracle_idxs.map((idx) => BCS.bcsSerializeUint64(idx)),
+        errors.map((err) => BCS.bcsSerializeBool(err)),
+        value_nums.map((val) => BCS.bcsSerializeU128(Number(val))),
+        value_scale_factors.map((scale) => BCS.bcsSerializeU8(scale)),
+        value_negs.map((neg) => BCS.bcsSerializeBool(neg)),
+        jobs_checksums.map((checksum) =>
+          BCS.bcsSerializeBytes(HexString.ensure(checksum).toUint8Array())
+        ),
+        min_response_nums.map((val) => BCS.bcsSerializeU128(Number(val))),
+        min_response_scale_factors.map((scale) => BCS.bcsSerializeU8(scale)),
+        min_response_negs.map((neg) => BCS.bcsSerializeBool(neg)),
+        max_response_nums.map((val) => BCS.bcsSerializeU128(Number(val))),
+        max_response_scale_factors.map((scale) => BCS.bcsSerializeU8(scale)),
+        max_response_negs.map((neg) => BCS.bcsSerializeBool(neg)),
+      ],
+      [
+        new TxnBuilderTypes.TypeTagStruct(
+          TxnBuilderTypes.StructTag.fromString(
+            this.coinType ?? "0x1::aptos_coin::AptosCoin"
+          )
+        ),
+      ],
+      200
     );
   }
 }
