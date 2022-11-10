@@ -228,6 +228,20 @@
     js-sha3 "^0.8.0"
     node-fetch "^2.1.6"
 
+"@switchboard-xyz/aptos.js@^2.5.26":
+  version "2.5.26"
+  resolved "https://registry.yarnpkg.com/@switchboard-xyz/aptos.js/-/aptos.js-2.5.26.tgz#786595eb065c448e3a904550b7c5e2992e87703f"
+  integrity sha512-/oY67sc5uvbujfQqB1Lh7nFOgZnk2kO6j0Pn8jrOYpjWhIiZG31XXauzDe+6jQPWWsbssTI0j+XcsuMYccV0ig==
+  dependencies:
+    "@switchboard-xyz/aptos.js" "^2.5.22"
+    "@switchboard-xyz/common" "^2.0.0"
+    aptos "^1.3.16"
+    big.js "^6.2.1"
+    bn.js "^5.2.1"
+    chalk "^5.0.1"
+    js-sha3 "^0.8.0"
+    node-fetch "^2.1.6"
+
 "@switchboard-xyz/common@^2.0.0":
   version "2.0.0"
   resolved "https://registry.npmjs.org/@switchboard-xyz/common/-/common-2.0.0.tgz"
