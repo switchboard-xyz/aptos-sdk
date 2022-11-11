@@ -196,7 +196,7 @@ const onAggregatorOpenRound = (
     `Created AggregatorAccount and LeaseAccount resources at account address ${aggregator.address}. Tx hash ${createFeedTx}`
   );
 
-  const updatePoller = await onAggregatorUpdate(client, async (e) => {
+  const updatePoller = onAggregatorUpdate(client, async (e) => {
     console.log(`NEW RESULT:`, e.data);
   });
 
@@ -239,17 +239,20 @@ const onAggregatorOpenRound = (
         const json = await response.json();
 
         // try save result
-        const tx = await aggregator.saveResult(user, {
-          oracleAddress: oracle.address,
-          oracleIdx: 0,
-          error: false,
-          value: new Big(json.result),
-          jobsChecksum: Buffer.from(aggregatorData.jobsChecksum).toString(
-            "hex"
-          ),
-          minResponse: new Big(json.result),
-          maxResponse: new Big(json.result),
-        });
+        const tx = await oracle.saveManyResult(user, [
+          {
+            aggregatorAddress: aggregator.address,
+            oracleAddress: oracle.address,
+            oracleIdx: 0,
+            error: false,
+            value: new Big(json.result),
+            jobsChecksum: Buffer.from(aggregatorData.jobsChecksum).toString(
+              "hex"
+            ),
+            minResponse: new Big(json.result),
+            maxResponse: new Big(json.result),
+          },
+        ]);
         console.log("save result tx:", tx);
       } catch (e) {} // errors will happen when task runner returns them
     } catch (e) {
