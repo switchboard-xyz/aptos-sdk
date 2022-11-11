@@ -1386,37 +1386,29 @@ export class OracleAccount {
       max_response_negs.push(maxResponseNeg);
     }
 
-    return sendRawAptosTx(
+    return sendAptosTx(
       this.client,
       account,
-      `${this.switchboardAddress}::oracle_save_many_results::run`,
+      `${this.switchboardAddress}::oracle_save_result_action::run`,
       [
-        BCS.bcsToBytes(TxnBuilderTypes.AccountAddress.fromHex(this.address)),
-        aggregator_addrs.map((addr) =>
-          BCS.bcsToBytes(TxnBuilderTypes.AccountAddress.fromHex(addr))
-        ),
-        oracle_idxs.map((idx) => BCS.bcsSerializeUint64(idx)),
-        errors.map((err) => BCS.bcsSerializeBool(err)),
-        value_nums.map((val) => BCS.bcsSerializeU128(Number(val))),
-        value_scale_factors.map((scale) => BCS.bcsSerializeU8(scale)),
-        value_negs.map((neg) => BCS.bcsSerializeBool(neg)),
+        this.address,
+        aggregator_addrs.map((addr) => addr),
+        oracle_idxs.map((idx) => idx),
+        errors.map((err) => err),
+        value_nums.map((val) => Number(val)),
+        value_scale_factors.map((scale) => scale),
+        value_negs.map((neg) => neg),
         jobs_checksums.map((checksum) =>
-          BCS.bcsSerializeBytes(HexString.ensure(checksum).toUint8Array())
+          HexString.ensure(checksum).toUint8Array()
         ),
-        min_response_nums.map((val) => BCS.bcsSerializeU128(Number(val))),
-        min_response_scale_factors.map((scale) => BCS.bcsSerializeU8(scale)),
-        min_response_negs.map((neg) => BCS.bcsSerializeBool(neg)),
-        max_response_nums.map((val) => BCS.bcsSerializeU128(Number(val))),
-        max_response_scale_factors.map((scale) => BCS.bcsSerializeU8(scale)),
-        max_response_negs.map((neg) => BCS.bcsSerializeBool(neg)),
+        min_response_nums.map((val) => Number(val)),
+        min_response_scale_factors.map((scale) => scale),
+        min_response_negs.map((neg) => neg),
+        max_response_nums.map((val) => Number(val)),
+        max_response_scale_factors.map((scale) => scale),
+        max_response_negs.map((neg) => neg),
       ],
-      [
-        new TxnBuilderTypes.TypeTagStruct(
-          TxnBuilderTypes.StructTag.fromString(
-            this.coinType ?? "0x1::aptos_coin::AptosCoin"
-          )
-        ),
-      ],
+      [this.coinType ?? "0x1::aptos_coin::AptosCoin"],
       200
     );
   }
