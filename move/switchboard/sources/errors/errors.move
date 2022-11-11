@@ -48,6 +48,14 @@ module switchboard::errors {
 
     public fun ResourceAlreadyExists(): u64 { error::already_exists(36) }
     public fun PermissionAlreadyExists(): u64 { error::already_exists(37) }
+
+    public fun FeedRelayNotFound(): u64 { error::not_found(38) }
+    public fun FeedRelayInsufficientUpdates(): u64 { error::invalid_argument(39) }
+    public fun FeedRelayIncorrectAggregator(): u64 { error::invalid_argument(40) }
+    public fun FeedRelayFailedConfirmation(): u64 { error::invalid_argument(41) }
+
+    public fun IncorrectAggregator(): u64 { error::invalid_argument(42) }
+
     #[test(account = @0x1)]
     public entry fun test_errors() {
         std::debug::print(&Generic());                           // 720896

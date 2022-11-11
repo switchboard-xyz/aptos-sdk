@@ -2,13 +2,19 @@ module switchboard::aggregator {
     use aptos_framework::account::{Self, SignerCapability};
     use aptos_framework::timestamp;
     use aptos_framework::block;
+    use aptos_std::ed25519;
+    use switchboard::serialization;
+    use switchboard::job::{Self, Job};
+    use switchboard::oracle_queue;
     use switchboard::math::{Self, SwitchboardDecimal};
+    use switchboard::vec_utils;
     use switchboard::errors;
+    use std::hash;
     use std::option::{Self, Option};
     use std::signer; 
     use std::vector;
     use std::coin::{Self, Coin};
-
+    
     // Aggregator Round Data
     struct LatestConfirmedRound {}
     struct CurrentRound {}
@@ -90,7 +96,7 @@ module switchboard::aggregator {
         min_oracle_results: u64,
         min_update_delay_seconds: u64,
         history_limit: u64,
-        variance_threshold: SwitchboardDecimal,
+        variance_threshold: SwitchboardDecimal, 
         force_report_period: u64,
         min_job_results: u64,
         expiration: u64,
@@ -157,6 +163,11 @@ module switchboard::aggregator {
         authority: address,
     }
 
+    struct FeedRelay has key {
+        oracle_keys: vector<vector<u8>>, 
+        authority: address,
+    }
+
     public fun addr_from_conf(conf: &AggregatorConfigParams): address {
         conf.addr
     }
@@ -185,52 +196,6 @@ module switchboard::aggregator {
         conf.min_update_delay_seconds
     }
 
-    public(friend) fun new_config(
-        addr: address,
-        name: vector<u8>,
-        metadata: vector<u8>,
-        queue_addr: address,
-        crank_addr: address,
-        batch_size: u64,
-        min_oracle_results: u64,
-        min_job_results: u64,
-        min_update_delay_seconds: u64,
-        start_after: u64,
-        variance_threshold: SwitchboardDecimal,
-        force_report_period: u64,
-        expiration: u64,
-        disable_crank: bool,
-        history_limit: u64,
-        read_charge: u64,
-        reward_escrow: address,
-        read_whitelist: vector<address>,
-        limit_reads_to_whitelist: bool,
-        authority: address,
-    ): AggregatorConfigParams {
-        AggregatorConfigParams {
-            addr,
-            name,
-            metadata,
-            queue_addr,
-            crank_addr,
-            batch_size,
-            min_oracle_results,
-            min_job_results,
-            min_update_delay_seconds,
-            start_after,
-            variance_threshold,
-            force_report_period,
-            expiration,
-            disable_crank,
-            history_limit,
-            read_charge,
-            reward_escrow,
-            read_whitelist,
-            limit_reads_to_whitelist,
-            authority,
-        }
-    }
-
     public fun exist(addr: address): bool {
         exists<Aggregator>(addr)
     }
@@ -245,9 +210,10 @@ module switchboard::aggregator {
         addr: address, 
         fee: Coin<CoinType>
     ): SwitchboardDecimal acquires AggregatorConfig, AggregatorReadConfig, AggregatorRound {
-        let _aggregator_config = borrow_global_mut<AggregatorConfig>(addr);
-        let aggregator_read_config = borrow_global_mut<AggregatorReadConfig>(addr);
+        let aggregator_config = borrow_global<AggregatorConfig>(addr);
+        let aggregator_read_config = borrow_global<AggregatorReadConfig>(addr);
 
+        assert!(oracle_queue::exist<CoinType>(aggregator_config.queue_addr), errors::QueueNotFound());
         if (aggregator_read_config.limit_reads_to_whitelist) {
             assert!(vector::contains(&aggregator_read_config.read_whitelist, &signer::address_of(account)), errors::PermissionDenied());
         } else {
@@ -268,8 +234,9 @@ module switchboard::aggregator {
         SwitchboardDecimal, /* Min Oracle Response */
         SwitchboardDecimal, /* Max Oracle Response */
     ) acquires AggregatorConfig, AggregatorReadConfig, AggregatorRound {
-        let _aggregator_config = borrow_global_mut<AggregatorConfig>(addr);
+        let aggregator_config = borrow_global_mut<AggregatorConfig>(addr);
         let aggregator_read_config = borrow_global_mut<AggregatorReadConfig>(addr);
+        assert!(oracle_queue::exist<CoinType>(aggregator_config.queue_addr), errors::QueueNotFound());
         if (aggregator_read_config.limit_reads_to_whitelist) {
             assert!(vector::contains(&aggregator_read_config.read_whitelist, &signer::address_of(account)), errors::PermissionDenied());
         } else {
@@ -294,6 +261,17 @@ module switchboard::aggregator {
         let aggregator_read_config = borrow_global_mut<AggregatorReadConfig>(addr);
         assert!(aggregator_read_config.read_charge == 0 && !aggregator_read_config.limit_reads_to_whitelist, errors::PermissionDenied());
         borrow_global<AggregatorRound<LatestConfirmedRound>>(addr).result
+    }
+
+
+    public fun latest_value_in_threshold(addr: address, max_confidence_interval: &SwitchboardDecimal): (SwitchboardDecimal, bool) acquires AggregatorRound, AggregatorReadConfig {
+        let aggregator_read_config = borrow_global_mut<AggregatorReadConfig>(addr);
+        assert!(aggregator_read_config.read_charge == 0 && !aggregator_read_config.limit_reads_to_whitelist, errors::PermissionDenied());
+        let latest_confirmed_round = borrow_global<AggregatorRound<LatestConfirmedRound>>(addr);
+        let uwm = vec_utils::unwrap(&latest_confirmed_round.medians);
+        let std_deviation = math::std_deviation(&uwm, &latest_confirmed_round.result);
+        let is_within_bound = math::gt(&std_deviation, max_confidence_interval);
+        (borrow_global<AggregatorRound<LatestConfirmedRound>>(addr).result, is_within_bound)
     }
 
 
@@ -374,10 +352,6 @@ module switchboard::aggregator {
         borrow_global<AggregatorConfig>(addr).crank_disabled
     }
 
-    public(friend) fun crank_row_count(self: address): u64 acquires AggregatorConfig {
-        borrow_global<AggregatorConfig>(self).crank_row_count
-    }
-
     public fun current_round_num_success(addr: address): u64 acquires AggregatorRound {
         let current_round = borrow_global<AggregatorRound<CurrentRound>>(addr);
         current_round.num_success
@@ -431,7 +405,7 @@ module switchboard::aggregator {
         u64,     // Min Oracle Results
     ) acquires AggregatorConfig {
         let aggregator = borrow_global<AggregatorConfig>(self);
-        (   
+        (
             aggregator.queue_addr,
             aggregator.batch_size,
             aggregator.min_oracle_results,
@@ -459,6 +433,147 @@ module switchboard::aggregator {
     public fun is_jobs_checksum_equal(addr: address, vec: &vector<u8>): bool acquires AggregatorJobData {
         let checksum = borrow_global<AggregatorJobData>(addr).jobs_checksum; // copy
         &checksum == vec
+    }
+
+    // set feed relay info for a feed
+    public entry fun set_feed_relay(
+        account: signer, 
+        aggregator_addr: address, 
+        authority: address, 
+        oracle_keys: vector<vector<u8>>
+    ) acquires Aggregator, FeedRelay {
+        assert!(has_authority(aggregator_addr, &account), errors::PermissionDenied());
+        if (!exists<FeedRelay>(aggregator_addr)) {
+            let aggregator_acct = get_aggregator_account(aggregator_addr);
+            move_to(&aggregator_acct, FeedRelay {
+                authority,
+                oracle_keys
+            });
+        } else {
+            let feed_relay = borrow_global_mut<FeedRelay>(aggregator_addr);
+            feed_relay.oracle_keys = oracle_keys;
+            feed_relay.authority = authority;
+        };
+    }
+
+    public entry fun set_feed_relay_oracle_keys(
+        account: signer, 
+        aggregator_addr: address, 
+        oracle_keys: vector<vector<u8>>
+    ) acquires Aggregator, FeedRelay {
+        let feed_relay = borrow_global_mut<FeedRelay>(aggregator_addr);
+        assert!(
+            feed_relay.authority == signer::address_of(&account) || 
+            has_authority(aggregator_addr, &account),
+            errors::PermissionDenied()
+        );
+        feed_relay.oracle_keys = oracle_keys;
+    }
+
+    /**
+     * Update Aggregator with oracle keys 
+     */
+    public entry fun relay_value(
+        addr: address, 
+        updates: &mut vector<vector<u8>>
+    ) acquires AggregatorRound, AggregatorConfig, AggregatorJobData, FeedRelay {
+        assert!(exists<FeedRelay>(addr), errors::FeedRelayNotFound());
+
+        // wipe current round oracle keys - to avoid anachronic / unwanted updates until open round
+        {
+            borrow_global_mut<AggregatorRound<CurrentRound>>(addr).oracle_keys = vector::empty();
+        };
+
+        let latest_confirmed_round = borrow_global_mut<AggregatorRound<LatestConfirmedRound>>(addr);
+        let job_checksum = borrow_global<AggregatorJobData>(addr).jobs_checksum;
+        let last_round_confirmed_timestamp = latest_confirmed_round.round_confirmed_timestamp;
+        let updates_length = vector::length(updates);
+        let (_queue_addr, _batch_size, min_oracle_results) = configs(addr);
+        let force_report_period = borrow_global<AggregatorConfig>(addr).force_report_period;
+        let feed_relay = borrow_global<FeedRelay>(addr);
+        let i = 0;
+        let min = math::zero();
+        let max = math::zero();
+        let medians = vector::empty<SwitchboardDecimal>();
+        while (i < updates_length) {
+            let sb_update = vector::borrow_mut(updates, i);
+            i = i + 1;
+            let (
+                value,             // SwitchboardDecimal
+                min_value,         // SwitchboardDecimal
+                max_value,         // SwitchboardDecimal
+                timestamp_seconds, // u64,
+                aggregator_addr,   // aggregator address
+                checksum,          // jobs checksum
+                _oracle_addr,      // oracle address
+                oracle_public_key, // oracle public_key
+                signature,         // message signature
+                message,           // message
+            ) = serialization::read_update(sb_update);
+
+            assert!(job_checksum == checksum, errors::JobsChecksumMismatch());
+
+            // validate that this oracle can make updates
+            assert!(vector::contains(&feed_relay.oracle_keys, &oracle_public_key), errors::OracleMismatch());
+            let public_key = ed25519::new_unvalidated_public_key_from_bytes(oracle_public_key);
+            serialization::validate(message, signature, public_key);
+
+            // here we at least know that oracle_addr signed this update
+            // we want to make sure that it's actually meant for this feed
+            assert!(aggregator_addr == addr, errors::FeedRelayIncorrectAggregator());
+
+            // check that the timestamp is valid - don't punish old timestamps if within threshold
+            assert!(timestamp_seconds >= timestamp::now_seconds() - force_report_period, errors::InvalidArgument());
+
+            // ignore values that fall within acceptable timestamp range, but are technically stale
+            if (timestamp_seconds < last_round_confirmed_timestamp) {
+                continue
+            };
+
+            vector::push_back(&mut medians, value);
+            if (i == 1) {
+                min = min_value;
+                max = max_value;
+            } else {
+                if (math::gt(&min, &min_value)) {
+                    min = min_value;
+                };
+                if (math::lt(&max, &max_value)) {
+                    max = max_value;
+                };
+            };
+        };
+        
+        // if we met the threshold of fresh updates to trigger a new result (but within the staleness threshold)
+        // then override latest round
+        let successes = vector::length(&medians);
+        if (successes >= min_oracle_results) {
+            let wrapped_medians = {
+                let i = 0;
+                let vec = vector::empty<Option<SwitchboardDecimal>>();
+                while (i < successes) {
+                    vector::push_back(&mut vec, option::some(*vector::borrow(&medians, i)));
+                    i = i + 1;
+                };
+                vec
+            };
+
+            // Update latest round
+            latest_confirmed_round.id = latest_confirmed_round.id + 1;
+            latest_confirmed_round.round_open_timestamp = timestamp::now_seconds();
+            latest_confirmed_round.round_open_block_height = block::get_current_block_height();
+            latest_confirmed_round.result = math::median(&mut medians);
+            latest_confirmed_round.std_deviation = math::std_deviation(&medians, &latest_confirmed_round.result);
+            latest_confirmed_round.min_response = min;
+            latest_confirmed_round.max_response = max;
+            latest_confirmed_round.oracle_keys = vector::empty();
+            latest_confirmed_round.medians = wrapped_medians;
+            latest_confirmed_round.errors_fulfilled = vector::empty();
+            latest_confirmed_round.num_success = successes;
+            latest_confirmed_round.num_error = 0;
+            latest_confirmed_round.is_closed = true;
+            latest_confirmed_round.round_confirmed_timestamp = timestamp::now_seconds();
+        }
     }
 
     #[test_only]
