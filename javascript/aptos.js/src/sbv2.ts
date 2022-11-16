@@ -898,7 +898,7 @@ export class AggregatorAccount {
     return await sendAptosTx(
       client,
       account,
-      `${switchboardAddress}::aggregator_open_round_action::run`,
+      `${switchboardAddress}::aggregator_open_round_action::run_many`,
       [
         aggregatorAddresses.map((addr) => HexString.ensure(addr).hex()),
         jitter ?? 1,
