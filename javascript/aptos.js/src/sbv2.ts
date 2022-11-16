@@ -887,6 +887,27 @@ export class AggregatorAccount {
     );
   }
 
+  static async openRoundN(
+    client: AptosClient,
+    account: AptosAccount,
+    aggregatorAddresses: MaybeHexString[],
+    switchboardAddress: MaybeHexString,
+    jitter?: number,
+    coinType?: string
+  ) {
+    return await sendAptosTx(
+      client,
+      account,
+      `${switchboardAddress}::aggregator_open_round_action::run`,
+      [
+        aggregatorAddresses.map((addr) => HexString.ensure(addr).hex()),
+        jitter ?? 1,
+      ],
+      [coinType ?? "0x1::aptos_coin::AptosCoin"],
+      200
+    );
+  }
+
   openRoundTx(): Types.TransactionPayload {
     return getAptosTx(
       `${this.switchboardAddress}::aggregator_open_round_action::run`,
