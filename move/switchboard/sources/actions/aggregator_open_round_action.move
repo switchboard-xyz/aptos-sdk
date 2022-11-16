@@ -46,7 +46,7 @@ module switchboard::aggregator_open_round_action {
         }
     }
 
-    public(friend) fun actuate<CoinType>(account: &signer, params: AggregatorOpenRoundActuateParams): u64 {
+    public(friend) fun actuate<CoinType>(_account: &signer, _params: AggregatorOpenRoundActuateParams): u64 {
       0
     }
 
@@ -61,8 +61,8 @@ module switchboard::aggregator_open_round_action {
     }    
 
     public entry fun run_n<CoinType>(
-        account: signer,
-        aggregator_addrs: vector<address>,
-        jitter: u64
+        _account: signer,
+        _aggregator_addrs: vector<address>,
+        _jitter: u64
     ) {}
 }

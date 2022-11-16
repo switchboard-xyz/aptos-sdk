@@ -4,12 +4,9 @@ module switchboard::aggregator {
     use aptos_framework::block;
     use aptos_std::ed25519;
     use switchboard::serialization;
-    use switchboard::job::{Self, Job};
-    use switchboard::oracle_queue;
     use switchboard::math::{Self, SwitchboardDecimal};
     use switchboard::vec_utils;
     use switchboard::errors;
-    use std::hash;
     use std::option::{Self, Option};
     use std::signer; 
     use std::vector;
@@ -210,10 +207,8 @@ module switchboard::aggregator {
         addr: address, 
         fee: Coin<CoinType>
     ): SwitchboardDecimal acquires AggregatorConfig, AggregatorReadConfig, AggregatorRound {
-        let aggregator_config = borrow_global<AggregatorConfig>(addr);
+        let _aggregator_config = borrow_global<AggregatorConfig>(addr);
         let aggregator_read_config = borrow_global<AggregatorReadConfig>(addr);
-
-        assert!(oracle_queue::exist<CoinType>(aggregator_config.queue_addr), errors::QueueNotFound());
         if (aggregator_read_config.limit_reads_to_whitelist) {
             assert!(vector::contains(&aggregator_read_config.read_whitelist, &signer::address_of(account)), errors::PermissionDenied());
         } else {
@@ -234,9 +229,8 @@ module switchboard::aggregator {
         SwitchboardDecimal, /* Min Oracle Response */
         SwitchboardDecimal, /* Max Oracle Response */
     ) acquires AggregatorConfig, AggregatorReadConfig, AggregatorRound {
-        let aggregator_config = borrow_global_mut<AggregatorConfig>(addr);
+        let _aggregator_config = borrow_global_mut<AggregatorConfig>(addr);
         let aggregator_read_config = borrow_global_mut<AggregatorReadConfig>(addr);
-        assert!(oracle_queue::exist<CoinType>(aggregator_config.queue_addr), errors::QueueNotFound());
         if (aggregator_read_config.limit_reads_to_whitelist) {
             assert!(vector::contains(&aggregator_read_config.read_whitelist, &signer::address_of(account)), errors::PermissionDenied());
         } else {
@@ -443,17 +437,9 @@ module switchboard::aggregator {
         oracle_keys: vector<vector<u8>>
     ) acquires Aggregator, FeedRelay {
         assert!(has_authority(aggregator_addr, &account), errors::PermissionDenied());
-        if (!exists<FeedRelay>(aggregator_addr)) {
-            let aggregator_acct = get_aggregator_account(aggregator_addr);
-            move_to(&aggregator_acct, FeedRelay {
-                authority,
-                oracle_keys
-            });
-        } else {
-            let feed_relay = borrow_global_mut<FeedRelay>(aggregator_addr);
-            feed_relay.oracle_keys = oracle_keys;
-            feed_relay.authority = authority;
-        };
+        let feed_relay = borrow_global_mut<FeedRelay>(aggregator_addr);
+        feed_relay.oracle_keys = oracle_keys;
+        feed_relay.authority = authority;
     }
 
     public entry fun set_feed_relay_oracle_keys(
