@@ -60,6 +60,12 @@ module switchboard::aggregator_open_round_action {
         actuate<CoinType>(&account, actuate_params);
     }    
 
+    public entry fun run_many<CoinType>(
+        _account: &signer,
+        _aggregator_addrs: vector<address>,
+        _jitter: u64
+    ) {}
+
     public entry fun run_n<CoinType>(
         _account: signer,
         _aggregator_addrs: vector<address>,
