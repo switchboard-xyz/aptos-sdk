@@ -103,20 +103,6 @@
     "@noble/hashes" "~1.1.1"
     "@scure/base" "~1.1.0"
 
-"@switchboard-xyz/aptos.js@^2.5.28":
-  version "2.5.29"
-  resolved "https://registry.yarnpkg.com/@switchboard-xyz/aptos.js/-/aptos.js-2.5.29.tgz#3f4456cd943beae1d226b8d1fbc1a3c208585217"
-  integrity sha512-qYYZFEortbdHYa7MVDkPhERBXcsXBD4b2hy8l0UQpUB1fCfjY/963kTmx4OzOtC1FxC9LoY7uj+EDs+L9ubOEQ==
-  dependencies:
-    "@switchboard-xyz/aptos.js" "^2.5.28"
-    "@switchboard-xyz/common" "^2.0.0"
-    aptos "^1.3.16"
-    big.js "^6.2.1"
-    bn.js "^5.2.1"
-    chalk "^5.0.1"
-    js-sha3 "^0.8.0"
-    node-fetch "^2.1.6"
-
 "@switchboard-xyz/common@^2.0.0":
   version "2.0.0"
   resolved "https://registry.npmjs.org/@switchboard-xyz/common/-/common-2.0.0.tgz"
