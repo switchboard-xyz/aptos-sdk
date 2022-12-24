@@ -1201,10 +1201,7 @@ export class CrankAccount {
     );
   }
 
-  pushTx(
-    account: MaybeHexString,
-    params: CrankPushParams
-  ): Types.TransactionPayload {
+  pushTx(params: CrankPushParams): Types.TransactionPayload {
     return getAptosTx(
       `${this.switchboardAddress}::crank_push_action::run`,
       [
