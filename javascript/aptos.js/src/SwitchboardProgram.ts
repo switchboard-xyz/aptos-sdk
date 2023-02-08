@@ -12,6 +12,13 @@ import { MAINNET_PROGRAM_ID, TESTNET_PROGRAM_ID } from "./generated";
 
 export type AptosNetwork = "localnet" | "devnet" | "testnet" | "mainnet";
 
+export class AptosSimulationError extends Error {
+  constructor(message: string) {
+    super(message);
+    Object.setPrototypeOf(this, AptosSimulationError.prototype);
+  }
+}
+
 export function getProgramId(
   networkId: AptosNetwork,
   programId?: MaybeHexString
@@ -161,8 +168,7 @@ export class SwitchboardProgram {
     );
 
     if (simulation.success === false) {
-      console.error(simulation);
-      throw new Error(`TxFailure: ${simulation.vm_status}`);
+      throw new AptosSimulationError(simulation.vm_status);
     }
 
     const signedTxn = await this.client.signTransaction(signer, txnRequest);
@@ -207,8 +213,7 @@ export class SwitchboardProgram {
     );
 
     if (simulation.success === false) {
-      console.error(simulation);
-      throw new Error(`TxFailure: ${simulation.vm_status}`);
+      throw new AptosSimulationError(simulation.vm_status);
     }
 
     const signedTxn = await this.client.signTransaction(user, txnRequest);
@@ -273,8 +278,7 @@ export class SwitchboardProgram {
     const bcsTxn = AptosClient.generateBCSTransaction(signer, rawTxn);
 
     if (simulation.success === false) {
-      console.error(simulation);
-      throw new Error(`TxFailure: ${simulation.vm_status}`);
+      throw new AptosSimulationError(simulation.vm_status);
     }
 
     const transactionRes = await this.client.submitSignedBCSTransaction(bcsTxn);
