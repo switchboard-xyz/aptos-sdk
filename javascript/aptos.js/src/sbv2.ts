@@ -14,6 +14,7 @@ import BN from "bn.js";
 import * as SHA3 from "js-sha3";
 
 import * as types from "./generated/types/index.js";
+import { AptosSimulationError } from "./SwitchboardProgram.js";
 
 export { OracleJob, IOracleJob } from "@switchboard-xyz/common";
 export const SWITCHBOARD_DEVNET_ADDRESS = `0xb91d3fef0eeb4e685dc85e739c7d3e2968784945be4424e92e2f86e2418bf271`;
@@ -400,8 +401,7 @@ export async function sendAptosTx(
   });
 
   if (simulation.success === false) {
-    console.error(simulation);
-    throw new Error(`TxFailure: ${simulation.vm_status}`);
+    throw new AptosSimulationError(simulation.vm_status);
   }
 
   const signedTxn = await client.signTransaction(signer, txnRequest);
@@ -463,8 +463,7 @@ export async function simulateAndRun(
   );
 
   if (simulation.success === false) {
-    console.error(simulation);
-    throw new Error(`TxFailure: ${simulation.vm_status}`);
+    throw new AptosSimulationError(simulation.vm_status);
   }
 
   const signedTxn = await client.signTransaction(user, txnRequest);
@@ -526,8 +525,7 @@ export async function sendRawAptosTx(
   const bcsTxn = AptosClient.generateBCSTransaction(signer, rawTxn);
 
   if (simulation.success === false) {
-    console.error(simulation);
-    throw new Error(`TxFailure: ${simulation.vm_status}`);
+    throw new AptosSimulationError(simulation.vm_status);
   }
 
   const transactionRes = await client.submitSignedBCSTransaction(bcsTxn);
@@ -1027,7 +1025,7 @@ export class AggregatorAccount {
     value: Big,
     aggregator: types.Aggregator
   ): Promise<boolean> {
-    if ((aggregator.latestConfirmedRound?.numSuccess ?? 0) === 0) {
+    if ((aggregator.latestConfirmedRound?.numSuccess.toNumber() ?? 0) === 0) {
       return true;
     }
     const timestamp = new BN(Math.round(Date.now() / 1000), 10);
