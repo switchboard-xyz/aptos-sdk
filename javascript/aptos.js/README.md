@@ -1,51 +1,55 @@
-# Aptos Switchboard SDK
+<div align="center">
+  <a href="#">
+    <img height="170" src="https://github.com/switchboard-xyz/sbv2-core/raw/main/website/static/img/icons/switchboard/avatar.svg" />
+  </a>
 
-[![GitHub](https://img.shields.io/badge/--181717?logo=github&logoColor=ffffff)](https://github.com/switchboard-xyz/aptos-sdk)&nbsp;
-[![twitter](https://badgen.net/twitter/follow/switchboardxyz)](https://twitter.com/switchboardxyz)&nbsp;&nbsp;
+  <h1>@switchboard-xyz/aptos.js</h1>
 
-A library of utility functions to interact with Switchboard Modules on Aptos
+  <p>A Typescript client to interact with Switchboard V2 on Aptos.</p>
 
-**Official Documentation**:
-[https://docs.switchboard.xyz/aptos](https://docs.switchboard.xyz/aptos)
+  <p>
+	  <a href="https://www.npmjs.com/package/@switchboard-xyz/aptos.js">
+      <img alt="NPM Badge" src="https://img.shields.io/github/package-json/v/switchboard-xyz/sbv2-aptos?color=red&filename=javascript%2Faptos.js%2Fpackage.json&label=%40switchboard-xyz%2Faptos.js&logo=npm">
+    </a>
+  </p>
 
-### NOTE (Oct 11 / 2022)
+  <p>
+    <a href="https://discord.gg/switchboardxyz">
+      <img alt="Discord" src="https://img.shields.io/discord/841525135311634443?color=blueviolet&logo=discord&logoColor=white">
+    </a>
+    <a href="https://twitter.com/switchboardxyz">
+      <img alt="Twitter" src="https://img.shields.io/twitter/follow/switchboardxyz?label=Follow+Switchboard" />
+    </a>
+  </p>
+
+  <h4>
+    <strong>Npm: </strong><a href="https://www.npmjs.com/package/@switchboard-xyz/aptos.js">npmjs.com/package/@switchboard-xyz/aptos.js</a>
+  </h4>
+  <h4>
+    <strong>Typedocs: </strong><a href="https://docs.switchboard.xyz/api/@switchboard-xyz/aptos.js">docs.switchboard.xyz/api/@switchboard-xyz/aptos.js</a>
+  </h4>
+  <h4>
+    <strong>Sbv2 Aptos SDK: </strong><a href="https://github.com/switchboard-xyz/sbv2-aptos">github.com/switchboard-xyz/sbv2-aptos</a>
+  </h4>
+</div>
+
+## Install
+
+```bash
+npm i --save @switchboard-xyz/aptos.js
+```
+
+## NOTE
+
+### (Oct 11 / 2022)
 
 Make sure that subdir is pointing to the correct subdirectory,
 `subdir = "move/switchboard/"`. You'll also have to run an `aptos move clean` to
 clear the cache from `~/.move` and pull the latest version if you're on `main`.
 
-## Live Deployment:
+## Usage
 
-| Cluster  | Address                                                            |
-| -------- | ------------------------------------------------------------------ |
-| Mainnet  | 0x7d7e436f0b2aafde60774efb26ccc432cf881b677aca7faaf2a01879bd19fb8  |
-| Testnet  | 0xb91d3fef0eeb4e685dc85e739c7d3e2968784945be4424e92e2f86e2418bf271 |
-| Devnet\* | 0xb91d3fef0eeb4e685dc85e739c7d3e2968784945be4424e92e2f86e2418bf271 |
-
-\*Devnet is currently experiencing faucet issues and may be unrelaible until
-resolved.
-
-For the simplest way to create and manage Switchboard feeds on Aptos, check out
-our [publisher](https://app.switchboard.xyz).
-
-#### Feed Addresses (same on devnet and testnet)
-
-```
-btc feed 0xc07d068fe17f67a85147702359b5819d226591307a5bb54139794f8931327e88
-eth feed 0xcaccdee7954db165b1b0923a619b58808937dbf4afb19091fdbb7f0584f41da1
-sol feed 0xe2677e5bd7473c13b7a8849d463b0b920b9bb02e98bbb6e638992dcf02394688
-usdc feed 0x1f7b23e6d81fa2102b2e994d2e54d26d116426c7dda5417925265f7b46f50c73
-near feed 0x33b7483ec735e6b82a2410e80db68980faf5c462873a75539a57cc26e4347ce8
-apt feed 0x7ac62190ba57b945975146f3d8725430ad3821391070b965b38206fe4cec9fd5
-```
-
-## Install
-
-```
-npm i --save @switchboard-xyz/aptos.js
-```
-
-## Creating Feeds
+### Creating Feeds
 
 ```ts
 import { Buffer } from "buffer";
@@ -174,58 +178,4 @@ const aggregatorAccount: AggregatorAccount = new AggregatorAccount(
 );
 
 console.log(await aggregatorAccount.loadData());
-```
-
-# Aptos
-
-### Move.toml
-
-```toml
-[addresses]
-switchboard = "0x34e2eead0aefbc3d0af13c0522be94b002658f4bef8e0740a21086d22236ad77"
-
-[dependencies]
-MoveStdlib = { git = "https://github.com/aptos-labs/aptos-core.git", subdir = "aptos-move/framework/move-stdlib/", rev = "devnet" }
-AptosFramework = { git = "https://github.com/aptos-labs/aptos-core.git", subdir = "aptos-move/framework/aptos-framework/", rev = "devnet" }
-AptosStdlib = { git = "https://github.com/aptos-labs/aptos-core.git", subdir = "aptos-move/framework/aptos-stdlib/", rev = "devnet" }
-Switchboard = { git = "https://github.com/switchboard-xyz/sbv2-aptos.git", subdir = "move/switchboard/", rev = "main" }
-```
-
-### Reading Feeds
-
-```move
-use switchboard::aggregator;
-use switchboard::math;
-
-// store latest value
-struct AggregatorInfo has copy, drop, store, key {
-    aggregator_addr: address,
-    latest_result: u128,
-    latest_result_scaling_factor: u8,
-    latest_result_neg: bool,
-}
-
-// get latest value
-public fun save_latest_value(aggregator_addr: address) {
-    // get latest value
-    let latest_value = aggregator::latest_value(aggregator_addr);
-    let (value, scaling_factor, neg) = math::unpack(latest_value);
-    move_to(account, AggregatorInfo {
-        aggregator_addr: aggregator_addr,
-        latest_result: value,
-        latest_result_scaling_factor: scaling_factor,
-        latest_result_neg: neg,
-    });
-}
-
-// some testing that uses aggregator test utility functions
-#[test(account = @0x1)]
-public entry fun test_aggregator(account: &signer) {
-
-    // creates test aggregator with data
-    aggregator::new_test(account, 100, 0, false);
-
-    // print out value
-    std::debug::print(&aggregator::latest_value(signer::address_of(account)));
-}
 ```

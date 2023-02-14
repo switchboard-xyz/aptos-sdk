@@ -14,7 +14,7 @@ export type AptosNetwork = "localnet" | "devnet" | "testnet" | "mainnet";
 
 export class AptosSimulationError extends Error {
   constructor(message: string) {
-    super(message);
+    super(`SimulationError: ${message}`);
     Object.setPrototypeOf(this, AptosSimulationError.prototype);
   }
 }

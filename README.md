@@ -1,9 +1,68 @@
-# Aptos Switchboard SDK
+<div align="center">
+  <a href="#">
+    <img height="170" src="https://github.com/switchboard-xyz/sbv2-core/raw/main/website/static/img/icons/switchboard/avatar.svg" />
+  </a>
 
-[![GitHub](https://img.shields.io/badge/--181717?logo=github&logoColor=ffffff)](https://github.com/switchboard-xyz/aptos-sdk)&nbsp;
-[![twitter](https://badgen.net/twitter/follow/switchboardxyz)](https://twitter.com/switchboardxyz)&nbsp;&nbsp;
+  <h1>Switchboard V2</h1>
 
-A library of utility functions to interact with Switchboard Modules on Aptos
+  <p>A collection of libraries and examples for interacting with Switchboard V2 on Aptos.</p>
+
+  <p>
+	  <a href="https://www.npmjs.com/package/@switchboard-xyz/aptos.js">
+      <img alt="NPM Badge" src="https://img.shields.io/github/package-json/v/switchboard-xyz/sbv2-aptos?color=red&filename=javascript%2Faptos.js%2Fpackage.json&label=%40switchboard-xyz%2Faptos.js&logo=npm">
+    </a>
+  </p>
+
+  <p>
+    <a href="https://discord.gg/switchboardxyz">
+      <img alt="Discord" src="https://img.shields.io/discord/841525135311634443?color=blueviolet&logo=discord&logoColor=white">
+    </a>
+    <a href="https://twitter.com/switchboardxyz">
+      <img alt="Twitter" src="https://img.shields.io/twitter/follow/switchboardxyz?label=Follow+Switchboard" />
+    </a>
+  </p>
+
+  <h4>
+    <strong>Documentation: </strong><a href="https://docs.switchboard.xyz">docs.switchboard.xyz</a>
+  </h4>
+</div>
+
+## Getting Started
+
+To get started, clone the
+[sbv2-aptos](https://github.com/switchboard-xyz/sbv2-aptos) repository.
+
+```bash
+git clone https://github.com/switchboard-xyz/sbv2-aptos
+```
+
+## Program IDs
+
+| **Network** | **Program ID**                                                       |
+| ----------- | -------------------------------------------------------------------- |
+| Mainnet     | `0x7d7e436f0b2aafde60774efb26ccc432cf881b677aca7faaf2a01879bd19fb8`  |
+| Testnet     | `0xb91d3fef0eeb4e685dc85e739c7d3e2968784945be4424e92e2f86e2418bf271` |
+
+## Libraries
+
+| **Lang** | **Name**                                                                                                                                                                                            | **Description**                                            |
+| -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| Move     | [switchboard](/move/switchboard/)                                                                                                                                                                   | Move module to deserialize and read Switchboard data feeds |
+| JS       | [@switchboard-xyz/aptos.js](/javascript/aptos.js/) <br />[[npmjs](https://www.npmjs.com/package/@switchboard-xyz/aptos.js), [Typedocs](https://docs.switchboard.xyz/api/@switchboard-xyz/aptos.js)] | Typescript package to interact with Switchboard V2         |
+
+## Example Programs
+
+- [feed-parser](/programs/feed-parser/): Read a Switchboard feed on Aptos
+
+## Troubleshooting
+
+1. File a
+   [GitHub Issue](https://github.com/switchboard-xyz/sbv2-aptos/issues/new)
+2. Ask a question in
+   [Discord #dev-support](https://discord.com/channels/841525135311634443/984343400377647144)
+
+<!--
+
 
 ## Live Deployment:
 
@@ -209,4 +268,4 @@ public entry fun test_aggregator(aptos_framework: &signer, account: &signer) {
     // print out value
     std::debug::print(&aggregator::latest_value(signer::address_of(account)));
 }
-```
+``` -->
