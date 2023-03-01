@@ -14,6 +14,7 @@ import BN from "bn.js";
 import * as SHA3 from "js-sha3";
 
 import * as types from "./generated/types/index.js";
+import { handleError } from "./SwitchboardError.js";
 import { AptosSimulationError } from "./SwitchboardProgram.js";
 
 export { OracleJob, IOracleJob } from "@switchboard-xyz/common";
@@ -382,32 +383,41 @@ export async function sendAptosTx(
 
   let txnRequest = await client.generateTransaction(signer.address(), payload);
 
-  const simulation = (
-    await client.simulateTransaction(signer, txnRequest, {
-      estimateGasUnitPrice: true,
-      estimateMaxGasAmount: true, // @ts-ignore
-      estimatePrioritizedGasUnitPrice: true,
-    })
-  )[0];
+  try {
+    const simulation = (
+      await client.simulateTransaction(signer, txnRequest, {
+        estimateGasUnitPrice: true,
+        estimateMaxGasAmount: true, // @ts-ignore
+        estimatePrioritizedGasUnitPrice: true,
+      })
+    )[0];
 
-  if (Number(simulation.gas_unit_price) > maxGasPrice) {
-    throw Error(
-      `Estimated gas price from simulation ${simulation.gas_unit_price} above maximum (${maxGasPrice}).`
-    );
+    if (Number(simulation.gas_unit_price) > maxGasPrice) {
+      throw Error(
+        `Estimated gas price from simulation ${simulation.gas_unit_price} above maximum (${maxGasPrice}).`
+      );
+    }
+
+    txnRequest = await client.generateTransaction(signer.address(), payload, {
+      gas_unit_price: simulation.gas_unit_price,
+    });
+
+    if (simulation.success === false) {
+      throw new AptosSimulationError(simulation.vm_status);
+    }
+
+    const signedTxn = await client.signTransaction(signer, txnRequest);
+    const transactionRes = await client.submitTransaction(signedTxn);
+    await client.waitForTransaction(transactionRes.hash);
+    return transactionRes.hash;
+  } catch (error) {
+    const switchboardError = handleError(error);
+    if (switchboardError) {
+      throw switchboardError;
+    }
+
+    throw error;
   }
-
-  txnRequest = await client.generateTransaction(signer.address(), payload, {
-    gas_unit_price: simulation.gas_unit_price,
-  });
-
-  if (simulation.success === false) {
-    throw new AptosSimulationError(simulation.vm_status);
-  }
-
-  const signedTxn = await client.signTransaction(signer, txnRequest);
-  const transactionRes = await client.submitTransaction(signedTxn);
-  await client.waitForTransaction(transactionRes.hash);
-  return transactionRes.hash;
 }
 
 /**
