@@ -45,23 +45,25 @@ export const ErrorCodeMap: Map<string, SwitchboardErrorEnum> = new Map([
   ["0x80025", SwitchboardErrorEnum["PermissionAlreadyExists"]],
 ]);
 
-const MoveAbortRegex = new RegExp("Move abort in (w+)::(w+): (0x[a-fA-Fd]+)");
+const MoveAbortRegex = new RegExp(
+  /Move abort in (?<programId>[^:]+)::(?<action>[^:]+): (?<errorCode>0x[a-fA-F0-9]+)/gm
+);
 
-export function handleError(error: unknown): SwitchboardErrorType | void {
+export function handleError(error: unknown): SwitchboardErrorType | undefined {
   const errorString = `${error}`;
 
-  const match = errorString.search(MoveAbortRegex);
-  if (match) {
-    const programId: string = match[1];
-    const action: string = match[2];
-    const errorCode: string = match[3];
+  const match = Array.from(errorString.matchAll(MoveAbortRegex));
+  if (match && match.length) {
+    const { programId, action, errorCode } = match[0].groups;
 
     if (!ErrorCodeMap.has(errorCode)) {
-      return;
+      return undefined;
     }
 
     const error = ErrorCodeMap.get(errorCode)!;
 
     return SwitchboardError.fromErrorType(error, [errorString]);
   }
+
+  return undefined;
 }

@@ -13,9 +13,9 @@ import Big from "big.js";
 import BN from "bn.js";
 import * as SHA3 from "js-sha3";
 
-import * as types from "./generated/types/index.js";
-import { handleError } from "./SwitchboardError.js";
-import { AptosSimulationError } from "./SwitchboardProgram.js";
+import * as types from "./generated/types";
+import { handleError } from "./SwitchboardError";
+import { AptosSimulationError } from "./SwitchboardProgram";
 
 export { OracleJob, IOracleJob } from "@switchboard-xyz/common";
 export const SWITCHBOARD_DEVNET_ADDRESS = `0xb91d3fef0eeb4e685dc85e739c7d3e2968784945be4424e92e2f86e2418bf271`;
