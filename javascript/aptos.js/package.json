@@ -1,7 +1,7 @@
 {
   "name": "@switchboard-xyz/aptos.js",
   "description": "API wrapper for intergating with the Switchboardv2 program on Aptos",
-  "version": "2.6.4",
+  "version": "2.6.5",
   "license": "MIT",
   "bin": {
     "sbv2-aptos": "./sbv2-aptos.ts"
@@ -33,7 +33,7 @@
     "test:old": "ts-mocha -p ./tsconfig.cjs.json --require ts-node/register -t 1000000 ./tests/*.tests.ts"
   },
   "dependencies": {
-    "@switchboard-xyz/common": "^2.1.29",
+    "@switchboard-xyz/common": "^2.1.33",
     "aptos": "^1.6.0",
     "big.js": "^6.2.1",
     "bn.js": "^5.2.1",
