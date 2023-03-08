@@ -3,9 +3,6 @@
   "description": "API wrapper for intergating with the Switchboardv2 program on Aptos",
   "version": "2.6.6",
   "license": "MIT",
-  "bin": {
-    "sbv2-aptos": "./sbv2-aptos.ts"
-  },
   "files": [
     "lib",
     "src",
@@ -19,17 +16,19 @@
     },
     "./package.json": "./package.json"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/switchboard-xyz/sbv2-aptos.git",
+    "directory": "packages/aptos.js"
+  },
   "main": "lib/cjs/index.js",
   "module": "lib/esm/index.js",
   "types": "lib/cjs/index.d.ts",
   "scripts": {
-    "build:cjs": "tsc -p tsconfig.cjs.json",
-    "build:esm": "tsc",
-    "build": "npm run build:cjs && npm run build:esm",
+    "build": "shx rm -rf lib || true; tsc -p tsconfig.cjs.json && tsc",
     "watch": "tsc -p tsconfig.cjs.json --watch",
-    "prepack": "npm run build && npm run lint",
     "test": "node ./node_modules/mocha/bin/mocha --loader=ts-node/esm --extension ts --timeout 10000 ./tests/*.tests.ts",
-    "test:old": "ts-mocha -p ./tsconfig.cjs.json --require ts-node/register -t 1000000 ./tests/*.tests.ts",
+    "prepack": "npm run lint && npm run build",
     "lint": "gts lint ./src ./tests",
     "fix": "gts fix ./src ./tests",
     "clean": "gts clean"
@@ -44,7 +43,7 @@
     "node-fetch": "^2.1.6"
   },
   "devDependencies": {
-    "@switchboard-xyz/eslint-config": "^0.1.7",
+    "@switchboard-xyz/eslint-config": "latest",
     "@types/big.js": "^6.1.6",
     "@types/bn.js": "^5.1.0",
     "@types/mocha": "^10.0.1",
@@ -62,6 +61,6 @@
     "yargs": "^17.5.1"
   },
   "engines": {
-    "node": ">=10.4.0"
+    "node": ">=12.0.0"
   }
 }
