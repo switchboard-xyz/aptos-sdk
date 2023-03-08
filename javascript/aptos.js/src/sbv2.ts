@@ -1,3 +1,7 @@
+import * as types from "./generated/types";
+import { handleError } from "./SwitchboardError";
+import { AptosSimulationError } from "./SwitchboardProgram";
+
 import { OracleJob } from "@switchboard-xyz/common";
 import {
   AptosAccount,
@@ -13,11 +17,7 @@ import Big from "big.js";
 import BN from "bn.js";
 import * as SHA3 from "js-sha3";
 
-import * as types from "./generated/types";
-import { handleError } from "./SwitchboardError";
-import { AptosSimulationError } from "./SwitchboardProgram";
-
-export { OracleJob, IOracleJob } from "@switchboard-xyz/common";
+export { IOracleJob, OracleJob } from "@switchboard-xyz/common";
 export const SWITCHBOARD_DEVNET_ADDRESS = `0xb91d3fef0eeb4e685dc85e739c7d3e2968784945be4424e92e2f86e2418bf271`;
 export const SWITCHBOARD_TESTNET_ADDRESS = `0xb91d3fef0eeb4e685dc85e739c7d3e2968784945be4424e92e2f86e2418bf271`;
 export const SWITCHBOARD_MAINNET_ADDRESS = `0x7d7e436f0b2aafde60774efb26ccc432cf881b677aca7faaf2a01879bd19fb8`;
@@ -100,7 +100,7 @@ export class AptosDecimal {
 
   static fromBig(val: Big): AptosDecimal {
     const value = val.c.slice();
-    let e = val.e + 1;
+    const e = val.e + 1;
     while (value.length - e > 9) {
       value.pop();
     }
@@ -592,7 +592,7 @@ export class AptosEvent {
           // increment sequence number
           lastSequenceNumber = events.at(-1)!.sequence_number;
         }
-        for (let event of events) {
+        for (const event of events) {
           callback(event).catch((error) => {
             if (errorHandler) {
               errorHandler(error);
@@ -709,7 +709,7 @@ export class AggregatorAccount {
         )
     );
     const promises: Array<Promise<OracleJob>> = [];
-    for (let job of jobs) {
+    for (const job of jobs) {
       promises.push(job.loadJob());
     }
     return await Promise.all(promises);
@@ -1379,7 +1379,7 @@ export class OracleAccount {
     const max_response_scale_factors: number[] = [];
     const max_response_negs: boolean[] = [];
 
-    for (let param of params) {
+    for (const param of params) {
       const {
         mantissa: valueMantissa,
         scale: valueScale,
@@ -1934,7 +1934,7 @@ interface CreateFeedParams extends AggregatorInitParams {
   initialLoadAmount: number;
 }
 
-interface CreateOracleParams extends OracleInitParams {}
+type CreateOracleParams = OracleInitParams;
 
 export async function createFeedTx(
   client: AptosClient,
@@ -1961,7 +1961,7 @@ export async function createFeedTx(
   );
 
   // enforce size 8 jobs array
-  let jobs =
+  const jobs =
     params.jobs.length < 8
       ? [
           ...params.jobs,

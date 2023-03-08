@@ -1,4 +1,5 @@
 import "mocha";
+
 import * as sbv2 from "../src";
 
 describe("Decimal tests", () => {

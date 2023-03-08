@@ -1,7 +1,7 @@
 import {
   SwitchboardError,
-  SwitchboardErrorType,
   SwitchboardErrorEnum,
+  SwitchboardErrorType,
 } from "./generated";
 
 export const ErrorCodeMap: Map<string, SwitchboardErrorEnum> = new Map([

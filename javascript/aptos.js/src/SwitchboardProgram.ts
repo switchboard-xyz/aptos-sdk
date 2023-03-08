@@ -1,3 +1,5 @@
+import { MAINNET_PROGRAM_ID, TESTNET_PROGRAM_ID } from "./generated";
+
 import {
   AptosAccount,
   AptosClient,
@@ -8,7 +10,6 @@ import {
   Types,
 } from "aptos";
 import { EntryFunctionId, MoveStructTag } from "aptos/src/generated";
-import { MAINNET_PROGRAM_ID, TESTNET_PROGRAM_ID } from "./generated";
 
 export type AptosNetwork = "localnet" | "devnet" | "testnet" | "mainnet";
 

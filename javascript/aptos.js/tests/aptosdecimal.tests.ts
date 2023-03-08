@@ -1,6 +1,8 @@
-import Big from "big.js";
 import "mocha";
+
 import { AptosDecimal } from "../src";
+
+import Big from "big.js";
 
 describe("Decimal tests", () => {
   it("Converts a SwitchboardDecimal", async () => {

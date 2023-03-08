@@ -1,7 +1,8 @@
 import "mocha";
-import assert from "assert";
 
 import * as sbv2 from "../src";
+
+import assert from "assert";
 
 describe("Errors tests", () => {
   it("Converts a move abort error", async () => {
