@@ -1,7 +1,7 @@
 {
   "name": "@switchboard-xyz/aptos.js",
   "description": "API wrapper for intergating with the Switchboardv2 program on Aptos",
-  "version": "2.6.5",
+  "version": "2.6.6",
   "license": "MIT",
   "bin": {
     "sbv2-aptos": "./sbv2-aptos.ts"
@@ -27,7 +27,6 @@
     "build:esm": "tsc",
     "build": "npm run build:cjs && npm run build:esm",
     "watch": "tsc -p tsconfig.cjs.json --watch",
-    "prepublishOnly": "shx rm -rf lib && npm run build",
     "prepack": "npm run build && npm run lint",
     "test": "node ./node_modules/mocha/bin/mocha --loader=ts-node/esm --extension ts --timeout 10000 ./tests/*.tests.ts",
     "test:old": "ts-mocha -p ./tsconfig.cjs.json --require ts-node/register -t 1000000 ./tests/*.tests.ts",
