@@ -1,7 +1,7 @@
 {
   "name": "@switchboard-xyz/aptos.js",
   "description": "API wrapper for intergating with the Switchboardv2 program on Aptos",
-  "version": "2.6.6",
+  "version": "2.6.7",
   "license": "MIT",
   "files": [
     "lib",
@@ -34,8 +34,8 @@
     "clean": "gts clean"
   },
   "dependencies": {
-    "@switchboard-xyz/common": "^2.1.33",
-    "aptos": "^1.6.0",
+    "@switchboard-xyz/common": "^2.1.35",
+    "aptos": "^1.8.3",
     "big.js": "^6.2.1",
     "bn.js": "^5.2.1",
     "chalk": "^5.0.1",
