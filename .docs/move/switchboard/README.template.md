@@ -1,10 +1,12 @@
 <div align="center">
 
-![Switchboard Logo](https://github.com/switchboard-xyz/sbv2-core/raw/main/website/static/img/icons/switchboard/avatar.png)
+<!-- commonheader -->
 
-# Aptos feed-parser
+<!-- commonheaderstop -->
 
-> An example contract reading the price of a Switchboard data feed on-chain.
+# switchboard
+
+> A Move module to interact with Switchboard on Aptos.
 
 </div>
 
@@ -31,4 +33,6 @@ Switchboard = { git = "https://github.com/switchboard-xyz/sbv2-aptos.git", subdi
 
 ## Usage
 
-N/A
+<!-- usage -->
+
+<!-- usagestop -->
