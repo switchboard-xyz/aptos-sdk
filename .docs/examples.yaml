@@ -1,0 +1,5 @@
+examples:
+  - name: "feed-parser"
+    description: Read a Switchboard feed on Aptos"
+    language: "move"
+    path: "programs/feed-parser"

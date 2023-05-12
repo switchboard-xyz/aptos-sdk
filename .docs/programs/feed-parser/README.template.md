@@ -1,6 +1,8 @@
 <div align="center">
 
-![Switchboard Logo](https://github.com/switchboard-xyz/sbv2-core/raw/main/website/static/img/icons/switchboard/avatar.png)
+<!-- commonheader -->
+
+<!-- commonheaderstop -->
 
 # Aptos feed-parser
 
@@ -31,4 +33,6 @@ Switchboard = { git = "https://github.com/switchboard-xyz/sbv2-aptos.git", subdi
 
 ## Usage
 
-N/A
+<!-- usage -->
+
+<!-- usagestop -->
