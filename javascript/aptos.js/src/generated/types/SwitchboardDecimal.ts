@@ -1,6 +1,8 @@
-import BN from "bn.js"; // eslint-disable-line @typescript-eslint/no-unused-vars
-import * as types from "../types/index.js"; // eslint-disable-line @typescript-eslint/no-unused-vars
+import * as types from "./"; // eslint-disable-line @typescript-eslint/no-unused-vars
+
 import { HexString } from "aptos"; // eslint-disable-line @typescript-eslint/no-unused-vars
+import Big from "big.js";
+import BN from "bn.js"; // eslint-disable-line @typescript-eslint/no-unused-vars
 
 export interface ISwitchboardDecimal {
   value: BN;
@@ -62,4 +64,38 @@ export class SwitchboardDecimal implements ISwitchboardDecimal {
       neg: obj.neg,
     });
   }
+
+  toBig(): Big {
+    const oldDp = Big.DP;
+    Big.DP = 18;
+    let result = new Big(this.value.toString());
+    if (this.neg === true) {
+      result = result.mul(-1);
+    }
+    const TEN = new Big(10);
+    result = safeDiv(result, TEN.pow(this.dec));
+    Big.DP = oldDp;
+    return result;
+  }
+
+  static fromBig(val: Big): SwitchboardDecimal {
+    const value = val.c.slice();
+    const e = val.e + 1;
+    while (value.length - e > 9) {
+      value.pop();
+    }
+    return new SwitchboardDecimal({
+      value: new BN(value.join("")),
+      dec: value.length - e,
+      neg: val.s === -1,
+    });
+  }
+}
+
+function safeDiv(number_: Big, denominator: Big, decimals = 20): Big {
+  const oldDp = Big.DP;
+  Big.DP = decimals;
+  const result = number_.div(denominator);
+  Big.DP = oldDp;
+  return result;
 }

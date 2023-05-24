@@ -1,3 +1,7 @@
+import * as types from "./generated/types";
+import { handleError } from "./SwitchboardError";
+import { AptosSimulationError } from "./SwitchboardProgram";
+
 import { OracleJob } from "@switchboard-xyz/common";
 import {
   AptosAccount,
@@ -13,11 +17,66 @@ import Big from "big.js";
 import BN from "bn.js";
 import * as SHA3 from "js-sha3";
 
-import * as types from "./generated/types/index.js";
-
 export { IOracleJob, OracleJob } from "@switchboard-xyz/common";
-export const SWITCHBOARD_DEVNET_ADDRESS = `0x34e2eead0aefbc3d0af13c0522be94b002658f4bef8e0740a21086d22236ad77`;
-export const SWITCHBOARD_TESTNET_ADDRESS = `0x34e2eead0aefbc3d0af13c0522be94b002658f4bef8e0740a21086d22236ad77`;
+export const SWITCHBOARD_DEVNET_ADDRESS = `0xb91d3fef0eeb4e685dc85e739c7d3e2968784945be4424e92e2f86e2418bf271`;
+export const SWITCHBOARD_TESTNET_ADDRESS = `0xb91d3fef0eeb4e685dc85e739c7d3e2968784945be4424e92e2f86e2418bf271`;
+export const SWITCHBOARD_MAINNET_ADDRESS = `0x7d7e436f0b2aafde60774efb26ccc432cf881b677aca7faaf2a01879bd19fb8`;
+
+export interface EncodeUpdateParams {
+  account: AptosAccount;
+  result: Big | number;
+  minResult: Big | number;
+  maxResult: Big | number;
+  timestamp: number;
+  aggregatorAddress: MaybeHexString;
+  jobsChecksum: string;
+  oraclePublicKey: string;
+  oracleAddress?: MaybeHexString;
+}
+
+export function encodeUpdate({
+  account,
+  result,
+  minResult,
+  maxResult,
+  timestamp,
+  aggregatorAddress,
+  jobsChecksum,
+  oraclePublicKey,
+  oracleAddress,
+}: EncodeUpdateParams) {
+  const serializeSwitchboardDecimal = (dec: AptosDecimal) => [
+    ...BCS.bcsSerializeU128(Number(dec.mantissa)).reverse(),
+    ...BCS.bcsSerializeU8(dec.scale).reverse(),
+    ...BCS.bcsSerializeBool(dec.neg).reverse(),
+  ];
+
+  const sbResult = AptosDecimal.fromBig(new Big(result));
+  const sbMinResult = AptosDecimal.fromBig(new Big(minResult));
+  const sbMaxResult = AptosDecimal.fromBig(new Big(maxResult));
+
+  const message = new Uint8Array([
+    ...serializeSwitchboardDecimal(sbResult),
+    ...serializeSwitchboardDecimal(sbMinResult),
+    ...serializeSwitchboardDecimal(sbMaxResult),
+    ...BCS.bcsSerializeUint64(timestamp).reverse(),
+    ...BCS.bcsToBytes(
+      TxnBuilderTypes.AccountAddress.fromHex(aggregatorAddress)
+    ),
+    ...BCS.bcsSerializeBytes(Buffer.from(jobsChecksum, "hex")),
+    ...BCS.bcsToBytes(
+      TxnBuilderTypes.AccountAddress.fromHex(oracleAddress ?? "0x0")
+    ),
+    ...BCS.bcsSerializeBytes(
+      new TxnBuilderTypes.Ed25519PublicKey(
+        Buffer.from(oraclePublicKey, "hex")
+      ).toBytes()
+    ),
+  ]);
+
+  const signature = account.signBuffer(message).toUint8Array();
+  return new Uint8Array([...message, ...signature]);
+}
 
 export class AptosDecimal {
   constructor(
@@ -41,10 +100,16 @@ export class AptosDecimal {
 
   static fromBig(val: Big): AptosDecimal {
     const value = val.c.slice();
-    let e = val.e + 1;
+    const e = val.e + 1;
     while (value.length - e > 9) {
       value.pop();
     }
+
+    // Aptos decimals cannot have a negative scale
+    while (value.length - e < 0) {
+      value.push(0);
+    }
+
     return new AptosDecimal(value.join(""), value.length - e, val.s === -1);
   }
 
@@ -106,6 +171,10 @@ export interface AggregatorSaveResultParams {
   maxResponse: Big;
 }
 
+export interface OracleSaveResultParams extends AggregatorSaveResultParams {
+  aggregatorAddress: MaybeHexString;
+}
+
 export interface JobInitParams {
   name: string;
   metadata: string;
@@ -140,6 +209,18 @@ export interface AggregatorSetConfigParams {
   readWhitelist?: MaybeHexString[];
   limitReadsToWhitelist?: boolean;
   coinType?: string;
+}
+
+export interface AggregatorSetFeedRelayParams {
+  aggregator_addr: MaybeHexString;
+  relay_authority: MaybeHexString; // user that has authority to oracle public keys
+  oracle_keys: string[];
+}
+
+// set_feed_relay_oracle_keys
+export interface AggregatorSetFeedRelayOracleKeys {
+  aggregator_addr: MaybeHexString;
+  oracle_keys: string[];
 }
 
 export interface CrankInitParams {
@@ -302,33 +383,41 @@ export async function sendAptosTx(
 
   let txnRequest = await client.generateTransaction(signer.address(), payload);
 
-  const simulation = (
-    await client.simulateTransaction(signer, txnRequest, {
-      estimateGasUnitPrice: true,
-      estimateMaxGasAmount: true, // @ts-ignore
-      estimatePrioritizedGasUnitPrice: true,
-    })
-  )[0];
+  try {
+    const simulation = (
+      await client.simulateTransaction(signer, txnRequest, {
+        estimateGasUnitPrice: true,
+        estimateMaxGasAmount: true, // @ts-ignore
+        estimatePrioritizedGasUnitPrice: true,
+      })
+    )[0];
 
-  if (Number(simulation.gas_unit_price) > maxGasPrice) {
-    throw Error(
-      `Estimated gas price from simulation ${simulation.gas_unit_price} above maximum (${maxGasPrice}).`
-    );
+    if (Number(simulation.gas_unit_price) > maxGasPrice) {
+      throw Error(
+        `Estimated gas price from simulation ${simulation.gas_unit_price} above maximum (${maxGasPrice}).`
+      );
+    }
+
+    txnRequest = await client.generateTransaction(signer.address(), payload, {
+      gas_unit_price: simulation.gas_unit_price,
+    });
+
+    if (simulation.success === false) {
+      throw new AptosSimulationError(simulation.vm_status);
+    }
+
+    const signedTxn = await client.signTransaction(signer, txnRequest);
+    const transactionRes = await client.submitTransaction(signedTxn);
+    await client.waitForTransaction(transactionRes.hash);
+    return transactionRes.hash;
+  } catch (error) {
+    const switchboardError = handleError(error);
+    if (switchboardError) {
+      throw switchboardError;
+    }
+
+    throw error;
   }
-
-  txnRequest = await client.generateTransaction(signer.address(), payload, {
-    gas_unit_price: simulation.gas_unit_price,
-  });
-
-  if (simulation.success === false) {
-    console.error(simulation);
-    throw new Error(`TxFailure: ${simulation.vm_status}`);
-  }
-
-  const signedTxn = await client.signTransaction(signer, txnRequest);
-  const transactionRes = await client.submitTransaction(signedTxn);
-  await client.waitForTransaction(transactionRes.hash);
-  return transactionRes.hash;
 }
 
 /**
@@ -384,8 +473,7 @@ export async function simulateAndRun(
   );
 
   if (simulation.success === false) {
-    console.log(simulation);
-    throw new Error(`TxFailure: ${simulation.vm_status}`);
+    throw new AptosSimulationError(simulation.vm_status);
   }
 
   const signedTxn = await client.signTransaction(user, txnRequest);
@@ -447,8 +535,7 @@ export async function sendRawAptosTx(
   const bcsTxn = AptosClient.generateBCSTransaction(signer, rawTxn);
 
   if (simulation.success === false) {
-    console.log(simulation);
-    throw new Error(`TxFailure: ${simulation.vm_status}`);
+    throw new AptosSimulationError(simulation.vm_status);
   }
 
   const transactionRes = await client.submitSignedBCSTransaction(bcsTxn);
@@ -505,7 +592,7 @@ export class AptosEvent {
           // increment sequence number
           lastSequenceNumber = events.at(-1)!.sequence_number;
         }
-        for (let event of events) {
+        for (const event of events) {
           callback(event).catch((error) => {
             if (errorHandler) {
               errorHandler(error);
@@ -622,7 +709,7 @@ export class AggregatorAccount {
         )
     );
     const promises: Array<Promise<OracleJob>> = [];
-    for (let job of jobs) {
+    for (const job of jobs) {
       promises.push(job.loadJob());
     }
     return await Promise.all(promises);
@@ -792,7 +879,8 @@ export class AggregatorAccount {
             this.coinType ?? "0x1::aptos_coin::AptosCoin"
           )
         ),
-      ]
+      ],
+      200
     );
   }
 
@@ -802,7 +890,29 @@ export class AggregatorAccount {
       account,
       `${this.switchboardAddress}::aggregator_open_round_action::run`,
       [HexString.ensure(this.address).hex(), jitter ?? 1],
-      [this.coinType]
+      [this.coinType],
+      200
+    );
+  }
+
+  static async openRoundN(
+    client: AptosClient,
+    account: AptosAccount,
+    aggregatorAddresses: MaybeHexString[],
+    switchboardAddress: MaybeHexString,
+    jitter?: number,
+    coinType?: string
+  ) {
+    return await sendAptosTx(
+      client,
+      account,
+      `${switchboardAddress}::aggregator_open_round_action::run_many`,
+      [
+        aggregatorAddresses.map((addr) => HexString.ensure(addr).hex()),
+        jitter ?? 1,
+      ],
+      [coinType ?? "0x1::aptos_coin::AptosCoin"],
+      200
     );
   }
 
@@ -830,20 +940,21 @@ export class AggregatorAccount {
         params.metadata ?? aggregator.metadata,
         HexString.ensure(params.queueAddress ?? aggregator.queueAddr).hex(),
         HexString.ensure(params.crankAddress ?? aggregator.crankAddr).hex(),
-        params.batchSize ?? aggregator.batchSize,
-        params.minOracleResults ?? aggregator.minOracleResults,
-        params.minJobResults ?? aggregator.minJobResults,
-        params.minUpdateDelaySeconds ?? aggregator.minUpdateDelaySeconds,
-        params.startAfter ?? aggregator.startAfter,
+        params.batchSize ?? aggregator.batchSize.toNumber(),
+        params.minOracleResults ?? aggregator.minOracleResults.toNumber(),
+        params.minJobResults ?? aggregator.minJobResults.toNumber(),
+        params.minUpdateDelaySeconds ??
+          aggregator.minUpdateDelaySeconds.toNumber(),
+        params.startAfter ?? aggregator.startAfter.toNumber(),
         params.varianceThreshold
           ? Number(vtMantissa)
-          : aggregator.varianceThreshold.value,
+          : aggregator.varianceThreshold.value.toNumber(),
         params.varianceThreshold ? vtScale : aggregator.varianceThreshold.dec,
-        params.forceReportPeriod ?? aggregator.forceReportPeriod,
-        params.expiration ?? aggregator.expiration,
-        false, //params.disableCrank ?? aggregator.disableCrank,
-        1000, //params.historySize ?? aggregator.historySize,
-        params.readCharge ?? aggregator.readCharge,
+        params.forceReportPeriod ?? aggregator.forceReportPeriod.toNumber(),
+        params.expiration ?? aggregator.expiration.toNumber(), // @ts-ignore
+        params.disableCrank ?? false, // @ts-ignore
+        params.historySize ?? 0, // @ts-ignore
+        params.readCharge ?? aggregator.readCharge.toNumber(),
         params.rewardEscrow
           ? HexString.ensure(params.rewardEscrow).hex()
           : HexString.ensure(aggregator.rewardEscrow).hex(),
@@ -871,24 +982,21 @@ export class AggregatorAccount {
       params.metadata ?? aggregator.metadata,
       HexString.ensure(params.queueAddress ?? aggregator.queueAddr).hex(),
       HexString.ensure(params.crankAddress ?? aggregator.crankAddr).hex(),
-      String(params.batchSize ?? aggregator.batchSize),
-      String(params.minOracleResults ?? aggregator.minOracleResults),
-      String(params.minJobResults ?? aggregator.minJobResults),
-      String(params.minUpdateDelaySeconds ?? aggregator.minUpdateDelaySeconds),
-      String(params.startAfter ?? aggregator.startAfter),
-      String(
-        params.varianceThreshold
-          ? Number(vtMantissa)
-          : aggregator.varianceThreshold.value
-      ),
-      String(
-        params.varianceThreshold ? vtScale : aggregator.varianceThreshold.dec
-      ),
-      String(params.forceReportPeriod ?? aggregator.forceReportPeriod),
-      String(params.expiration ?? aggregator.expiration),
-      false, // params.disableCrank ?? aggregator.disableCrank,
-      "1000", // params.historySize ?? (aggregator as any).historySize,
-      String(params.readCharge ?? aggregator.readCharge),
+      params.batchSize ?? aggregator.batchSize.toNumber(),
+      params.minOracleResults ?? aggregator.minOracleResults.toNumber(),
+      params.minJobResults ?? aggregator.minJobResults.toNumber(),
+      params.minUpdateDelaySeconds ??
+        aggregator.minUpdateDelaySeconds.toNumber(),
+      params.startAfter ?? aggregator.startAfter.toNumber(),
+      params.varianceThreshold
+        ? Number(vtMantissa)
+        : aggregator.varianceThreshold.value.toNumber(),
+      params.varianceThreshold ? vtScale : aggregator.varianceThreshold.dec,
+      params.forceReportPeriod ?? aggregator.forceReportPeriod.toNumber(),
+      params.expiration ?? aggregator.expiration.toNumber(), // @ts-ignore
+      params.disableCrank ?? false, // @ts-ignore
+      params.historySize ?? 0, // @ts-ignore
+      params.readCharge ?? aggregator.readCharge.toNumber(),
       params.rewardEscrow
         ? HexString.ensure(params.rewardEscrow).hex()
         : HexString.ensure(aggregator.rewardEscrow).hex(),
@@ -905,12 +1013,12 @@ export class AggregatorAccount {
     );
   }
 
-  static async watch(
+  static watch(
     client: AptosClient,
     switchboardAddress: MaybeHexString,
     callback: EventCallback,
     pollingIntervalMs = 1000
-  ): Promise<AptosEvent> {
+  ): AptosEvent {
     const switchboardHexString = HexString.ensure(switchboardAddress);
     const event = new AptosEvent(
       client,
@@ -919,7 +1027,7 @@ export class AggregatorAccount {
       "aggregator_update_events",
       pollingIntervalMs
     );
-    await event.onTrigger(callback);
+    event.onTrigger(callback);
     return event;
   }
 
@@ -927,7 +1035,7 @@ export class AggregatorAccount {
     value: Big,
     aggregator: types.Aggregator
   ): Promise<boolean> {
-    if ((aggregator.latestConfirmedRound?.numSuccess ?? 0) === 0) {
+    if ((aggregator.latestConfirmedRound?.numSuccess.toNumber() ?? 0) === 0) {
       return true;
     }
     const timestamp = new BN(Math.round(Date.now() / 1000), 10);
@@ -1101,10 +1209,7 @@ export class CrankAccount {
     );
   }
 
-  pushTx(
-    account: MaybeHexString,
-    params: CrankPushParams
-  ): Types.TransactionPayload {
+  pushTx(params: CrankPushParams): Types.TransactionPayload {
     return getAptosTx(
       `${this.switchboardAddress}::crank_push_action::run`,
       [
@@ -1249,6 +1354,88 @@ export class OracleAccount {
       `${this.switchboardAddress}::oracle_heartbeat_action::run`,
       [HexString.ensure(this.address).hex()],
       [this.coinType]
+    );
+  }
+
+  /**
+   * Oracle Bulk Save Results Action
+   */
+  async saveManyResult(
+    account: AptosAccount,
+    params: OracleSaveResultParams[]
+  ): Promise<string> {
+    const aggregator_addrs: MaybeHexString[] = [];
+    const oracle_addrs: MaybeHexString[] = [];
+    const oracle_idxs: number[] = [];
+    const errors: boolean[] = [];
+    const value_nums: string[] = [];
+    const value_scale_factors: number[] = [];
+    const value_negs: boolean[] = [];
+    const jobs_checksums: MaybeHexString[] = [];
+    const min_response_nums: string[] = [];
+    const min_response_scale_factors: number[] = [];
+    const min_response_negs: boolean[] = [];
+    const max_response_nums: string[] = [];
+    const max_response_scale_factors: number[] = [];
+    const max_response_negs: boolean[] = [];
+
+    for (const param of params) {
+      const {
+        mantissa: valueMantissa,
+        scale: valueScale,
+        neg: valueNeg,
+      } = AptosDecimal.fromBig(param.value);
+      const {
+        mantissa: minResponseMantissa,
+        scale: minResponseScale,
+        neg: minResponseNeg,
+      } = AptosDecimal.fromBig(param.minResponse);
+      const {
+        mantissa: maxResponseMantissa,
+        scale: maxResponseScale,
+        neg: maxResponseNeg,
+      } = AptosDecimal.fromBig(param.maxResponse);
+
+      aggregator_addrs.push(param.aggregatorAddress);
+      oracle_addrs.push(param.oracleAddress);
+      oracle_idxs.push(param.oracleIdx);
+      errors.push(param.error);
+      value_nums.push(valueMantissa);
+      value_scale_factors.push(valueScale);
+      value_negs.push(valueNeg);
+      jobs_checksums.push(param.jobsChecksum);
+      min_response_nums.push(minResponseMantissa);
+      min_response_scale_factors.push(minResponseScale);
+      min_response_negs.push(minResponseNeg);
+      max_response_nums.push(maxResponseMantissa);
+      max_response_scale_factors.push(maxResponseScale);
+      max_response_negs.push(maxResponseNeg);
+    }
+
+    return sendAptosTx(
+      this.client,
+      account,
+      `${this.switchboardAddress}::oracle_save_result_action::run`,
+      [
+        this.address,
+        aggregator_addrs.map((addr) => addr),
+        oracle_idxs.map((idx) => idx),
+        errors.map((err) => err),
+        value_nums.map((val) => Number(val)),
+        value_scale_factors.map((scale) => scale),
+        value_negs.map((neg) => neg),
+        jobs_checksums.map((checksum) =>
+          HexString.ensure(checksum).toUint8Array()
+        ),
+        min_response_nums.map((val) => Number(val)),
+        min_response_scale_factors.map((scale) => scale),
+        min_response_negs.map((neg) => neg),
+        max_response_nums.map((val) => Number(val)),
+        max_response_scale_factors.map((scale) => scale),
+        max_response_negs.map((neg) => neg),
+      ],
+      [this.coinType ?? "0x1::aptos_coin::AptosCoin"],
+      200
     );
   }
 }
@@ -1752,7 +1939,7 @@ interface CreateJobParams extends JobInitParams {
   seed?: MaybeHexString;
 }
 
-interface CreateOracleParams extends OracleInitParams {}
+type CreateOracleParams = OracleInitParams;
 
 export async function createFeedTx(
   client: AptosClient,
@@ -1779,7 +1966,7 @@ export async function createFeedTx(
   );
 
   // enforce size 8 jobs array
-  let jobs =
+  const jobs =
     params.jobs.length < 8
       ? [
           ...params.jobs,

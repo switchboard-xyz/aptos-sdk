@@ -1,8 +1,6 @@
-import { strict as assert } from "assert";
-import Big from "big.js";
-import { BN } from "bn.js";
 import "mocha";
-import * as sbv2 from "../lib/cjs";
+
+import * as sbv2 from "../src";
 
 describe("Decimal tests", () => {
   const sbv2Decimal_100: sbv2.types.SwitchboardDecimalMoveStruct = {
@@ -43,7 +41,7 @@ describe("Decimal tests", () => {
     console.log(parsedDecimal);
   });
 
-  it("Converts a SwitchboardDecimal", async () => {
+  it("Converts an AggregatorRound", async () => {
     const parsedRound = sbv2.types.AggregatorRound.fromMoveStruct(round);
 
     console.log(parsedRound);
