@@ -1747,6 +1747,11 @@ interface CreateFeedParams extends AggregatorInitParams {
   initialLoadAmount: number;
 }
 
+interface CreateJobParams extends JobInitParams {
+  aggregatorAddress: MaybeHexString;
+  seed?: MaybeHexString;
+}
+
 interface CreateOracleParams extends OracleInitParams {}
 
 export async function createFeedTx(
@@ -1858,6 +1863,63 @@ export async function createFeed(
 
   const tx = await simulateAndRun(client, account, txn);
   return [aggregator, tx];
+}
+
+export async function createJobTx(
+  client: AptosClient,
+  authority: MaybeHexString,
+  params: CreateJobParams,
+  switchboardAddress: MaybeHexString
+): Promise<[JobAccount, Types.TransactionPayload]> {
+  const seed = params.seed
+    ? HexString.ensure(HexString.ensure(params.seed))
+    : new AptosAccount().address();
+  const resource_address = generateResourceAccountAddress(
+    HexString.ensure(authority),
+    bcsAddressToBytes(HexString.ensure(seed))
+  );
+
+  return [
+    new JobAccount(client, resource_address, switchboardAddress),
+    getAptosTx(
+      `${switchboardAddress}::create_job_action::run`,
+      [
+        // authority will own everything
+        HexString.ensure(params.authority).hex(),
+
+        // aggregator
+        HexString.ensure(params.aggregatorAddress).hex(),
+
+        // job
+        params.name,
+        params.metadata,
+        params.data,
+        params.weight || 1,
+
+        // seed
+        seed.hex(),
+      ],
+      []
+    ),
+  ];
+}
+
+// Create a feed with jobs, a lease, then optionally push the lease to the specified crank
+export async function createJob(
+  client: AptosClient,
+  account: AptosAccount,
+  params: CreateJobParams,
+  switchboardAddress: MaybeHexString
+): Promise<[JobAccount, string]> {
+  const [job, txn] = await createJobTx(
+    client,
+    account.address(),
+    params,
+    switchboardAddress
+  );
+
+  const tx = await simulateAndRun(client, account, txn);
+  return [job, tx];
 }
 
 // Create an oracle, oracle wallet, permisison, and set the heartbeat permission if user is the queue authority
