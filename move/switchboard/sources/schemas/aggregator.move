@@ -459,6 +459,7 @@ module switchboard::aggregator {
     /**
      * Update Aggregator with oracle keys 
      */
+    #[legacy_entry_fun]
     public entry fun relay_value(
         addr: address, 
         updates: &mut vector<vector<u8>>
