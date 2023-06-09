@@ -1,0 +1,11 @@
+clients:
+  - name: "switchboard"
+    slug: "./"
+    description: "A Move module to interact with Switchboard on Aptos."
+    language: "move"
+    path: "move/switchboard"
+  - name: "@switchboard-xyz/aptos.js"
+    slug: "./"
+    description: "A Typescript client to interact with Switchboard on Aptos."
+    language: "javascript"
+    path: "javascript/aptos.js"

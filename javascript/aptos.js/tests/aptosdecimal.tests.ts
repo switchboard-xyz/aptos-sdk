@@ -1,9 +1,8 @@
-import { strict as assert } from "assert";
-import Big from "big.js";
-import { BN } from "bn.js";
 import "mocha";
-import * as sbv2 from "../lib/cjs";
-import { AptosDecimal } from "../lib/cjs";
+
+import { AptosDecimal } from "../src";
+
+import Big from "big.js";
 
 describe("Decimal tests", () => {
   it("Converts a SwitchboardDecimal", async () => {

@@ -77,6 +77,7 @@ export type SwitchboardErrorType =
   | AggregatorQueueNotReady
   | ResourceAlreadyExists
   | PermissionAlreadyExists;
+
 export abstract class SwitchboardError extends Error {
   readonly logs?: string[];
 

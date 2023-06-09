@@ -1,7 +1,8 @@
-import BN from "bn.js"; // eslint-disable-line @typescript-eslint/no-unused-vars
-import * as types from "../types/index.js"; // eslint-disable-line @typescript-eslint/no-unused-vars
+import * as types from "./"; // eslint-disable-line @typescript-eslint/no-unused-vars
+
 import { HexString } from "aptos"; // eslint-disable-line @typescript-eslint/no-unused-vars
 import Big from "big.js";
+import BN from "bn.js"; // eslint-disable-line @typescript-eslint/no-unused-vars
 
 export interface ISwitchboardDecimal {
   value: BN;
@@ -79,7 +80,7 @@ export class SwitchboardDecimal implements ISwitchboardDecimal {
 
   static fromBig(val: Big): SwitchboardDecimal {
     const value = val.c.slice();
-    let e = val.e + 1;
+    const e = val.e + 1;
     while (value.length - e > 9) {
       value.pop();
     }

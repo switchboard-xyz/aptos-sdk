@@ -1,3 +1,7 @@
+import * as types from "./generated/types";
+import { handleError } from "./SwitchboardError";
+import { AptosSimulationError } from "./SwitchboardProgram";
+
 import { OracleJob } from "@switchboard-xyz/common";
 import {
   AptosAccount,
@@ -13,9 +17,7 @@ import Big from "big.js";
 import BN from "bn.js";
 import * as SHA3 from "js-sha3";
 
-import * as types from "./generated/types/index.js";
-
-export { OracleJob, IOracleJob } from "@switchboard-xyz/common";
+export { IOracleJob, OracleJob } from "@switchboard-xyz/common";
 export const SWITCHBOARD_DEVNET_ADDRESS = `0xb91d3fef0eeb4e685dc85e739c7d3e2968784945be4424e92e2f86e2418bf271`;
 export const SWITCHBOARD_TESTNET_ADDRESS = `0xb91d3fef0eeb4e685dc85e739c7d3e2968784945be4424e92e2f86e2418bf271`;
 export const SWITCHBOARD_MAINNET_ADDRESS = `0x7d7e436f0b2aafde60774efb26ccc432cf881b677aca7faaf2a01879bd19fb8`;
@@ -98,7 +100,7 @@ export class AptosDecimal {
 
   static fromBig(val: Big): AptosDecimal {
     const value = val.c.slice();
-    let e = val.e + 1;
+    const e = val.e + 1;
     while (value.length - e > 9) {
       value.pop();
     }
@@ -381,33 +383,41 @@ export async function sendAptosTx(
 
   let txnRequest = await client.generateTransaction(signer.address(), payload);
 
-  const simulation = (
-    await client.simulateTransaction(signer, txnRequest, {
-      estimateGasUnitPrice: true,
-      estimateMaxGasAmount: true, // @ts-ignore
-      estimatePrioritizedGasUnitPrice: true,
-    })
-  )[0];
+  try {
+    const simulation = (
+      await client.simulateTransaction(signer, txnRequest, {
+        estimateGasUnitPrice: true,
+        estimateMaxGasAmount: true, // @ts-ignore
+        estimatePrioritizedGasUnitPrice: true,
+      })
+    )[0];
 
-  if (Number(simulation.gas_unit_price) > maxGasPrice) {
-    throw Error(
-      `Estimated gas price from simulation ${simulation.gas_unit_price} above maximum (${maxGasPrice}).`
-    );
+    if (Number(simulation.gas_unit_price) > maxGasPrice) {
+      throw Error(
+        `Estimated gas price from simulation ${simulation.gas_unit_price} above maximum (${maxGasPrice}).`
+      );
+    }
+
+    txnRequest = await client.generateTransaction(signer.address(), payload, {
+      gas_unit_price: simulation.gas_unit_price,
+    });
+
+    if (simulation.success === false) {
+      throw new AptosSimulationError(simulation.vm_status);
+    }
+
+    const signedTxn = await client.signTransaction(signer, txnRequest);
+    const transactionRes = await client.submitTransaction(signedTxn);
+    await client.waitForTransaction(transactionRes.hash);
+    return transactionRes.hash;
+  } catch (error) {
+    const switchboardError = handleError(error);
+    if (switchboardError) {
+      throw switchboardError;
+    }
+
+    throw error;
   }
-
-  txnRequest = await client.generateTransaction(signer.address(), payload, {
-    gas_unit_price: simulation.gas_unit_price,
-  });
-
-  if (simulation.success === false) {
-    console.error(simulation);
-    throw new Error(`TxFailure: ${simulation.vm_status}`);
-  }
-
-  const signedTxn = await client.signTransaction(signer, txnRequest);
-  const transactionRes = await client.submitTransaction(signedTxn);
-  await client.waitForTransaction(transactionRes.hash);
-  return transactionRes.hash;
 }
 
 /**
@@ -463,8 +473,7 @@ export async function simulateAndRun(
   );
 
   if (simulation.success === false) {
-    console.error(simulation);
-    throw new Error(`TxFailure: ${simulation.vm_status}`);
+    throw new AptosSimulationError(simulation.vm_status);
   }
 
   const signedTxn = await client.signTransaction(user, txnRequest);
@@ -526,8 +535,7 @@ export async function sendRawAptosTx(
   const bcsTxn = AptosClient.generateBCSTransaction(signer, rawTxn);
 
   if (simulation.success === false) {
-    console.error(simulation);
-    throw new Error(`TxFailure: ${simulation.vm_status}`);
+    throw new AptosSimulationError(simulation.vm_status);
   }
 
   const transactionRes = await client.submitSignedBCSTransaction(bcsTxn);
@@ -584,7 +592,7 @@ export class AptosEvent {
           // increment sequence number
           lastSequenceNumber = events.at(-1)!.sequence_number;
         }
-        for (let event of events) {
+        for (const event of events) {
           callback(event).catch((error) => {
             if (errorHandler) {
               errorHandler(error);
@@ -701,7 +709,7 @@ export class AggregatorAccount {
         )
     );
     const promises: Array<Promise<OracleJob>> = [];
-    for (let job of jobs) {
+    for (const job of jobs) {
       promises.push(job.loadJob());
     }
     return await Promise.all(promises);
@@ -1027,7 +1035,7 @@ export class AggregatorAccount {
     value: Big,
     aggregator: types.Aggregator
   ): Promise<boolean> {
-    if ((aggregator.latestConfirmedRound?.numSuccess ?? 0) === 0) {
+    if ((aggregator.latestConfirmedRound?.numSuccess.toNumber() ?? 0) === 0) {
       return true;
     }
     const timestamp = new BN(Math.round(Date.now() / 1000), 10);
@@ -1371,7 +1379,7 @@ export class OracleAccount {
     const max_response_scale_factors: number[] = [];
     const max_response_negs: boolean[] = [];
 
-    for (let param of params) {
+    for (const param of params) {
       const {
         mantissa: valueMantissa,
         scale: valueScale,
@@ -1926,7 +1934,7 @@ interface CreateFeedParams extends AggregatorInitParams {
   initialLoadAmount: number;
 }
 
-interface CreateOracleParams extends OracleInitParams {}
+type CreateOracleParams = OracleInitParams;
 
 export async function createFeedTx(
   client: AptosClient,
@@ -1953,7 +1961,7 @@ export async function createFeedTx(
   );
 
   // enforce size 8 jobs array
-  let jobs =
+  const jobs =
     params.jobs.length < 8
       ? [
           ...params.jobs,
