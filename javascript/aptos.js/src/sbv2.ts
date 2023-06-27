@@ -1938,7 +1938,6 @@ type CreateOracleParams = OracleInitParams;
 
 export async function createFeedTx(
   client: AptosClient,
-  authority: MaybeHexString,
   params: CreateFeedParams,
   switchboardAddress: MaybeHexString
 ): Promise<[AggregatorAccount, Types.TransactionPayload]> {
@@ -1946,7 +1945,7 @@ export async function createFeedTx(
     ? HexString.ensure(HexString.ensure(params.seed))
     : new AptosAccount().address();
   const resource_address = generateResourceAccountAddress(
-    HexString.ensure(authority),
+    HexString.ensure(params.authority),
     bcsAddressToBytes(HexString.ensure(seed))
   );
 
@@ -2038,7 +2037,6 @@ export async function createFeed(
 ): Promise<[AggregatorAccount, string]> {
   const [aggregator, txn] = await createFeedTx(
     client,
-    account.address(),
     params,
     switchboardAddress
   );
