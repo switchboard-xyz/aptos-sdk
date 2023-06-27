@@ -35,7 +35,7 @@
   },
   "dependencies": {
     "@switchboard-xyz/common": "^2.2.0",
-    "aptos": "^1.8.3",
+    "aptos": "^1.11.0",
     "big.js": "^6.2.1",
     "bn.js": "^5.2.1",
     "chalk": "^5.0.1",
