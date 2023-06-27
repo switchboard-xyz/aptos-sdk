@@ -400,7 +400,7 @@ export async function sendAptosTx(
 
     txnRequest = await client.generateTransaction(signer.address(), payload, {
       gas_unit_price: simulation.gas_unit_price,
-      max_gas_amount: (Number(simulation.gas_used) * 1.2).toString(),
+      max_gas_amount: Math.ceil(Number(simulation.gas_used) * 1.2).toString(),
     });
 
     if (simulation.success === false) {
