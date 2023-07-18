@@ -1,5 +1,5 @@
 module switchboard::aggregator {
-    use aptos_framework::account::{Self, SignerCapability};
+    use aptos_framework::account::{SignerCapability};
     use aptos_framework::timestamp;
     use aptos_framework::block;
     use aptos_std::ed25519;
@@ -562,6 +562,9 @@ module switchboard::aggregator {
             latest_confirmed_round.round_confirmed_timestamp = timestamp::now_seconds();
         }
     }
+
+    #[test_only]
+    use aptos_framework::account;
 
     #[test_only]
     public entry fun new_test(account: &signer, value: u128, dec: u8, neg: bool) {
