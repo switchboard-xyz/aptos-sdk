@@ -52,10 +52,11 @@ The following addresses can be used with the Switchboard deployment on Aptos
 
 ## Clients
 
-| **Lang**   | **Name**                                         | **Description**                                            |
-| ---------- | ------------------------------------------------ | ---------------------------------------------------------- |
-| Move       | [switchboard](move/switchboard)                  | A Move module to interact with Switchboard on Aptos.       |
-| Javascript | [@switchboard-xyz/aptos.js](javascript/aptos.js) | A Typescript client to interact with Switchboard on Aptos. |
+| **Lang**   | **Name**                                         | **Description**                                             |
+| ---------- | ------------------------------------------------ | ----------------------------------------------------------- |
+| Move       | [switchboard](move/switchboard/mainnet/)         | A Move module to interact with Switchboard on Aptos.        |
+| Move       | [switchboard](move/switchboard/testnet/)         | A Move module to interact with Switchboard on Aptos testnet |
+| Javascript | [@switchboard-xyz/aptos.js](javascript/aptos.js) | A Typescript client to interact with Switchboard on Aptos.  |
 
 ## Example Programs
 
