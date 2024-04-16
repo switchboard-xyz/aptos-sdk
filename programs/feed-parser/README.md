@@ -11,7 +11,7 @@
 ## Build
 
 ```bash
-aptos move compile --named-addresses switchboard=default
+aptos move compile --named-addresses switchboard_feed_parser=default
 ```
 
 ## Install
@@ -20,7 +20,7 @@ Add the following to your `Move.toml`.
 
 ```toml
 [addresses]
-switchboard = "0x34e2eead0aefbc3d0af13c0522be94b002658f4bef8e0740a21086d22236ad77"
+switchboard = "0xb91d3fef0eeb4e685dc85e739c7d3e2968784945be4424e92e2f86e2418bf271"
 
 [dependencies]
 MoveStdlib = { git = "https://github.com/aptos-labs/aptos-core.git", subdir = "aptos-move/framework/move-stdlib/", rev = "testnet" }
