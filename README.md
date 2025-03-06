@@ -40,6 +40,7 @@ The following addresses can be used with the Switchboard deployment on Aptos
 | StateAddress         | `0x7d7e436f0b2aafde60774efb26ccc432cf881b677aca7faaf2a01879bd19fb8`  |
 | Permissioned Queue   | `0x11fbd91e4a718066891f37958f0b68d10e720f2edf8d57854fb20c299a119a8c` |
 | Permissionless Queue | `0xc887072e37f17f9cc7afc0a00e2b283775d703c610acca3997cb26e74bc53f3b` |
+| On-Demand Adapter    | `0x890fd4ed8a26198011e7923f53f5f1e5eeb2cc389dd50b938f16cb95164dc81c` |
 
 ### Testnet
 
@@ -62,7 +63,8 @@ The following addresses can be used with the Switchboard deployment on Aptos
 
 | **Lang** | **Name**                            | **Description**                   |
 | -------- | ----------------------------------- | --------------------------------- |
-| Move     | [feed-parser](programs/feed-parser) | Read a Switchboard feed on Aptos" |
+| Move     | [feed-parser](programs/feed-parser) | Read a Switchboard feed on Aptos |
+| Move     | [feed-parser-adapter](programs/feed-parser-adapter) | Read an On-Demand Feed with the v2 interface |
 
 ## Troubleshooting
 
