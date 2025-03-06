@@ -1,0 +1,21 @@
+[package]
+name = "SwitchboardFeedParser"
+version = "0.1.0"
+
+[addresses]
+std = "0x1"
+aptos_framework = "0x1"
+switchboard_adapter = "0x890fd4ed8a26198011e7923f53f5f1e5eeb2cc389dd50b938f16cb95164dc81c" 
+switchboard_feed_parser = "_"
+
+[dependencies]
+MoveStdlib = { git = "https://github.com/aptos-labs/aptos-core.git", subdir = "aptos-move/framework/move-stdlib/", rev = "mainnet" }
+AptosFramework = { git = "https://github.com/aptos-labs/aptos-core.git", subdir = "aptos-move/framework/aptos-framework/", rev = "mainnet" }
+AptosStdlib = { git = "https://github.com/aptos-labs/aptos-core.git", subdir = "aptos-move/framework/aptos-stdlib/", rev = "mainnet" }
+
+# Add the adapter
+[dependencies.SwitchboardAdapter]
+git = "https://github.com/switchboard-xyz/aptos.git"
+subdir = "adapter/mainnet"
+rev = "main"
+
